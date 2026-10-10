@@ -29,6 +29,9 @@ jobs:
           node --check dist/landscape.js
           node --check dist/architecture.js
           node --check dist/districts.js
+          node --check dist/graphics.js
+          node --check dist/vegetation.js
+          node tests/assets.test.cjs
           node --check dist/roadworks.js
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

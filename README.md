@@ -100,3 +100,20 @@ Terrain now has broader river valleys, layered hills, blended shore materials,
 shoreline rocks, irregular tree crowns and woodland beyond the playable map.
 It is still a lightweight procedural browser game, not commercial-game graphics
 or a reproduction of Cities: Skylines II's simulation.
+
+### Edition 7: rendering overhaul
+
+- Detailed, textured architectural wall, door, window and cornice modules at
+  close range, with simpler façades farther away.
+- Photographic HDR daylight, reflected sky/ground lighting, depth-based contact
+  shading, multisample antialiasing and a filmic display transform.
+- Detailed 3D pine geometry nearby and compact tree impostors at distance;
+  broadleaf vegetation uses four views rendered from a detailed CC0 tree model.
+- Gameplay camera centers on the developed city with a closer starting view.
+  Roads, shoreline water and vegetation materials have been retuned together.
+- High quality enables contact shading and nearby detailed models. Low quality
+  disables those effects, reduces pixel density and uses lighter geometry.
+
+Asset sources and licenses are in `dist/assets/CREDITS.md`. `node tests/assets.test.cjs`
+checks shipped model buffers, local texture dependencies, generated tree images
+and the HDR file. Simulation and save formats are unchanged in this edition.
