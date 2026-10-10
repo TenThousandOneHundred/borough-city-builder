@@ -23,7 +23,7 @@ jobs:
           node-version: '22'
       - name: Verify game engine and modules
         run: |
-          node --test tests/engine.test.cjs
+          node --test tests/engine.test.cjs tests/parcels.test.mjs
           node --check dist/app.js
           node --check dist/renderer.js
           node --check dist/landscape.js

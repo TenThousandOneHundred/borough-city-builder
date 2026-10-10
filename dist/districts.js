@@ -29,13 +29,40 @@ export function districtBuilding(a,q,t,seed){
    for(let f=1;f<floors;f++){balcony(-.66,f*.57,.98,1.18);box(-1.39,f*.57,0,.04,.045,2.4,trim)}
    a.roofDetails(q,h,1.35,2.3,v);for(let j=0;j<3;j++)shrub(.5+j*.3,.8,.2);
   }else{
-   // Slender, asymmetric towers above a low podium; stepped terraces vary per lot.
-   vol(0,-.1,2.85,2.5,.65,0,wall('stone',1));
-   const ww=1.45+(n%3)*.19,dd=1.55+(n%2)*.23;
-   vol(-.2,-.35,ww,dd,h*.72,.65,fac);vol(-.28,-.5,ww*.84,dd*.84,h*.28,h*.72+.65,wall('stone',Math.ceil(floors*.28)));
-   for(let f=1;f<floors;f++){const y=.65+f*.57;if(f<floors*.72)for(const x of [-.58,.28])balcony(x,y,.57,.68);if(f%3===0)box(-.2,y,-1.22,ww,.035,.06,trim)}
-   box(-.28,h+.76,-.5,ww*.82,.12,dd*.82,'#727a74');a.cylinder(q,.12,h+1,-.5,.12,.35,'#8a9189');
-   for(let j=0;j<5;j++)shrub(-1.15+j*.52,1.17,.19);
+   // A neighborhood mixes point towers, slabs, brick apartments and terraces.
+   // Each family has different proportions, materials and a complete roofline.
+   const family=seed%6,F=family===2?5+n%3:family===4?6+n%4:9+n%9,H=F*.49;
+   const facade=wall(family===2?'brick':family===3?'glass':'stone',F);
+   const W=family===1?2.75:family===2?2.9:1.85+n%3*.18,D=family===1?1.25:family===2?2.25:1.8;
+   if(family===4){
+    for(let tier=0;tier<3;tier++){const levelFloors=3,yy=tier*1.47,ww=2.85-tier*.47,dd=2.5-tier*.43;
+     vol(-tier*.13,-tier*.14,ww,dd,1.47,yy,wall(tier%2?'brick':'stone',levelFloors));
+     for(let j=0;j<3;j++)shrub(-.9+j*.65,1.1-tier*.2,.14);
+     box(-tier*.13,yy+1.5,dd/2-tier*.14,ww,.045,.08,trim);
+    }a.roofDetails(q,4.41,1.85,1.65,v);
+   }else{
+    vol(0,-.2,W,D,H,0,facade);
+    const balconyFaces=family===0||family===1||family===5;
+    if(balconyFaces){for(let floor=1;floor<F;floor++){
+     const yy=floor*.49,across=family===1?3:2;
+     for(let j=0;j<across;j++){
+      const xx=(j-(across-1)/2)*(W/across);
+      balcony(xx,yy,D/2-.03,W/across*.82);
+     }
+     // Contrasting side walls and slab edges define real recessed balconies.
+     for(const side of [-1,1])box(side*(W/2+.015),yy,D/2-.02,.055,.49,.4,family===5?'#566167':'#c1c3ba');
+    }}
+    if(family===3){for(let j=0;j<6;j++)box(-W/2+j*W/5,H/2,D/2-.18,.026,H,.04,'#84908f');
+     for(let floor=1;floor<F;floor++)box(0,floor*.49,D/2-.18,W,.04,.04,'#5c6c70');}
+    if(family===2){for(let floor=1;floor<F;floor++)box(0,floor*.49,D/2-.18,W,.035,.06,'#a6a69b');
+     for(const xx of [-W/2,W/2])box(xx,H/2,D/2-.17,.12,H,.075,'#b7b6aa');}
+    a.roofDetails(q,H,W,D,v);
+    vol(-.2,-.45,W*.46,D*.5,.42,H,wall('stone',1));
+    box(0,.28,D/2-.15,.52,.54,.035,'#30474c');
+    box(0,.68,D/2+.03,.86,.06,.48,'#a7afaa');
+    for(let j=0;j<3;j++)shrub(-.8+j*.8,1.55,.17);
+   }
+
   }
   return true;
  }

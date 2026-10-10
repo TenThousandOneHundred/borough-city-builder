@@ -117,3 +117,7 @@ or a reproduction of Cities: Skylines II's simulation.
 Asset sources and licenses are in `dist/assets/CREDITS.md`. `node tests/assets.test.cjs`
 checks shipped model buffers, local texture dependencies, generated tree images
 and the HDR file. Simulation and save formats are unchanged in this edition.
+
+## Edition 8 visual revision
+
+Compatible developed cells now share larger visual building sites; simulation cells and saved zoning are unchanged. Apartment families include slab towers, brick mid-rises, glass towers, balcony towers and stepped terraces. Close views use batched window recesses and sills with varied materials. Terrain color multiplication is corrected and developed block interiors gain small trees. This remains an original simplified browser city-builder, not a recreation of the commercial game engine or its assets.
