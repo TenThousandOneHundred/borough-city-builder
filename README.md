@@ -45,3 +45,30 @@ Moving from the original ChatGPT site to GitHub Pages creates a different storag
 
 ## Graphics revision 4
 Replaces square lot slabs with gardens and driveways, corrects inward-facing roof triangles, adds hipped roof styles, chamfered building footprints, varied proportions, darker glazing, detailed CC0 window meshes with PBR textures, leafy cutout canopies, smoother riverbanks, rounded junction corners, crosswalks and traffic signals. The home background is an unsaved demonstration city with residential neighborhoods and a concentrated office district. Player save format remains version 1.
+
+### Edition 5: roads and building catalogue
+
+- Eight road specifications: gravel, alley, two-lane, one-way, four-lane,
+  tree-lined avenue, six-lane boulevard and highway. Width, markings, cost,
+  capacity and vehicle animation speed differ.
+- Straight mode: drag from start to end. Curved mode: click start, control/bend
+  point, then endpoint. Escape cancels. Previews show the construction quote;
+  blocked or unaffordable paths leave the city unchanged. Endpoints snap to
+  existing road endpoints. Bridges cost four times the land construction rate.
+- Curves are persistent quadratic paths rendered as continuous road surfaces.
+  Underlying connected cells support the existing economy and zoning system.
+  Bulldozing any cell belonging to a path removes that whole path for ₡10;
+  shared intersections and pre-existing roads are retained.
+- 38 selectable building/zone options across housing, commerce, industry,
+  offices, power, water, health, education, emergency services, parks,
+  transportation and waste. Facilities have individual costs, upkeep and
+  service-capacity multipliers. New models include turbines, solar arrays,
+  treatment tanks, row houses, courtyards, sports courts and fountain plazas.
+- Continuous riverbank profiles, more detailed surrounding terrain, textured
+  lots, balcony railings and expanded procedural architectural styles.
+- Version-1 worlds remain loadable. New road paths and building choices are
+  included in manual saves, five-minute autosaves and exported backups.
+
+This remains a lightweight city simulation: traffic is illustrative, road
+capacity feeds a citywide congestion metric, and there is no lane-level route
+planning, grade-separated interchange editor or Cities: Skylines II asset set.
