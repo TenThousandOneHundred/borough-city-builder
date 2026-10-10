@@ -72,3 +72,31 @@ Replaces square lot slabs with gardens and driveways, corrects inward-facing roo
 This remains a lightweight city simulation: traffic is illustrative, road
 capacity feeds a citywide congestion metric, and there is no lane-level route
 planning, grade-separated interchange editor or Cities: Skylines II asset set.
+
+### Edition 6: zoning and district architecture
+
+Housing and commerce now use **free density-based zoning**, rather than choosing
+and paying for a specific building. Industry and offices also use zoning. Choose
+Rectangle, Brush or Fill block; green lots are residential and blue lots are
+commercial. Eligible land is within four connected land cells of a street;
+highways do not provide frontage. The zoning tool highlights eligible lots.
+
+Private development requires a road network connected to the map edge, available
+power and water, demand and adequate happiness. Lots visibly pass through three
+construction stages before a developer selects a building. The inspector explains
+why a lot is waiting. Removing zoning cancels unfinished development and preserves
+occupied buildings. Bulldozing a developed zoned lot allows redevelopment.
+Service buildings remain individually placed and paid for.
+
+Older saves migrate once: developed buildings stay intact; undeveloped legacy
+housing/commercial tiles become zones. Zoning, density and construction progress
+are included in existing verified saves and backups. Explicitly removed zoning
+stays removed on reload.
+
+The district renderer replaces residential, commercial and office massing with
+pitched-roof houses, dormers, porches, gutters, recessed balconies, asymmetric
+terraced towers, elliptical office facades, mullions and storefront awnings.
+Terrain now has broader river valleys, layered hills, blended shore materials,
+shoreline rocks, irregular tree crowns and woodland beyond the playable map.
+It is still a lightweight procedural browser game, not commercial-game graphics
+or a reproduction of Cities: Skylines II's simulation.
