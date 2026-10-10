@@ -1,7 +1,9 @@
+import {sculptedBuilding} from './skyline.js?v=9';
 import * as THREE from './vendor/three.module.js';
 // District buildings use separate wings, roof forms and recessed outdoor spaces.
 // Geometry is deterministic so a saved neighborhood never changes on reload.
 export function districtBuilding(a,q,t,seed){
+ if(sculptedBuilding(a,q,t,seed))return true;
  const v=t.variant,night=a.v.night,kind=t.type,n=seed%11,low=t.density==='low',medium=t.density==='medium'||t.building==='apartments';
  const box=(x,y,z,w,h,d,c)=>a.box(q,x,y,z,w,h,d,c),wall=(style,f)=>a.facade(style,f,v,night),vol=(x,z,w,d,h,y,m)=>a.volume(q,x,z,w,d,h,y,m);
  const glass=wall('glass',1),trim=['#b5ad99','#888d86','#b8b8aa','#988b79'][v];

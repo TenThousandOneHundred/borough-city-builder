@@ -1,12 +1,12 @@
-import {visualParcels} from './parcels.js?v=8';
-import {Graphics} from './graphics.js?v=8';
-import {Vegetation} from './vegetation.js?v=8';
+import {visualParcels} from './parcels.js?v=9';
+import {Graphics} from './graphics.js?v=9';
+import {Vegetation} from './vegetation.js?v=9';
 import {RGBELoader} from './vendor/RGBELoader.js';
 import * as THREE from './vendor/three.module.js';
 import {OrbitControls} from './vendor/OrbitControls.js';
-import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=8';
-import {Architecture} from './architecture.js?v=8';
-import {Roadworks} from './roadworks.js?v=8';
+import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=9';
+import {Architecture} from './architecture.js?v=9';
+import {Roadworks} from './roadworks.js?v=9';
 const N=48,T=4,HALF=96,zoneColors={residential:'#54b663',commercial:'#5bb1d8',industrial:'#cdb268',office:'#aa87c9'};
 export class CityView{
 constructor(canvas){this.canvas=canvas;this.scene=new THREE.Scene();this.scene.background=new THREE.Color('#aebfca');this.scene.fog=new THREE.FogExp2('#b7c6cc',.0018);
