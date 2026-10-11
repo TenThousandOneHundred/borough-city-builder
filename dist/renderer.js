@@ -1,17 +1,17 @@
-import {Residents} from './residents.js?v=18';
-import {Traffic} from './traffic.js?v=18';
-import {Vehicles} from './vehicles.js?v=18';
-import {BuildingFactory} from './building-factory.js?v=18';
-import {StreetLife} from './street-life.js?v=18';
-import {visualParcels} from './parcels.js?v=18';
-import {Graphics} from './graphics.js?v=18';
-import {Vegetation} from './vegetation.js?v=18';
+import {Residents} from './residents.js?v=19';
+import {Traffic} from './traffic.js?v=19';
+import {Vehicles} from './vehicles.js?v=19';
+import {BuildingFactory} from './building-factory.js?v=19';
+import {StreetLife} from './street-life.js?v=19';
+import {visualParcels} from './parcels.js?v=19';
+import {Graphics} from './graphics.js?v=19';
+import {Vegetation} from './vegetation.js?v=19';
 import {RGBELoader} from './vendor/RGBELoader.js';
 import * as THREE from './vendor/three.module.js';
 import {OrbitControls} from './vendor/OrbitControls.js';
-import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=18';
-import {Architecture} from './architecture.js?v=18';
-import {Roadworks} from './roadworks.js?v=18';
+import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=19';
+import {Architecture} from './architecture.js?v=19';
+import {Roadworks} from './roadworks.js?v=19';
 const N=48,T=4,HALF=96,zoneColors={residential:'#54b663',commercial:'#5bb1d8',industrial:'#cdb268',office:'#aa87c9'};
 export class CityView{
 constructor(canvas){this.canvas=canvas;this.scene=new THREE.Scene();this.scene.background=new THREE.Color('#aebfca');this.scene.fog=new THREE.FogExp2('#b7c6cc',.00105);
@@ -27,7 +27,7 @@ environment(){const c=document.createElement('canvas');c.width=512;c.height=256;
 mat(color){if(!this.materials.has(color))this.materials.set(color,new THREE.MeshStandardMaterial({color,roughness:.78}));return this.materials.get(color)}
 box(group,x,y,z,sx,sy,sz,color,shadow=true){const m=new THREE.Mesh(this.unitBox,this.mat(color));m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=shadow;m.receiveShadow=true;group.add(m);return m}
 disposeGroup(g){g.traverse(o=>{if(o.geometry&&o.geometry!==this.unitBox&&!o.userData.sharedAsset)o.geometry.dispose()});g.clear()}
-setWorld(w,{menu=false,reset=true}={}){this.world=w;this.menu=menu;this.running=false;this.signatures=[];this.renderStates=[];this.disposeGroup(this.tileGroup);for(const g of this.buildings.values())if(g.userData.factory)this.disposeGroup(g);this.buildings.clear();for(const car of this.cars)this.disposeGroup(car.mesh);for(const mesh of this.vehicles.fleet||[])mesh.dispose();this.vehicles.fleet=[];this.disposeGroup(this.carGroup);this.cars=[];this.residents=null;this.traffic=new Traffic(w,CityEngine);this.landscape.build(w);this.makeGrid();if(reset){this.focusWorld(menu)}this.refresh(true)}
+setWorld(w,{menu=false,reset=true}={}){this.world=w;this.menu=menu;this.running=false;this.signatures=[];this.renderStates=[];this.disposeGroup(this.tileGroup);for(const g of this.buildings.values())if(g.userData.factory)this.disposeGroup(g);this.buildings.clear();for(const car of this.cars)this.disposeGroup(car.mesh);for(const mesh of this.vehicles.fleet||[])mesh.dispose();this.vehicles.fleet=[];this.disposeGroup(this.carGroup);this.cars=[];this.residents=null;this.traffic=null;this.landscape.build(w);this.makeGrid();if(reset){this.focusWorld(menu)}this.refresh(true)}
 makeGrid(){this.disposeGroup(this.grid);const points=[];for(let s=0;s<=48;s++)for(let k=0;k<96;k++){let a=-96+s*4,b=-96+k*2;points.push(a,floorHeight(this.world,a,b)+.15,b,a,floorHeight(this.world,a,b+2)+.15,b+2);points.push(b,floorHeight(this.world,b,a)+.15,a,b+2,floorHeight(this.world,b+2,a)+.15,a)}const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(points,3));this.grid.add(new THREE.LineSegments(geo,new THREE.LineBasicMaterial({color:'#b6ced2',transparent:true,opacity:.16})))}
 refresh(force=false){if(!this.world)return;const demographics=this.world.tiles.map(t=>[t.type,t.level,t.people,t.construction].join('/')).join(';');if(this.residents&&demographics!==this.residentDemographics){this.residents.reconcile();this.residentDemographics=demographics;}const parcels=visualParcels(this.world);let models=false,roads=false,trees=false,zones=false,occupancy=false,destinations=false;this.renderStates ||= [];
 this.world.tiles.forEach((t,i)=>{const parcel=parcels.get(i),oldState=this.renderStates[i],isService=t.type&&t.type!=='road'&&!this.models.accepts(t)&&t.level>0;
@@ -50,7 +50,7 @@ previewZones(cells,zone){this.clearLine();const access=CityEngine.zoneAccess(thi
 updateOverlay(){const ground=this.landscape.ground;if(!ground)return;const colors=ground.geometry.attributes.color,pos=ground.geometry.attributes.position,w=this.world,stats=CityEngine.analyze(w);for(let i=0;i<pos.count;i++){let x=pos.getX(i),z=pos.getZ(i),tx=Math.max(0,Math.min(47,Math.floor((x+96)/4))),ty=Math.max(0,Math.min(47,Math.floor((z+96)/4))),t=w.tiles[ty*48+tx];let c;if(this.overlay==='none'){c=terrainColor(w,x,z)}else{c=new THREE.Color('#bcbfc1');if(this.overlay==='zones'&&(t.zone||zoneColors[t.type]))c.set(CityEngine.ZONES[t.zone]?.color||zoneColors[t.type]);if(this.overlay==='traffic'&&t.type==='road')c.set(stats.traffic>65?'#df7358':'#79bf85');if(this.overlay==='utilities'&&t.type)c.set(['power','water'].includes(t.type)?'#49c1ed':'#98afbc');if(this.overlay==='pollution'&&t.type==='industrial')c.set('#d2ac63')}colors.setXYZ(i,c.r,c.g,c.b)}colors.needsUpdate=true;ground.material.color.set(this.overlay==='none'?'#ffffff':'#dce0df')}
 setupCars(){if(!this.traffic)this.traffic=new Traffic(this.world,CityEngine);else this.traffic.rebuild(this.world);this.roadworks.syncSignals(this.traffic);if(!this.cars.length){for(let i=0;i<32;i++){const mesh=this.carModel(i),agent=this.traffic.addAgent();mesh.scale.setScalar(0);this.cars.push({mesh,agent});}this.vehicles.rebuildFleet(this.cars,this.carGroup);}for(const car of this.cars)this.moveCar(car);if(!this.menu){this.traffic.residentsEnabled=true;if(!this.residents)this.residents=new Residents(this.world,this.traffic);else this.residents.reconcile();}this.vehicles.updateFleet(this.cars);}
 carModel(i){return this.vehicles.create(i)}
-moveCar(car){const a=car.agent;if(!a?.active){car.mesh.scale.setScalar(0);return}car.mesh.scale.setScalar(1);car.mesh.position.set(a.x,this.roadworks.height(this.world,a.x,a.z)+.08,a.z);car.mesh.rotation.y=a.heading;}
+moveCar(car){const a=car.agent;if(!a?.active){car.mesh.scale.setScalar(0);return}car.mesh.scale.setScalar(1);if(car.heightWorld!==this.world||car.heightX!==a.x||car.heightZ!==a.z){car.roadHeight=this.roadworks.height(this.world,a.x,a.z)+.08;car.heightWorld=this.world;car.heightX=a.x;car.heightZ=a.z;}car.mesh.position.set(a.x,car.roadHeight,a.z);car.mesh.rotation.y=a.heading;}
 focusOutside(){const p=this.traffic?.portals[0];if(!p)return;this.controls.target.set(p.x,1,p.z);this.camera.position.set(p.x+18,22,p.z+25);this.controls.update();}
 
 setOverlay(v){if(this.overlay===v)return;this.overlay=v;this.refresh(true);if(v==='none')this.updateOverlay()}

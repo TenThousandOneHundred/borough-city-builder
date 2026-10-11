@@ -24,7 +24,7 @@ export class Junctions {
  }
  limit(agent,time,dt,policy,agents){const route=this.route(agent.points),position=(route.distances[agent.segment]??route.distances.at(-1))+(agent.distance||0);let limit=Infinity;agent.waitReason='';
   for(const gate of route.gates){const j=gate.junction;if(j.owner&&(!j.owner.active||j.owner.points!==j.owner.gatePoints))j.owner=null;
-   if(position>gate.exit+1.4){if(j.owner===agent)j.owner=null;continue;}
+   if(position>gate.exit){if(position>gate.exit+1.4&&j.owner===agent)j.owner=null;continue;}
    if(position<gate.entry-9)break;
    if(j.owner===agent)continue;
    const remaining=Math.max(0,gate.entry-position-.3);
