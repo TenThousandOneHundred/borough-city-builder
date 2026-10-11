@@ -1,6 +1,7 @@
-import {batchStatic} from './static-batch.js?v=15';
+import {outsidePortals} from './traffic.js?v=16';
+import {batchStatic} from './static-batch.js?v=16';
 import * as THREE from './vendor/three.module.js';
-import {floorHeight,groundHeight,wetness} from './landscape.js?v=15';
+import {floorHeight,groundHeight,wetness} from './landscape.js?v=16';
 export class Roadworks{
 constructor(v){this.v=v;this.group=new THREE.Group();v.scene.add(this.group);this.lamps=[];}
 clear(){this.group.traverse(o=>{if(o.geometry&&o.geometry!==this.v.unitBox)o.geometry.dispose()});this.group.clear();this.lamps=[]}
@@ -18,7 +19,10 @@ if(dirs.length>=3&&i%2===0){this.signal(x+1.66,this.height(w,x,z),z+1.66)}
 if(i%5===0&&t.ground!=='water'){let horizontal=dirs.some(d=>d.x),lx=x+(horizontal?0:1.8),lz=z+(horizontal?1.8:0),y=this.height(w,lx,lz);this.lamp(lx,y,lz,horizontal)}
 }
 for(const path of w.roadPaths||[])this.path(w,path,asphalt,walk,curb);
-const out=[{x:-140,z:2},{x:-96,z:2}];this.ribbon(w,out,3.4,0,asphalt);this.line(w,out,.03,'#dbd5b4');this.batchStats=batchStatic(this.group,this.v.unitBox);}
+for(const portal of outsidePortals(w))this.outside(w,portal,asphalt);this.batchStats=batchStatic(this.group,this.v.unitBox);}
+outside(w,p,asphalt){const points=[];for(let d=0;d<=280;d+=4)points.push({x:p.x+p.dx*d,z:p.z+p.dz*d});this.ribbon(w,points,3.4,0,asphalt);this.line(w,points,.055,'#e4d9a2');for(const side of [-1,1])this.line(w,points,.045,'#e3e2d6',side*1.5);
+ const x=p.x+p.dx*8+p.dz*2.8,z=p.z+p.dz*8-p.dx*2.8,y=this.height(w,x,z);this.v.box(this.group,x,y+2,z,.08,4,.08,'#747d79');
+ const canvas=document.createElement('canvas');canvas.width=512;canvas.height=128;const c=canvas.getContext('2d');c.fillStyle='#164f43';c.fillRect(0,0,512,128);c.strokeStyle='#ffffff';c.lineWidth=6;c.strokeRect(5,5,502,118);c.fillStyle='#ffffff';c.font='bold 34px sans-serif';c.textAlign='center';c.fillText('OUTSIDE CONNECTION',256,54);c.font='27px sans-serif';c.fillText('Regional highway  ↔',256,97);const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;const sign=new THREE.Mesh(new THREE.PlaneGeometry(5,1.25),new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide}));sign.position.set(x,y+4,z);sign.rotation.y=p.dx?Math.PI/2:0;this.group.add(sign);}
 path(w,path,asphalt,walk,curb){const spec=CityEngine.ROADS[path.type],points=CityEngine.sampleRoad(path.controls).map(p=>({x:(p.x+.5)*4-96,z:(p.y+.5)*4-96})),width=spec.width;this.ribbon(w,points,width+(spec.sidewalk?.7:.35),0,spec.sidewalk?walk:this.v.mat('#9a9784'),.1);this.ribbon(w,points,width,0,path.type==='gravel'?this.v.mat('#928875'):asphalt,.13);for(const side of [-1,1])this.ribbon(w,points,.045,side*(width/2-.09),spec.sidewalk?curb:this.v.mat('#c9c7b6'),.17);
 if(spec.median)this.ribbon(w,points,.18,0,curb,.18);for(let lane=1;lane<spec.lanes;lane++){if(spec.median&&lane===spec.lanes/2)continue;for(let j=0;j<points.length-2;j+=7)this.ribbon(w,points.slice(j,Math.min(j+4,points.length)),.025,-width/2+lane*width/spec.lanes,this.v.mat(lane===spec.lanes/2&&!spec.oneway?'#c6bd98':'#d6d3c4'),.18)}
 for(let j=4;j<points.length-1;j+=35){const p=points[j],a=points[j-1],b=points[j+1],dx=b.x-a.x,dz=b.z-a.z,l=Math.hypot(dx,dz)||1;if(spec.sidewalk)this.lamp(p.x-dz/l*(width/2+.25),this.height(w,p.x,p.z),p.z+dx/l*(width/2+.25),Math.abs(dx)>Math.abs(dz));if(wetness(w,p.x,p.z)>.3){this.v.box(this.group,p.x,this.height(w,p.x,p.z)/2-1,p.z,.4,this.height(w,p.x,p.z)+2,.4,'#9a9a8f')}if(spec.oneway){const dir={x:dx/l,z:dz/l};for(const side of [-1,1])this.line(w,[{x:p.x-dir.x*.4-dir.z*side*.22,z:p.z-dir.z*.4+dir.x*side*.22},p],.07,'#dedbc9')}if(spec.green){const tree=new THREE.Mesh(new THREE.SphereGeometry(.55,10,8),this.v.mat('#61754b'));tree.scale.y=1.4;tree.position.set(p.x+dz/l*(width/2+.25),this.height(w,p.x,p.z)+1.3,p.z-dx/l*(width/2+.25));tree.castShadow=true;this.group.add(tree)}}

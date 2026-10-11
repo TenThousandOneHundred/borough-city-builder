@@ -1,8 +1,8 @@
-import {districtBuilding} from './districts.js?v=15';
+import {districtBuilding} from './districts.js?v=16';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {floorHeight} from './landscape.js?v=15';
+import {floorHeight} from './landscape.js?v=16';
 export class Architecture{
 constructor(view){this.v=view;this.cache=new Map();this.roof=this.roofMaterial();this.roofs=new Map();this.ready=Promise.all([this.loadKit(),this.loadArchitecture()]);}
 async loadKit(){try{const gltf=await new GLTFLoader().loadAsync(new URL('./assets/facade/facade.gltf',import.meta.url).href);this.kit=gltf.scene.children;this.kit.forEach(node=>node.traverse(o=>{if(o.isMesh){o.material.envMapIntensity=.25;o.material.roughness=Math.max(.4,o.material.roughness);o.castShadow=true;o.receiveShadow=true}}))}catch(e){console.warn('Detailed facade fallback:',e.message)}}
