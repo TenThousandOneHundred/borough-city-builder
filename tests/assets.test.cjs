@@ -19,3 +19,22 @@ for(const image of model.images)assert.ok(model.bufferViews[image.bufferView]);
 assert.ok(tree.length<4*1024*1024,'nearby tree stays within download budget');
 
 for(const file of ['rock-color.jpg','rock-normal.jpg']){const b=fs.readFileSync(path.join(root,'assets',file));assert.equal(b.readUInt16BE(0),0xffd8);assert.ok(b.length>10000&&b.length<2*1024*1024);}
+
+let buildingCount=0;
+for(const file of ['buildings/urban.glb','buildings/industry.glb','coast.glb']){
+ const data=fs.readFileSync(path.join(root,'assets',file));
+ assert.equal(data.toString('utf8',0,4),'glTF');assert.equal(data.readUInt32LE(4),2);assert.equal(data.readUInt32LE(8),data.length);
+ const gltf=JSON.parse(data.toString('utf8',20,20+data.readUInt32LE(12)));
+ assert.ok(data.length<12*1024*1024,file+' download budget');
+ for(const buffer of gltf.buffers)assert.equal(buffer.uri,undefined,'self contained GLB');
+ for(const view of gltf.bufferViews)assert.ok((view.byteOffset||0)+view.byteLength<=gltf.buffers[view.buffer].byteLength);
+ for(const image of gltf.images)assert.ok(gltf.bufferViews[image.bufferView],'embedded texture');
+ for(const mesh of gltf.meshes)for(const primitive of mesh.primitives){assert.ok(gltf.accessors[primitive.attributes.POSITION]);assert.ok(gltf.materials[primitive.material]);}
+ if(file.startsWith('buildings/')){
+  const roots=gltf.scenes[gltf.scene||0].nodes;buildingCount+=roots.length;
+  const triangles=index=>{const node=gltf.nodes[index];return (node.mesh===undefined?0:gltf.meshes[node.mesh].primitives.reduce((n,p)=>n+gltf.accessors[p.indices ?? p.attributes.POSITION].count/3,0))+(node.children||[]).reduce((n,i)=>n+triangles(i),0)};
+  for(const index of roots){assert.ok(gltf.nodes[index].extras.category);assert.ok(triangles(index)<200000,'complete building triangle budget');}
+ }
+}
+assert.equal(buildingCount,21);
+console.log('21 complete GLB buildings and scanned coast verified');

@@ -36,3 +36,11 @@ Tree Small 02 by Rico Cilliers / Poly Haven (CC0) is also supplied as a simplifi
 ## Edition 12 terrain
 
 [Rock Face 03](https://polyhaven.com/a/rock_face_03), Poly Haven, CC0. The 1K diffuse and OpenGL normal maps are used for exposed terrain. License: https://polyhaven.com/license
+
+## Edition 13 complete building libraries and scanned coast
+
+- [Modular Urban Apartments Facade](https://polyhaven.com/a/modular_urban_apartments_facade), James Ray Cock / Poly Haven, CC0. Artist-created facade modules assembled into 16 complete buildings, with original textures, simplified geometry and additional original roof/entrance geometry.
+- [Modular Factory Facade](https://polyhaven.com/a/modular_factory_facade), Poly Haven, CC0. Artist-created modules assembled into five complete industrial, retail and loft buildings; simplified geometry with original textures.
+- [Coast Rocks 02](https://polyhaven.com/a/coast_rocks_02), Poly Haven, CC0. Scanned coastal geometry simplified and textures resized to 1K.
+
+These GLB files embed their textures. Building assemblies are original adaptations, not Cities: Skylines II assets. All source assets use https://polyhaven.com/license . Earlier procedural models remain as loading-failure fallbacks.

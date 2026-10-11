@@ -1,25 +1,29 @@
-import {buildHouse} from './house-architecture.js?v=12';
-import {buildUrban} from './city-architecture.js?v=12';
+import {ModelLibrary} from './model-library.js?v=13';
+import {buildHouse} from './house-architecture.js?v=13';
+import {buildUrban} from './city-architecture.js?v=13';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import * as THREE from './vendor/three.module.js';
-import {MeshBuilder} from './mesh-builder.js?v=12';
-import {BuildingMaterials} from './building-materials.js?v=12';
-import {lotPlan} from './building-plan.js?v=12';
-import {floorHeight} from './landscape.js?v=12';
+import {MeshBuilder} from './mesh-builder.js?v=13';
+import {BuildingMaterials} from './building-materials.js?v=13';
+import {lotPlan} from './building-plan.js?v=13';
+import {floorHeight} from './landscape.js?v=13';
 
 export class BuildingFactory{
- constructor(view){this.view=view;this.materials=new BuildingMaterials(view);this.batchRoot=new THREE.Group();view.scene.add(this.batchRoot);}
+ constructor(view){this.view=view;this.library=view.renderer?new ModelLibrary(view):null;this.ready=this.library?.ready||Promise.resolve();this.materials=new BuildingMaterials(view);this.batchRoot=new THREE.Group();view.scene.add(this.batchRoot);}
  rebuild(buildings){
-  this.batchRoot.traverse(o=>o.geometry?.dispose());this.batchRoot.clear();const batches=new Map();
+  this.batchRoot.traverse(o=>{if(o.isInstancedMesh)o.dispose();if(!o.userData.sharedAsset)o.geometry?.dispose();});this.batchRoot.clear();const batches=new Map(),instances=new Map();
   for(const root of buildings.values()){
    if(!root.userData.factory)continue;root.updateMatrixWorld(true);
+   if(root.userData.asset){root.traverse(o=>{if(!o.isMesh)return;const key=o.geometry.uuid+':'+o.material.uuid;if(!instances.has(key))instances.set(key,{geometry:o.geometry,material:o.material,transforms:[]});instances.get(key).transforms.push(o.matrixWorld.clone());});continue;}
    root.traverse(o=>{if(!o.isMesh)return;const geometry=o.geometry.clone().applyMatrix4(o.matrixWorld);if(!batches.has(o.material))batches.set(o.material,[]);batches.get(o.material).push(geometry);});
   }
+  for(const {geometry,material,transforms}of instances.values()){const mesh=new THREE.InstancedMesh(geometry,material,transforms.length);transforms.forEach((matrix,i)=>mesh.setMatrixAt(i,matrix));mesh.userData.sharedAsset=true;mesh.castShadow=mesh.receiveShadow=true;mesh.computeBoundingSphere();this.batchRoot.add(mesh);}
   for(const [material,parts]of batches){const geometry=mergeGeometries(parts,false);parts.forEach(g=>g.dispose());if(!geometry)continue;geometry.computeBoundingSphere();const mesh=new THREE.Mesh(geometry,material);mesh.castShadow=true;mesh.receiveShadow=true;this.batchRoot.add(mesh);}
  }
 
  accepts(tile){return ['residential','commercial','office','industrial'].includes(tile.type);}
  create(world,index,parcel){
+  const asset=this.library?.create(world,index,parcel);if(asset)return asset;
   const p=lotPlan(world,index,parcel),b=new MeshBuilder(),m=(name,t=p.tone)=>this.materials.get(name,t),fh=.64,night=this.view.night;
   const cladding=m(p.style%2===0?'masonry':'plaster'),concrete=m('concrete'),metal=m('metal'),glass=m('glass'),recess=m('recess'),roof=m('roof'),paving=m('paving');
   const W=p.lotWidth,D=p.lotDepth;
