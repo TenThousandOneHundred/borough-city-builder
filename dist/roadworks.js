@@ -1,5 +1,6 @@
+import {batchStatic} from './static-batch.js?v=15';
 import * as THREE from './vendor/three.module.js';
-import {floorHeight,groundHeight,wetness} from './landscape.js?v=14';
+import {floorHeight,groundHeight,wetness} from './landscape.js?v=15';
 export class Roadworks{
 constructor(v){this.v=v;this.group=new THREE.Group();v.scene.add(this.group);this.lamps=[];}
 clear(){this.group.traverse(o=>{if(o.geometry&&o.geometry!==this.v.unitBox)o.geometry.dispose()});this.group.clear();this.lamps=[]}
@@ -17,7 +18,7 @@ if(dirs.length>=3&&i%2===0){this.signal(x+1.66,this.height(w,x,z),z+1.66)}
 if(i%5===0&&t.ground!=='water'){let horizontal=dirs.some(d=>d.x),lx=x+(horizontal?0:1.8),lz=z+(horizontal?1.8:0),y=this.height(w,lx,lz);this.lamp(lx,y,lz,horizontal)}
 }
 for(const path of w.roadPaths||[])this.path(w,path,asphalt,walk,curb);
-const out=[{x:-140,z:2},{x:-96,z:2}];this.ribbon(w,out,3.4,0,asphalt);this.line(w,out,.03,'#dbd5b4');}
+const out=[{x:-140,z:2},{x:-96,z:2}];this.ribbon(w,out,3.4,0,asphalt);this.line(w,out,.03,'#dbd5b4');this.batchStats=batchStatic(this.group,this.v.unitBox);}
 path(w,path,asphalt,walk,curb){const spec=CityEngine.ROADS[path.type],points=CityEngine.sampleRoad(path.controls).map(p=>({x:(p.x+.5)*4-96,z:(p.y+.5)*4-96})),width=spec.width;this.ribbon(w,points,width+(spec.sidewalk?.7:.35),0,spec.sidewalk?walk:this.v.mat('#9a9784'),.1);this.ribbon(w,points,width,0,path.type==='gravel'?this.v.mat('#928875'):asphalt,.13);for(const side of [-1,1])this.ribbon(w,points,.045,side*(width/2-.09),spec.sidewalk?curb:this.v.mat('#c9c7b6'),.17);
 if(spec.median)this.ribbon(w,points,.18,0,curb,.18);for(let lane=1;lane<spec.lanes;lane++){if(spec.median&&lane===spec.lanes/2)continue;for(let j=0;j<points.length-2;j+=7)this.ribbon(w,points.slice(j,Math.min(j+4,points.length)),.025,-width/2+lane*width/spec.lanes,this.v.mat(lane===spec.lanes/2&&!spec.oneway?'#c6bd98':'#d6d3c4'),.18)}
 for(let j=4;j<points.length-1;j+=35){const p=points[j],a=points[j-1],b=points[j+1],dx=b.x-a.x,dz=b.z-a.z,l=Math.hypot(dx,dz)||1;if(spec.sidewalk)this.lamp(p.x-dz/l*(width/2+.25),this.height(w,p.x,p.z),p.z+dx/l*(width/2+.25),Math.abs(dx)>Math.abs(dz));if(wetness(w,p.x,p.z)>.3){this.v.box(this.group,p.x,this.height(w,p.x,p.z)/2-1,p.z,.4,this.height(w,p.x,p.z)+2,.4,'#9a9a8f')}if(spec.oneway){const dir={x:dx/l,z:dz/l};for(const side of [-1,1])this.line(w,[{x:p.x-dir.x*.4-dir.z*side*.22,z:p.z-dir.z*.4+dir.x*side*.22},p],.07,'#dedbc9')}if(spec.green){const tree=new THREE.Mesh(new THREE.SphereGeometry(.55,10,8),this.v.mat('#61754b'));tree.scale.y=1.4;tree.position.set(p.x+dz/l*(width/2+.25),this.height(w,p.x,p.z)+1.3,p.z-dx/l*(width/2+.25));tree.castShadow=true;this.group.add(tree)}}

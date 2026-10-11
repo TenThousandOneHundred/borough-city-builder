@@ -1,12 +1,12 @@
-import {ModelLibrary} from './model-library.js?v=14';
-import {buildHouse} from './house-architecture.js?v=14';
-import {buildUrban} from './city-architecture.js?v=14';
+import {ModelLibrary} from './model-library.js?v=15';
+import {buildHouse} from './house-architecture.js?v=15';
+import {buildUrban} from './city-architecture.js?v=15';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import * as THREE from './vendor/three.module.js';
-import {MeshBuilder} from './mesh-builder.js?v=14';
-import {BuildingMaterials} from './building-materials.js?v=14';
-import {lotPlan} from './building-plan.js?v=14';
-import {floorHeight} from './landscape.js?v=14';
+import {MeshBuilder} from './mesh-builder.js?v=15';
+import {BuildingMaterials} from './building-materials.js?v=15';
+import {lotPlan} from './building-plan.js?v=15';
+import {floorHeight} from './landscape.js?v=15';
 
 export class BuildingFactory{
  constructor(view){this.view=view;this.library=view.renderer?new ModelLibrary(view):null;this.ready=this.library?.ready||Promise.resolve();this.materials=new BuildingMaterials(view);this.batchRoot=new THREE.Group();view.scene.add(this.batchRoot);}
@@ -19,11 +19,11 @@ export class BuildingFactory{
   }
   this.instanceBatches=[];
   for(const {geometry,material,transforms}of instances.values()){const make=g=>{const mesh=new THREE.InstancedMesh(g,material,transforms.length);transforms.forEach(({matrix},i)=>mesh.setMatrixAt(i,matrix));mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);mesh.userData.sharedAsset=true;mesh.castShadow=mesh.receiveShadow=true;mesh.frustumCulled=false;this.batchRoot.add(mesh);return mesh;};const near=make(geometry),far=geometry.userData.lod?make(geometry.userData.lod):null;if(far)far.count=0;this.instanceBatches.push({near,far,transforms});}
-  this.updateVisibility();
+  this.visibilitySignature=null;this.updateVisibility();
   for(const [material,parts]of batches){const geometry=mergeGeometries(parts,false);parts.forEach(g=>g.dispose());if(!geometry)continue;geometry.computeBoundingSphere();const mesh=new THREE.Mesh(geometry,material);mesh.castShadow=true;mesh.receiveShadow=true;this.batchRoot.add(mesh);}
  }
 
- updateVisibility(){if(!this.view.camera)return;const camera=this.view.camera;camera.updateMatrixWorld();const frustum=new THREE.Frustum().setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse));const threshold=this.view.detailEnabled===false?0:18;
+ updateVisibility(){if(!this.view.camera)return;const camera=this.view.camera;camera.updateMatrixWorld();const signature=camera.matrixWorld.elements.join(',')+camera.projectionMatrix.elements.join(',')+this.view.detailEnabled;if(signature===this.visibilitySignature)return;this.visibilitySignature=signature;const frustum=new THREE.Frustum().setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse));const threshold=this.view.detailEnabled===false?0:18;
   for(const {near,far,transforms}of this.instanceBatches||[]){near.count=0;if(far)far.count=0;for(const {matrix,sphere}of transforms){if(!frustum.intersectsSphere(sphere))continue;const mesh=far&&camera.position.distanceTo(sphere.center)>threshold?far:near;mesh.setMatrixAt(mesh.count++,matrix);}near.instanceMatrix.needsUpdate=true;if(far)far.instanceMatrix.needsUpdate=true;}
  }
  accepts(tile){return ['residential','commercial','office','industrial'].includes(tile.type);}
