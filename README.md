@@ -137,3 +137,11 @@ The private-building renderer has been replaced for housing, commerce, offices a
 City geometry is combined into shared material batches instead of drawing every building separately. Daylight, glass and scanned cladding have been retuned. The river now reflects the actual scene through Three.js's MIT-licensed Reflector, refreshed at a capped rate; Low graphics disables the reflection pass. Terrain materials add finer ground variation. Geometry regression tests cover parcel orientation, visible roof normals, finite surfaces, batching bounds and vehicle size.
 
 This is a larger renderer replacement, but still an original procedural browser city-builder with lower visual and simulation complexity than Cities: Skylines II. Save format, five-minute autosave, manual save, multiple worlds, curved roads, zoning and the explicit home-screen start flow remain unchanged.
+
+## Edition 12 architecture and terrain replacement
+
+Urban architecture now uses continuous concave or curved floor outlines: L-shaped and U-shaped blocks, chamfered slabs, rounded offices, elliptical towers and terraced silhouettes. Facades follow those outlines at a consistent bay width, with recessed rooms, blinds, cornices, cantilevered balconies and glass railings. Roof triangulation preserves open courtyards, and mechanical plant is placed inside each actual footprint. Detached houses now have hip roofs, dormers, projecting bay windows, secondary wings, garages, porches and garden details. Building height varies independently from architectural family.
+
+Surrounding terrain uses a cached, seeded, domain-warped ridged heightfield with 26 thermal erosion passes. The playable valley retains its previous elevation range. Scanned rock textures blend across steep faces, with ground grasses and riverbank reeds in undeveloped areas. Low graphics hides this ground cover. Atmospheric haze is reduced so distant landforms remain visible.
+
+Automated tests additionally verify concave roof triangulation, roof orientation, deterministic terrain and the playable valley elevation boundary. These changes retain the save schema and all simulation controls. The result remains an original procedural game; it does not match the commercial game's visual detail or simulation breadth.

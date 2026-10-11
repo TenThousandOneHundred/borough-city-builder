@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import {MeshBuilder} from './mesh-builder.js?v=11';
+import {MeshBuilder} from './mesh-builder.js?v=12';
 export class Vehicles{
  constructor(){this.materials=new Map();}
  mat(name,color,metalness=0,roughness=.7){if(!this.materials.has(name))this.materials.set(name,new THREE.MeshStandardMaterial({color,metalness,roughness}));return this.materials.get(name);}

@@ -17,3 +17,5 @@ const jsonLength=tree.readUInt32LE(12),model=JSON.parse(tree.toString('utf8',20,
 for(const v of model.bufferViews)assert.ok((v.byteOffset||0)+v.byteLength<=model.buffers[v.buffer].byteLength);
 for(const image of model.images)assert.ok(model.bufferViews[image.bufferView]);
 assert.ok(tree.length<4*1024*1024,'nearby tree stays within download budget');
+
+for(const file of ['rock-color.jpg','rock-normal.jpg']){const b=fs.readFileSync(path.join(root,'assets',file));assert.equal(b.readUInt16BE(0),0xffd8);assert.ok(b.length>10000&&b.length<2*1024*1024);}

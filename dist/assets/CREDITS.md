@@ -32,3 +32,7 @@ RGBELoader is Three.js r170, MIT, alongside the existing Three.js license.
 ## Edition 10 close-range vegetation
 
 Tree Small 02 by Rico Cilliers / Poly Haven (CC0) is also supplied as a simplified 3D GLB for nearby trees. Reduced with glTF Transform/meshoptimizer to a target 2% geometry ratio, with textures resized to 512 pixels. Distant trees retain the rendered views.
+
+## Edition 12 terrain
+
+[Rock Face 03](https://polyhaven.com/a/rock_face_03), Poly Haven, CC0. The 1K diffuse and OpenGL normal maps are used for exposed terrain. License: https://polyhaven.com/license

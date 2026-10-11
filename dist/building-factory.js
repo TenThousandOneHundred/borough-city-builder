@@ -1,9 +1,11 @@
+import {buildHouse} from './house-architecture.js?v=12';
+import {buildUrban} from './city-architecture.js?v=12';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import * as THREE from './vendor/three.module.js';
-import {MeshBuilder} from './mesh-builder.js?v=11';
-import {BuildingMaterials} from './building-materials.js?v=11';
-import {lotPlan} from './building-plan.js?v=11';
-import {floorHeight} from './landscape.js?v=11';
+import {MeshBuilder} from './mesh-builder.js?v=12';
+import {BuildingMaterials} from './building-materials.js?v=12';
+import {lotPlan} from './building-plan.js?v=12';
+import {floorHeight} from './landscape.js?v=12';
 
 export class BuildingFactory{
  constructor(view){this.view=view;this.materials=new BuildingMaterials(view);this.batchRoot=new THREE.Group();view.scene.add(this.batchRoot);}
@@ -81,18 +83,7 @@ export class BuildingFactory{
   const ground=p.low?m('lawn'):paving;
   b.box(0,-.02,0,W-.08,.04,D-.08,ground);
   if(p.low){
-   const bw=1.85+p.variation*.7,bd=1.75+p.style%3*.16,x=-.24,z=-.3;
-   const h=block(x,z,bw,bd,p.floors,0,'masonry');
-   gable(x,z,bw+.24,bd+.24,h,.48+p.variation*.16);
-   if(p.style!==0){const h2=block(bw*.47,-.32,.85,1.5,1,0,'masonry');gable(bw*.47,-.32,1.0,1.67,h2,.3);}
-   b.box(x,.35,z+bd/2+.035,.28,.67,.07,m('wood'));
-   b.box(x,.045,1.32,.62,.09,.75,paving);
-   b.box(x,.79,1.08,1.22,.07,.65,roof);
-   for(const s of [-1,1])b.box(x+s*.52,.43,1.29,.04,.78,.04,concrete);
-   b.box(x-.6,h+.26,z-.4,.14,.58,.19,cladding);
-   b.box(-1.34,.012,.88,.63,.024,1.95,paving);
-   for(const s of [-1,1]){for(let i=0;i<10;i++)b.box(s*(W/2-.12),.15,-D/2+.2+i*(D-.5)/9,.026,.3,.035,m('wood'));b.box(s*(W/2-.12),.22,-.08,.026,.025,D-.3,m('wood'));}
-   plant(.92,0,1.63,1.14,.3);
+   buildHouse(b,p,m,block,gable,plant);
   }else if(p.type==='industrial'){
    const bw=W-.5,bd=D-.9,h=2*fh;block(0,-.2,bw,bd,2,0,'masonry');gable(0,-.2,bw+.1,bd+.15,h,.38);
    for(let j=0;j<3;j++){const x=(j-1)*bw*.28;b.box(x,.48,bd/2-.17,bw*.23,.92,.04,metal);for(let k=0;k<6;k++)b.box(x,.15+k*.13,bd/2-.14,bw*.22,.016,.015,concrete);}
@@ -102,25 +93,7 @@ export class BuildingFactory{
    for(let j=0;j<4;j++){const x=(j-1.5)*bw/4;b.box(x,.76,z+bd/2+.09,bw/4-.04,.09,.3,m('metal',p.style%5));}
    b.box(0,.92,z+bd/2+.05,bw*.65,.14,.1,m('wood'));plant(-W*.38,0,D*.34,.36,.45);
   }else{
-   const bw=W-.26,bd=D-.35,podium=Math.min(2,p.floors),baseH=block(0,0,bw,bd,podium,0,'glass');
-   const remaining=Math.max(1,p.floors-podium),courtyard=p.style===0&&Math.min(W,D)>5;
-   if(courtyard){
-    const wing=Math.min(1.55,bw*.25),height=block(-(bw-wing)/2,0,wing,bd,remaining,baseH,'masonry');
-    block((bw-wing)/2,0,wing,bd,remaining,baseH,'masonry');block(0,-(bd-wing)/2,bw-wing*2,wing,remaining,baseH,'masonry');
-    block(0,(bd-wing)/2,bw-wing*2,wing,Math.max(2,remaining-2),baseH,'masonry');
-    roofwork(-(bw-wing)/2,height,0,wing,bd);roofwork((bw-wing)/2,height,0,wing,bd);plant(0,baseH,0,bw-wing*2-.2,bd-wing*2-.2);
-   }else{
-    const setback=p.style===3?.65:.25,tw=bw-setback*2,td=bd-setback*2,tz=-setback*.45;
-    const curtain=p.type==='office'&&(p.style===2||p.style===5),h=block(0,tz,tw,td,remaining,baseH,curtain?'glass':'masonry');
-    roofwork(0,h,tz,tw,td,p.style===3);
-    if(p.style===3){plant(-bw*.3,baseH,bd*.38,.75,.35);plant(bw*.3,baseH,bd*.38,.75,.35);}
-    if(p.type==='residential'&&p.style%2===1){const bays=Math.max(2,Math.floor(tw/.75));for(let f=podium+1;f<p.floors;f++)for(let j=0;j<bays;j++)balcony(-tw/2+(j+.5)*tw/bays,tz+td/2+.12,tw/bays*.82,f*fh);}
-    if(p.style===4&&p.floors>8){const cap=block(-tw*.12,tz-.15,tw*.57,td*.6,2,h,'glass');roofwork(-tw*.12,cap,tz-.15,tw*.57,td*.6);}
-   }
-   // Lobby doors, a transparent canopy and signage are human-scaled on any lot.
-   b.box(0,.46,bd/2+.045,.64,.9,.04,recess);for(const s of [-1,1])b.box(s*.17,.46,bd/2+.075,.28,.8,.015,glass);
-   b.box(0,1.02,bd/2+.17,.95,.045,.34,metal);
-   for(const s of [-1,1])plant(s*(bw*.39),0,bd/2-.11,.4,.3);
+   buildUrban(b,{...p,night},m,roofwork);
   }
   const root=b.finish();root.rotation.y=p.angle;
   let base=floorHeight(world,p.cx,p.cz);for(const dx of [-W/2+.1,W/2-.1])for(const dz of [-D/2+.1,D/2-.1]){const x=p.cx+dx*Math.cos(p.angle)+dz*Math.sin(p.angle),z=p.cz-dx*Math.sin(p.angle)+dz*Math.cos(p.angle);base=Math.max(base,floorHeight(world,x,z));}

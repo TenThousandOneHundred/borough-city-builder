@@ -1,18 +1,18 @@
-import {Vehicles} from './vehicles.js?v=11';
-import {BuildingFactory} from './building-factory.js?v=11';
-import {StreetLife} from './street-life.js?v=11';
-import {visualParcels} from './parcels.js?v=11';
-import {Graphics} from './graphics.js?v=11';
-import {Vegetation} from './vegetation.js?v=11';
+import {Vehicles} from './vehicles.js?v=12';
+import {BuildingFactory} from './building-factory.js?v=12';
+import {StreetLife} from './street-life.js?v=12';
+import {visualParcels} from './parcels.js?v=12';
+import {Graphics} from './graphics.js?v=12';
+import {Vegetation} from './vegetation.js?v=12';
 import {RGBELoader} from './vendor/RGBELoader.js';
 import * as THREE from './vendor/three.module.js';
 import {OrbitControls} from './vendor/OrbitControls.js';
-import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=11';
-import {Architecture} from './architecture.js?v=11';
-import {Roadworks} from './roadworks.js?v=11';
+import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=12';
+import {Architecture} from './architecture.js?v=12';
+import {Roadworks} from './roadworks.js?v=12';
 const N=48,T=4,HALF=96,zoneColors={residential:'#54b663',commercial:'#5bb1d8',industrial:'#cdb268',office:'#aa87c9'};
 export class CityView{
-constructor(canvas){this.canvas=canvas;this.scene=new THREE.Scene();this.scene.background=new THREE.Color('#aebfca');this.scene.fog=new THREE.FogExp2('#b7c6cc',.0018);
+constructor(canvas){this.canvas=canvas;this.scene=new THREE.Scene();this.scene.background=new THREE.Color('#aebfca');this.scene.fog=new THREE.FogExp2('#b7c6cc',.00105);
 this.renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'high-performance'});this.renderer.setPixelRatio(Math.min(devicePixelRatio,2));this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=THREE.PCFSoftShadowMap;this.renderer.shadowMap.autoUpdate=false;this.renderer.shadowMap.needsUpdate=true;this.renderer.outputColorSpace=THREE.SRGBColorSpace;this.renderer.toneMapping=THREE.ACESFilmicToneMapping;this.renderer.toneMappingExposure=.87;
 this.camera=new THREE.PerspectiveCamera(43,innerWidth/innerHeight,.2,1800);this.camera.position.set(-65,65,90);this.controls=new OrbitControls(this.camera,canvas);this.controls.target.set(-8,1,0);this.controls.enableDamping=true;this.controls.dampingFactor=.08;this.controls.maxPolarAngle=Math.PI*.48;this.controls.minPolarAngle=.13;this.controls.minDistance=12;this.controls.maxDistance=420;this.controls.mouseButtons={LEFT:null,MIDDLE:THREE.MOUSE.PAN,RIGHT:THREE.MOUSE.ROTATE};this.controls.touches={ONE:THREE.TOUCH.ROTATE,TWO:THREE.TOUCH.DOLLY_PAN};
 this.ambient=new THREE.HemisphereLight('#cbdcf0','#606c78',.55);this.scene.add(this.ambient);this.sun=new THREE.DirectionalLight('#fff6e9',3.0);this.sun.position.set(-65,95,70);this.sun.castShadow=true;this.sun.shadow.mapSize.set(4096,4096);Object.assign(this.sun.shadow.camera,{left:-105,right:105,top:105,bottom:-105,near:1,far:340});this.sun.shadow.bias=-.0002;this.sun.shadow.normalBias=.012;this.sun.shadow.radius=2;this.scene.add(this.sun);
