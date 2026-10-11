@@ -44,3 +44,5 @@ Tree Small 02 by Rico Cilliers / Poly Haven (CC0) is also supplied as a simplifi
 - [Coast Rocks 02](https://polyhaven.com/a/coast_rocks_02), Poly Haven, CC0. Scanned coastal geometry simplified and textures resized to 1K.
 
 These GLB files embed their textures. Building assemblies are original adaptations, not Cities: Skylines II assets. All source assets use https://polyhaven.com/license . Earlier procedural models remain as loading-failure fallbacks.
+
+Edition 14 adds simplified distant geometry derived from the same CC0 building assemblies and further simplifies Coast Rocks 02 to 3,527 triangles. Original embedded textures are reused by both building detail levels.

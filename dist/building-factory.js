@@ -1,12 +1,12 @@
-import {ModelLibrary} from './model-library.js?v=13';
-import {buildHouse} from './house-architecture.js?v=13';
-import {buildUrban} from './city-architecture.js?v=13';
+import {ModelLibrary} from './model-library.js?v=14';
+import {buildHouse} from './house-architecture.js?v=14';
+import {buildUrban} from './city-architecture.js?v=14';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import * as THREE from './vendor/three.module.js';
-import {MeshBuilder} from './mesh-builder.js?v=13';
-import {BuildingMaterials} from './building-materials.js?v=13';
-import {lotPlan} from './building-plan.js?v=13';
-import {floorHeight} from './landscape.js?v=13';
+import {MeshBuilder} from './mesh-builder.js?v=14';
+import {BuildingMaterials} from './building-materials.js?v=14';
+import {lotPlan} from './building-plan.js?v=14';
+import {floorHeight} from './landscape.js?v=14';
 
 export class BuildingFactory{
  constructor(view){this.view=view;this.library=view.renderer?new ModelLibrary(view):null;this.ready=this.library?.ready||Promise.resolve();this.materials=new BuildingMaterials(view);this.batchRoot=new THREE.Group();view.scene.add(this.batchRoot);}
@@ -14,13 +14,18 @@ export class BuildingFactory{
   this.batchRoot.traverse(o=>{if(o.isInstancedMesh)o.dispose();if(!o.userData.sharedAsset)o.geometry?.dispose();});this.batchRoot.clear();const batches=new Map(),instances=new Map();
   for(const root of buildings.values()){
    if(!root.userData.factory)continue;root.updateMatrixWorld(true);
-   if(root.userData.asset){root.traverse(o=>{if(!o.isMesh)return;const key=o.geometry.uuid+':'+o.material.uuid;if(!instances.has(key))instances.set(key,{geometry:o.geometry,material:o.material,transforms:[]});instances.get(key).transforms.push(o.matrixWorld.clone());});continue;}
+   if(root.userData.asset){const sphere=new THREE.Box3().setFromObject(root).getBoundingSphere(new THREE.Sphere());root.traverse(o=>{if(!o.isMesh)return;const key=o.geometry.uuid+':'+o.material.uuid;if(!instances.has(key))instances.set(key,{geometry:o.geometry,material:o.material,transforms:[]});instances.get(key).transforms.push({matrix:o.matrixWorld.clone(),sphere});});continue;}
    root.traverse(o=>{if(!o.isMesh)return;const geometry=o.geometry.clone().applyMatrix4(o.matrixWorld);if(!batches.has(o.material))batches.set(o.material,[]);batches.get(o.material).push(geometry);});
   }
-  for(const {geometry,material,transforms}of instances.values()){const mesh=new THREE.InstancedMesh(geometry,material,transforms.length);transforms.forEach((matrix,i)=>mesh.setMatrixAt(i,matrix));mesh.userData.sharedAsset=true;mesh.castShadow=mesh.receiveShadow=true;mesh.computeBoundingSphere();this.batchRoot.add(mesh);}
+  this.instanceBatches=[];
+  for(const {geometry,material,transforms}of instances.values()){const make=g=>{const mesh=new THREE.InstancedMesh(g,material,transforms.length);transforms.forEach(({matrix},i)=>mesh.setMatrixAt(i,matrix));mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);mesh.userData.sharedAsset=true;mesh.castShadow=mesh.receiveShadow=true;mesh.frustumCulled=false;this.batchRoot.add(mesh);return mesh;};const near=make(geometry),far=geometry.userData.lod?make(geometry.userData.lod):null;if(far)far.count=0;this.instanceBatches.push({near,far,transforms});}
+  this.updateVisibility();
   for(const [material,parts]of batches){const geometry=mergeGeometries(parts,false);parts.forEach(g=>g.dispose());if(!geometry)continue;geometry.computeBoundingSphere();const mesh=new THREE.Mesh(geometry,material);mesh.castShadow=true;mesh.receiveShadow=true;this.batchRoot.add(mesh);}
  }
 
+ updateVisibility(){if(!this.view.camera)return;const camera=this.view.camera;camera.updateMatrixWorld();const frustum=new THREE.Frustum().setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse));const threshold=this.view.detailEnabled===false?0:18;
+  for(const {near,far,transforms}of this.instanceBatches||[]){near.count=0;if(far)far.count=0;for(const {matrix,sphere}of transforms){if(!frustum.intersectsSphere(sphere))continue;const mesh=far&&camera.position.distanceTo(sphere.center)>threshold?far:near;mesh.setMatrixAt(mesh.count++,matrix);}near.instanceMatrix.needsUpdate=true;if(far)far.instanceMatrix.needsUpdate=true;}
+ }
  accepts(tile){return ['residential','commercial','office','industrial'].includes(tile.type);}
  create(world,index,parcel){
   const asset=this.library?.create(world,index,parcel);if(asset)return asset;

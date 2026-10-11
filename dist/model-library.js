@@ -1,8 +1,8 @@
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {lotPlan} from './building-plan.js?v=13';
-import {floorHeight} from './landscape.js?v=13';
+import {lotPlan} from './building-plan.js?v=14';
+import {floorHeight} from './landscape.js?v=14';
 // Complete textured assets are loaded once, batched per material, and instanced.
 export class ModelLibrary {
  constructor(view){this.view=view;this.models=[];this.materials=new Set();this.lotGeometry=new THREE.PlaneGeometry(1,1);this.lotGeometry.rotateX(-Math.PI/2);this.ready=this.load();}
@@ -13,6 +13,7 @@ export class ModelLibrary {
     this.ingest(scene);
    }catch(error){console.warn('Building model fallback:',file,error.message);}
   }));
+  try{const [manifest,data]=await Promise.all([fetch(new URL('./assets/buildings/lod.json',import.meta.url)).then(r=>{if(!r.ok)throw Error(r.status);return r.json()}),fetch(new URL('./assets/buildings/lod.bin',import.meta.url)).then(r=>{if(!r.ok)throw Error(r.status);return r.arrayBuffer()})]);this.ingestLod(manifest,data);}catch(error){console.warn('Distant model fallback:',error.message);}
   this.setNight(this.view.night);
  }
  ingest(scene){
@@ -40,6 +41,7 @@ export class ModelLibrary {
     // The merged model library owns its buffers, the import hierarchy can go.
     scene.traverse(o=>o.geometry?.dispose());
  }
+ ingestLod(manifest,data){for(const model of this.models)model.root.children.forEach((mesh,i)=>{const entry=manifest[model.name]?.[i];if(!entry)return;const geometry=new THREE.BufferGeometry();for(const [name,a]of Object.entries(entry.attributes))geometry.setAttribute(name,new THREE.BufferAttribute(new Float32Array(data,a.offset,a.count),a.itemSize));geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(data,entry.index.offset,entry.index.count),1));geometry.computeBoundingSphere();mesh.geometry.userData.lod=geometry;});}
  setNight(on){for(const material of this.materials)if(material.userData.glass){material.emissive.set(on?'#bc9d6e':'#000000');material.emissiveIntensity=on?.23:0;material.emissiveMap=on?material.map:null;material.needsUpdate=true;}}
  create(world,index,parcel){
   if(!this.models.length)return null;const p=lotPlan(world,index,parcel),category=p.low?'residential-low':p.type;

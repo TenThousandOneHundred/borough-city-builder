@@ -1,8 +1,8 @@
-import {ScannedRocks} from './scanned-rocks.js?v=13';
-import {groundCover} from './ground-cover.js?v=13';
-import {terrainField} from './terrain-field.js?v=13';
-import {reflectedWater} from './water.js?v=13';
-import {naturalTerrain} from './terrain-material.js?v=13';
+import {ScannedRocks} from './scanned-rocks.js?v=14';
+import {groundCover} from './ground-cover.js?v=14';
+import {terrainField} from './terrain-field.js?v=14';
+import {reflectedWater} from './water.js?v=14';
+import {naturalTerrain} from './terrain-material.js?v=14';
 import * as THREE from './vendor/three.module.js';
 export const TILE=4,SIZE=48,HALF=96;
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),smooth=t=>t*t*(3-2*t);
@@ -34,5 +34,5 @@ for(let k=0;k<4200;k++){const x=hash(k,77,w.seed)*640-320,z=hash(k,83,w.seed)*64
 makeRocks(w){const points=[];for(let k=0;k<1700;k++){const x=hash(k,131,w.seed)*470-235,z=hash(k,139,w.seed)*470-235,wet=wetness(w,x,z);if(wet<.12||wet>.45||Math.abs(z-2)<5&&x<0)continue;const ix=Math.floor((x+96)/4),iy=Math.floor((z+96)/4);if(ix>=0&&iy>=0&&ix<48&&iy<48&&w.tiles[iy*48+ix].type)continue;points.push([x,z,.15+hash(k,143,w.seed)*.5])}if(this.scannedRocks.populate(this.group,points,groundHeight,w))return;const geo=new THREE.IcosahedronGeometry(1,2),a=geo.attributes.position;for(let i=0;i<a.count;i++){const v=1+.16*Math.sin(a.getX(i)*8+a.getY(i)*7+a.getZ(i)*5);a.setXYZ(i,a.getX(i)*v,a.getY(i)*v,a.getZ(i)*v)}geo.computeVertexNormals();const mesh=new THREE.InstancedMesh(geo,this.view.mat('#87897c'),points.length),d=new THREE.Object3D();points.forEach(([x,z,r],i)=>{d.position.set(x,groundHeight(w,x,z)+r*.23,z);d.scale.set(r*1.4,r*.65,r);d.rotation.set(i*.31,i*.77,0);d.updateMatrix();mesh.setMatrixAt(i,d.matrix);mesh.setColorAt(i,new THREE.Color().setHSL(.14,.06,.68+(i%5)*.035))});mesh.castShadow=true;mesh.receiveShadow=true;this.group.add(mesh)}
 
 refreshTrees(w){if(this.cover){this.group.remove(this.cover);this.cover.geometry.dispose();this.cover.material.dispose();this.cover=groundCover(this.view,w,groundHeight,wetness);this.group.add(this.cover);}for(let o of this.trees||[]){this.group.remove(o);o.dispose?.();o.traverse(m=>{if(m.geometry&&!m.userData.sharedAsset)m.geometry.dispose()})}this.makeTrees(w)}
-update(time,night){if(this.cover)this.cover.visible=this.view.detailEnabled!==false;if(this.waterMaterial){this.waterMaterial.uniforms.time.value=time;this.waterMaterial.uniforms.night.value=night?1:0;this.waterMaterial.uniforms.reflectionEnabled.value=this.view.detailEnabled===false?0:1}}
+update(time,night){if(this.cover)this.cover.visible=this.view.detailEnabled!==false;if(this.waterMaterial){this.waterMaterial.uniforms.time.value=time;this.waterMaterial.uniforms.night.value=night?1:0;this.waterMaterial.uniforms.reflectionEnabled.value=this.view.reflectionsEnabled===false||this.view.detailEnabled===false?0:1}}
 }

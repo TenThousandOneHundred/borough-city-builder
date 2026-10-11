@@ -38,3 +38,6 @@ for(const file of ['buildings/urban.glb','buildings/industry.glb','coast.glb']){
 }
 assert.equal(buildingCount,21);
 console.log('21 complete GLB buildings and scanned coast verified');
+const coastData=fs.readFileSync(path.join(root,'assets/coast.glb')),coast=JSON.parse(coastData.toString('utf8',20,20+coastData.readUInt32LE(12)));
+assert.ok(coast.meshes.reduce((total,m)=>total+m.primitives.reduce((n,p)=>n+coast.accessors[p.indices??p.attributes.POSITION].count/3,0),0)<5000,'coastal patch triangle budget');
+assert.ok(fs.statSync(path.join(root,'assets/buildings/lod.bin')).size<10*1024*1024,'distant geometry download budget');
