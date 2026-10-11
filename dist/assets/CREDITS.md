@@ -28,3 +28,7 @@ Detailed window/door meshes and their PBR textures are adapted from [Modular Urb
 
 All Poly Haven assets above: https://polyhaven.com/license
 RGBELoader is Three.js r170, MIT, alongside the existing Three.js license.
+
+## Edition 10 close-range vegetation
+
+Tree Small 02 by Rico Cilliers / Poly Haven (CC0) is also supplied as a simplified 3D GLB for nearby trees. Reduced with glTF Transform/meshoptimizer to a target 2% geometry ratio, with textures resized to 512 pixels. Distant trees retain the rendered views.

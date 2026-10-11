@@ -125,3 +125,7 @@ Compatible developed cells now share larger visual building sites; simulation ce
 ## Edition 9 architecture and terrain
 
 High-density housing and offices use contour-built floor plates: rounded, elliptical, lens-shaped and tapered profiles, continuous balconies, reflective physical glass, and batched facade ribs. Traditional masonry remains mixed into residential districts. Terrain now blends scanned grass at two world-space scales with soil at low banks and rocky slopes, with more detailed distant ridges and denser woodland. Existing city cells, roads, zoning, persistence and start controls are preserved. Browser checks cover rendered daytime/nighttime scenes; automated geometry tests validate every new profile family.
+
+## Edition 10 city blocks and detail
+
+Most urban development now forms street-facing podiums, perimeter courtyard blocks and varied masonry towers; sculpted towers are less frequent. Roofs include scanned surfaces, ventilation fans, connected ductwork and bounded equipment layouts. Near-camera broadleaf trees use a 2.98 MB simplified CC0 3D model, while distant trees retain lightweight views. Verge trees and instanced decorative pedestrians add street scale; pedestrian animation follows the pause/start state and does not modify simulated population. The home backdrop uses denser downtown blocks and a closer camera. Saved cities and zoning remain intact. This is still a simplified original browser game and does not reproduce Cities: Skylines II.
