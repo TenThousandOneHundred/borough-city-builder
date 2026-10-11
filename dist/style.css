@@ -5,3 +5,6 @@
 .road-modes{display:flex;gap:8px;align-items:center;padding:8px 14px;border-top:1px solid #ffffff15}.road-modes[hidden]{display:none}.road-modes button{padding:7px 14px;border-radius:5px;background:#233a4c;color:#cfdae3;border:1px solid #577286}.road-modes button.active{background:#267ba0;color:white}.road-modes span{font-size:11px;color:#aac2cf}.build-option{min-width:155px}.build-option small{white-space:normal;line-height:1.5;max-width:175px}
 
 .zone-option .model-icon{color:var(--zone-color);text-shadow:0 0 18px color-mix(in srgb,var(--zone-color) 25%,transparent)}.zone-option{border-bottom:3px solid var(--zone-color)!important}.zone-option.active{background:color-mix(in srgb,var(--zone-color) 25%,#243c49)!important}
+/* Keep the growing city overview above the construction toolbar. */
+.info-panel{max-height:calc(100dvh - 230px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+#trafficPolicy{display:block;width:100%;margin-top:7px}

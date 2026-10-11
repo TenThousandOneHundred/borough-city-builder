@@ -1,9 +1,9 @@
-import {outsidePortals} from './traffic.js?v=17';
-import {ScannedRocks} from './scanned-rocks.js?v=17';
-import {groundCover} from './ground-cover.js?v=17';
-import {terrainField} from './terrain-field.js?v=17';
-import {reflectedWater} from './water.js?v=17';
-import {naturalTerrain} from './terrain-material.js?v=17';
+import {outsidePortals} from './traffic.js?v=18';
+import {ScannedRocks} from './scanned-rocks.js?v=18';
+import {groundCover} from './ground-cover.js?v=18';
+import {terrainField} from './terrain-field.js?v=18';
+import {reflectedWater} from './water.js?v=18';
+import {naturalTerrain} from './terrain-material.js?v=18';
 import * as THREE from './vendor/three.module.js';
 export const TILE=4,SIZE=48,HALF=96;
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),smooth=t=>t*t*(3-2*t);
