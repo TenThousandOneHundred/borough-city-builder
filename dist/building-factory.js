@@ -1,0 +1,129 @@
+import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
+import * as THREE from './vendor/three.module.js';
+import {MeshBuilder} from './mesh-builder.js?v=11';
+import {BuildingMaterials} from './building-materials.js?v=11';
+import {lotPlan} from './building-plan.js?v=11';
+import {floorHeight} from './landscape.js?v=11';
+
+export class BuildingFactory{
+ constructor(view){this.view=view;this.materials=new BuildingMaterials(view);this.batchRoot=new THREE.Group();view.scene.add(this.batchRoot);}
+ rebuild(buildings){
+  this.batchRoot.traverse(o=>o.geometry?.dispose());this.batchRoot.clear();const batches=new Map();
+  for(const root of buildings.values()){
+   if(!root.userData.factory)continue;root.updateMatrixWorld(true);
+   root.traverse(o=>{if(!o.isMesh)return;const geometry=o.geometry.clone().applyMatrix4(o.matrixWorld);if(!batches.has(o.material))batches.set(o.material,[]);batches.get(o.material).push(geometry);});
+  }
+  for(const [material,parts]of batches){const geometry=mergeGeometries(parts,false);parts.forEach(g=>g.dispose());if(!geometry)continue;geometry.computeBoundingSphere();const mesh=new THREE.Mesh(geometry,material);mesh.castShadow=true;mesh.receiveShadow=true;this.batchRoot.add(mesh);}
+ }
+
+ accepts(tile){return ['residential','commercial','office','industrial'].includes(tile.type);}
+ create(world,index,parcel){
+  const p=lotPlan(world,index,parcel),b=new MeshBuilder(),m=(name,t=p.tone)=>this.materials.get(name,t),fh=.64,night=this.view.night;
+  const cladding=m(p.style%2===0?'masonry':'plaster'),concrete=m('concrete'),metal=m('metal'),glass=m('glass'),recess=m('recess'),roof=m('roof'),paving=m('paving');
+  const W=p.lotWidth,D=p.lotDepth;
+  const colorFor=(floor,col,side)=>{let n=(Math.imul(floor+19,73856093)^Math.imul(col+7,19349663)^p.seed^side*83492791)>>>0;n=(n^(n>>>13))>>>0;return[n/4294967296,n%7]};
+  const block=(x,z,w,d,floors,y=0,style='masonry')=>{
+   const height=floors*fh,wall=style==='glass'?metal:cladding;
+   // Inner volume stays behind recessed windows. Outer walls are built from
+   // actual piers and spandrels, so reveals cast shadows at every camera range.
+   b.box(x,y+height/2,z,w-.11,height,d-.11,recess);
+   for(let side=0;side<4;side++){
+    const angle=side*Math.PI/2,cos=Math.cos(angle),sin=Math.sin(angle),width=side%2?d:w,depth=side%2?w:d;
+    const turn=(xx,yy,zz)=>[x+xx*cos+zz*sin,yy,z-xx*sin+zz*cos];
+    const bar=(xx,yy,zz,ww,hh,dd,mat)=>{const t=turn(xx,yy,zz);b.box(...t,side%2?dd:ww,hh,side%2?ww:dd,mat)};
+    const bays=Math.max(2,Math.round(width/(style==='glass'?.52:.63))),bay=width/bays;
+    for(let f=0;f<floors;f++){
+     const bottom=y+f*fh,curtain=style==='glass',sill=curtain?.055:.19,top=curtain?.035:.075;
+     bar(0,bottom+sill/2,depth/2,width,sill,.08,wall);
+     bar(0,bottom+fh-top/2,depth/2,width,top,.08,wall);
+     for(let c=0;c<bays;c++){
+      const px=-width/2+(c+.5)*bay,ww=bay*(curtain?.94:.69),winH=fh-sill-top;
+      bar(-width/2+c*bay,bottom+fh/2,depth/2,curtain?.025:bay-ww,fh,.09,wall);
+      const [rnd,blind]=colorFor(f,c,side),pane=night&&rnd<.19?m('lit'):glass,tint=.83+rnd*.17;
+      const zface=depth/2-.028;
+      b.quad(turn(px-ww/2,bottom+sill,zface),turn(px+ww/2,bottom+sill,zface),turn(px+ww/2,bottom+sill+winH,zface),turn(px-ww/2,bottom+sill+winH,zface),pane,[tint,tint,tint]);
+      if(!curtain){bar(px,bottom+sill-.01,depth/2+.025,ww+.075,.025,.095,concrete);bar(px,bottom+sill+winH/2,depth/2+.009,.014,winH,.019,metal);
+       if(blind===0)bar(px,bottom+sill+winH*.81,depth/2-.018,ww,winH*.35,.01,m('plaster',(p.tone+2)%5));
+      }
+     }
+     bar(width/2,bottom+fh/2,depth/2,curtain?.025:.07,fh,.09,wall);
+    }
+   }
+   b.box(x,y+height-.03,z,w+.07,.06,d+.07,concrete);
+   return y+height;
+  };
+  const plant=(x,y,z,w,d)=>{b.box(x,y+.08,z,w,.16,d,concrete);b.box(x,y+.2,z,w*.88,.17,d*.88,m('leaves'));};
+  const roofwork=(x,y,z,w,d,green=false)=>{
+   b.box(x,y+.015,z,w,.03,d,roof);
+   for(const s of [-1,1]){b.box(x+s*w/2,y+.08,z,.045,.16,d,concrete);b.box(x,y+.08,z+s*d/2,w,.16,.045,concrete);}
+   const count=Math.min(8,Math.max(1,Math.floor(w*d/3.5))),rows=Math.ceil(count/2);
+   for(let i=0;i<count;i++){
+    const px=x+(i%2-.5)*Math.min(1.2,w*.36),pz=z+(Math.floor(i/2)-(rows-1)/2)*Math.min(.65,d*.48/rows);
+    b.box(px,y+.13,pz,.38,.22,.47,metal);b.cylinder(px,y+.25,pz,.125,.035,recess,16);
+    for(let k=0;k<4;k++)b.box(px-.12+k*.08,y+.29,pz,.012,.012,.23,metal);
+    b.box(px+.28,y+.1,pz,.24,.14,.11,metal);
+   }
+   b.box(x-w*.29,y+.2,z-d*.27,.45,.38,.52,concrete);
+   if(green&&w>2){plant(x+w*.30,y,z+d*.27,.65,.38);plant(x-w*.3,y,z+d*.27,.65,.38);}
+  };
+  const gable=(x,z,w,d,y,rise)=>{
+   const left=[x-w/2,y,z-d/2],right=[x+w/2,y,z-d/2],peak=[x,y+rise,z-d/2],back=[x,y+rise,z+d/2];
+   b.quad(left,[x-w/2,y,z+d/2],back,peak,roof);b.quad(peak,back,[x+w/2,y,z+d/2],right,roof);
+   b.quad(left,peak,right,left,cladding);b.quad([x+w/2,y,z+d/2],back,[x-w/2,y,z+d/2],[x+w/2,y,z+d/2],cladding);
+   for(const s of [-1,1])b.box(x+s*w/2,y,z,.045,.035,d+.06,metal);
+  };
+  const balcony=(x,z,width,y)=>{
+   b.box(x,y,z,width,.035,.32,concrete);
+   b.box(x,y+.2,z+.145,width,.018,.018,metal);
+   for(let i=0;i<=Math.ceil(width/.18);i++)b.box(x-width/2+i*width/Math.ceil(width/.18),y+.1,z+.145,.013,.2,.013,metal);
+  };
+  // Lot paving, setback and landscaping use true parcel dimensions.
+  const ground=p.low?m('lawn'):paving;
+  b.box(0,-.02,0,W-.08,.04,D-.08,ground);
+  if(p.low){
+   const bw=1.85+p.variation*.7,bd=1.75+p.style%3*.16,x=-.24,z=-.3;
+   const h=block(x,z,bw,bd,p.floors,0,'masonry');
+   gable(x,z,bw+.24,bd+.24,h,.48+p.variation*.16);
+   if(p.style!==0){const h2=block(bw*.47,-.32,.85,1.5,1,0,'masonry');gable(bw*.47,-.32,1.0,1.67,h2,.3);}
+   b.box(x,.35,z+bd/2+.035,.28,.67,.07,m('wood'));
+   b.box(x,.045,1.32,.62,.09,.75,paving);
+   b.box(x,.79,1.08,1.22,.07,.65,roof);
+   for(const s of [-1,1])b.box(x+s*.52,.43,1.29,.04,.78,.04,concrete);
+   b.box(x-.6,h+.26,z-.4,.14,.58,.19,cladding);
+   b.box(-1.34,.012,.88,.63,.024,1.95,paving);
+   for(const s of [-1,1]){for(let i=0;i<10;i++)b.box(s*(W/2-.12),.15,-D/2+.2+i*(D-.5)/9,.026,.3,.035,m('wood'));b.box(s*(W/2-.12),.22,-.08,.026,.025,D-.3,m('wood'));}
+   plant(.92,0,1.63,1.14,.3);
+  }else if(p.type==='industrial'){
+   const bw=W-.5,bd=D-.9,h=2*fh;block(0,-.2,bw,bd,2,0,'masonry');gable(0,-.2,bw+.1,bd+.15,h,.38);
+   for(let j=0;j<3;j++){const x=(j-1)*bw*.28;b.box(x,.48,bd/2-.17,bw*.23,.92,.04,metal);for(let k=0;k<6;k++)b.box(x,.15+k*.13,bd/2-.14,bw*.22,.016,.015,concrete);}
+   b.cylinder(-bw*.31,h,-bd*.27,.11,1.1,metal);plant(bw*.32,0,D*.37,.5,.32);
+  }else if(p.type==='commercial'&&p.density==='low'){
+   const bw=W-.38,bd=D*.64,z=-D*.12,h=block(0,z,bw,bd,p.floors,0,'glass');roofwork(0,h,z,bw,bd);
+   for(let j=0;j<4;j++){const x=(j-1.5)*bw/4;b.box(x,.76,z+bd/2+.09,bw/4-.04,.09,.3,m('metal',p.style%5));}
+   b.box(0,.92,z+bd/2+.05,bw*.65,.14,.1,m('wood'));plant(-W*.38,0,D*.34,.36,.45);
+  }else{
+   const bw=W-.26,bd=D-.35,podium=Math.min(2,p.floors),baseH=block(0,0,bw,bd,podium,0,'glass');
+   const remaining=Math.max(1,p.floors-podium),courtyard=p.style===0&&Math.min(W,D)>5;
+   if(courtyard){
+    const wing=Math.min(1.55,bw*.25),height=block(-(bw-wing)/2,0,wing,bd,remaining,baseH,'masonry');
+    block((bw-wing)/2,0,wing,bd,remaining,baseH,'masonry');block(0,-(bd-wing)/2,bw-wing*2,wing,remaining,baseH,'masonry');
+    block(0,(bd-wing)/2,bw-wing*2,wing,Math.max(2,remaining-2),baseH,'masonry');
+    roofwork(-(bw-wing)/2,height,0,wing,bd);roofwork((bw-wing)/2,height,0,wing,bd);plant(0,baseH,0,bw-wing*2-.2,bd-wing*2-.2);
+   }else{
+    const setback=p.style===3?.65:.25,tw=bw-setback*2,td=bd-setback*2,tz=-setback*.45;
+    const curtain=p.type==='office'&&(p.style===2||p.style===5),h=block(0,tz,tw,td,remaining,baseH,curtain?'glass':'masonry');
+    roofwork(0,h,tz,tw,td,p.style===3);
+    if(p.style===3){plant(-bw*.3,baseH,bd*.38,.75,.35);plant(bw*.3,baseH,bd*.38,.75,.35);}
+    if(p.type==='residential'&&p.style%2===1){const bays=Math.max(2,Math.floor(tw/.75));for(let f=podium+1;f<p.floors;f++)for(let j=0;j<bays;j++)balcony(-tw/2+(j+.5)*tw/bays,tz+td/2+.12,tw/bays*.82,f*fh);}
+    if(p.style===4&&p.floors>8){const cap=block(-tw*.12,tz-.15,tw*.57,td*.6,2,h,'glass');roofwork(-tw*.12,cap,tz-.15,tw*.57,td*.6);}
+   }
+   // Lobby doors, a transparent canopy and signage are human-scaled on any lot.
+   b.box(0,.46,bd/2+.045,.64,.9,.04,recess);for(const s of [-1,1])b.box(s*.17,.46,bd/2+.075,.28,.8,.015,glass);
+   b.box(0,1.02,bd/2+.17,.95,.045,.34,metal);
+   for(const s of [-1,1])plant(s*(bw*.39),0,bd/2-.11,.4,.3);
+  }
+  const root=b.finish();root.rotation.y=p.angle;
+  let base=floorHeight(world,p.cx,p.cz);for(const dx of [-W/2+.1,W/2-.1])for(const dz of [-D/2+.1,D/2-.1]){const x=p.cx+dx*Math.cos(p.angle)+dz*Math.sin(p.angle),z=p.cz-dx*Math.sin(p.angle)+dz*Math.cos(p.angle);base=Math.max(base,floorHeight(world,x,z));}
+  root.position.set(p.cx,base+.035,p.cz);root.userData.plan=p;root.userData.factory=true;return root;
+ }
+}

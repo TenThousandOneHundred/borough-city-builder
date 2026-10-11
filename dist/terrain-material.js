@@ -15,8 +15,8 @@ export function naturalTerrain(material){
  vec3 grassB=texture2D(map,mat2(.8,-.6,.6,.8)*p*.073+vec2(.37,.71)).rgb;
  vec3 grass=mix(grassA,grassB,smoothstep(.18,.82,variation));
  // Preserve scanned surface detail while using a temperate grass palette.
- float detail=dot(grass,vec3(.3,.59,.11));
- vec3 meadow=mix(vec3(.105,.155,.064),vec3(.205,.255,.125),variation)*(.65+detail*2.8);
+ float detail=dot(grass,vec3(.3,.59,.11));float micro=terrainNoise(p*6.0);
+ vec3 meadow=mix(vec3(.085,.125,.065),vec3(.185,.22,.125),variation)*(.48+detail*3.4+micro*.12);
  float shore=1.-smoothstep(.15,1.15,vTerrainPosition.y);
  float slope=1.-abs(normalize(vTerrainNormal).y);
  float stone=smoothstep(.15,.49,slope);
