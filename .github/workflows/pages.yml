@@ -23,7 +23,7 @@ jobs:
           node-version: '22'
       - name: Verify game engine and modules
         run: |
-          node --test tests/engine.test.cjs tests/parcels.test.mjs tests/skyline.test.mjs tests/urban.test.mjs tests/street-life.test.mjs tests/rebuild.test.mjs tests/landscape-rebuild.test.mjs tests/model-library.test.mjs tests/game-performance.test.mjs tests/traffic.test.mjs
+          node --test tests/engine.test.cjs tests/parcels.test.mjs tests/skyline.test.mjs tests/urban.test.mjs tests/street-life.test.mjs tests/rebuild.test.mjs tests/landscape-rebuild.test.mjs tests/model-library.test.mjs tests/game-performance.test.mjs tests/traffic.test.mjs tests/residents.test.mjs
           for module in dist/*.js; do node --input-type=module --check < "$module"; done
           node --check dist/app.js
           node --check dist/renderer.js

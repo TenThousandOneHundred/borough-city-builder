@@ -1,7 +1,7 @@
-import {outsidePortals} from './traffic.js?v=16';
-import {batchStatic} from './static-batch.js?v=16';
+import {outsidePortals} from './traffic.js?v=17';
+import {batchStatic} from './static-batch.js?v=17';
 import * as THREE from './vendor/three.module.js';
-import {floorHeight,groundHeight,wetness} from './landscape.js?v=16';
+import {floorHeight,groundHeight,wetness} from './landscape.js?v=17';
 export class Roadworks{
 constructor(v){this.v=v;this.group=new THREE.Group();v.scene.add(this.group);this.lamps=[];}
 clear(){this.group.traverse(o=>{if(o.geometry&&o.geometry!==this.v.unitBox)o.geometry.dispose()});this.group.clear();this.lamps=[]}
