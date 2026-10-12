@@ -10,3 +10,7 @@
 #trafficPolicy{display:block;width:100%;margin-top:7px}
 
 .terrain-panel .build-option{min-height:72px;height:80px;padding:7px}.terrain-panel .model-icon{font-size:24px;height:28px}.terrain-controls{padding:8px 14px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;border-top:1px solid #ffffff12}.terrain-controls label{display:flex;align-items:center;gap:6px;font-size:12px}.terrain-controls input,.terrain-controls select{padding:5px;color:#e4edef;background:#253843;border:1px solid #647c88;border-radius:4px}.terrain-controls button{padding:7px 12px;font-size:12px}
+
+.transit-controls{padding:8px 14px;border-top:1px solid #ffffff18;font-size:12px}.transit-controls .road-modes{padding:8px 0}.transit-lines{max-height:90px;overflow:auto}.transit-lines>div{display:flex;justify-content:space-between;gap:12px;align-items:center;margin:4px 0}.transit-lines button{font-size:11px;padding:4px 8px}
+
+.planning-transit .build-options{display:none}

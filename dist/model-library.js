@@ -1,8 +1,8 @@
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {lotPlan} from './building-plan.js?v=23';
-import {floorHeight} from './landscape.js?v=23';
+import {lotPlan} from './building-plan.js?v=24.4';
+import {floorHeight} from './landscape.js?v=24.4';
 // Complete textured assets are loaded once, batched per material, and instanced.
 export class ModelLibrary {
  constructor(view){this.view=view;this.models=[];this.materials=new Set();this.lotGeometry=new THREE.PlaneGeometry(1,1);this.lotGeometry.rotateX(-Math.PI/2);this.ready=this.load();}
