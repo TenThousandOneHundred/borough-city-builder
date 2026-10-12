@@ -1,0 +1,127 @@
+"""Bake original modern architecture as a self-contained, material-batched GLB.
+Dimensions are metres. Facades have inset glazing, floor slabs and mullions;
+setbacks, balconies and rooftop plant are geometry rather than painted boxes.
+No commercial-game assets or dependencies are used.
+"""
+import math, json, struct, pathlib
+from collections import defaultdict
+ROOT=pathlib.Path(__file__).resolve().parents[1]
+materials=[
+ ('modern-concrete',[.43,.45,.42,1],0,.84),
+ ('modern-glass',[.10,.18,.21,1],.68,.18),
+ ('modern-frame',[.10,.13,.14,1],.6,.35),
+ ('modern-roof',[.42,.44,.42,1],0,.93),
+ ('modern-wood',[.39,.29,.19,1],0,.8),
+ ('modern-leaves',[.22,.31,.16,1],0,1),
+ ('modern-recess',[.09,.12,.14,1],0,.9),
+ ('modern-blind',[.47,.45,.39,1],0,.94),
+ ('modern-glass-occupied',[.10,.18,.21,1],.68,.18),
+]
+CONCRETE,GLASS,FRAME,ROOF,WOOD,LEAVES,RECESS,BLIND,OCCUPIED=range(len(materials))
+models=[]
+class Model:
+ def __init__(self,name,category,floors):
+  self.name,self.category,self.floors=name,category,floors;self.parts=defaultdict(lambda:{'p':[],'n':[],'uv':[],'c':[],'i':[]})
+ def quad(self,a,b,c,d,mat,color=(1,1,1)):
+  part=self.parts[mat];start=len(part['p'])//3;u=[b[i]-a[i] for i in range(3)];v=[c[i]-a[i] for i in range(3)];n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];length=math.sqrt(sum(x*x for x in n))
+  if length<1e-8:return
+  n=[x/length for x in n]
+  for pos,uv in zip([a,b,c,d],[(0,0),(1,0),(1,1),(0,1)]):part['p']+=list(pos);part['n']+=n;part['uv']+=list(uv);part['c']+=list(color)
+  part['i'] += [start,start+1,start+2,start,start+2,start+3]
+ def box(self,x,y,z,w,h,d,mat=CONCRETE,color=(1,1,1)):
+  a,b=x-w/2,x+w/2;c,e=y,y+h;f,g=z-d/2,z+d/2
+  for q in [((a,c,g),(b,c,g),(b,e,g),(a,e,g)),((b,c,f),(a,c,f),(a,e,f),(b,e,f)),((b,c,g),(b,c,f),(b,e,f),(b,e,g)),((a,c,f),(a,c,g),(a,e,g),(a,e,f)),((a,e,g),(b,e,g),(b,e,f),(a,e,f))]:self.quad(*q,mat,color)
+ def ring(self,w,d,bevel=.7,x=0,z=0):
+  # Counterclockwise viewed from above. Bevels soften corners without expensive curves.
+  r=min(bevel,w/3,d/3);return [(x+a,z+b) for a,b in [(-w/2+r,-d/2),(w/2-r,-d/2),(w/2,-d/2+r),(w/2,d/2-r),(w/2-r,d/2),(-w/2+r,d/2),(-w/2,d/2-r),(-w/2,-d/2+r)]]
+ def surface(self,points,y,mat,color=(1,1,1)):
+  cx=sum(p[0] for p in points)/len(points);cz=sum(p[1] for p in points)/len(points)
+  for a,b in zip(points,points[1:]+points[:1]):self.quad((cx,y,cz),(b[0],y,b[1]),(a[0],y,a[1]),(cx,y,cz),mat,color)
+ def band(self,points,y,h,mat=CONCRETE,color=(1,1,1)):
+  for a,b in zip(points,points[1:]+points[:1]):self.quad((b[0],y,b[1]),(a[0],y,a[1]),(a[0],y+h,a[1]),(b[0],y+h,b[1]),mat,color)
+  self.surface(points,y+h,mat,color)
+ def shell(self,w,d,floors,x=0,z=0,y=0,bevel=.7,balconies=False,curtain=False,oval=False):
+  points=([(x+w/2*math.cos(j*math.tau/32),z+d/2*math.sin(j*math.tau/32)) for j in range(32)] if oval else self.ring(w,d,bevel,x,z))
+  fh=3.2;top=y+floors*fh
+  # Recessed dark walls sit behind individual panes and facade structure.
+  for side,(a,b) in enumerate(zip(points,points[1:]+points[:1])):
+   dx,dz=b[0]-a[0],b[1]-a[1];length=math.hypot(dx,dz);tx,tz=dx/length,dz/length;nx,nz=tz,-tx
+   def p(u,v,out=0):return (a[0]+tx*u+nx*out,v,a[1]+tz*u+nz*out)
+   self.quad(p(length,y,-.1),p(0,y,-.1),p(0,top,-.1),p(length,top,-.1),RECESS)
+   bays=max(1,round(length/(1.6 if curtain else 2.6)));bay=length/bays
+   for f in range(floors):
+    level=y+f*fh;bottom=.32 if curtain else .75;upper=.13 if curtain else .38
+    for lo,hi in [(level,level+bottom),(level+fh-upper,level+fh)]:self.quad(p(length,lo,.025),p(0,lo,.025),p(0,hi,.025),p(length,hi,.025),FRAME if curtain else CONCRETE)
+    for j in range(bays):
+     margin=.045 if curtain else .24;l=j*bay+margin;r=(j+1)*bay-margin;shade=.74+((j*17+f*31+side*11)%19)/65
+     self.quad(p(r,level+bottom,-.035),p(l,level+bottom,-.035),p(l,level+fh-upper,-.035),p(r,level+fh-upper,-.035),OCCUPIED if (j*17+f*31+side*11)%4==1 else GLASS,(shade,shade,min(1,shade+.04)))
+     if (j*17+f*31+side*11)%9<2 and f>0:
+      blindtop=level+fh-upper;blindbottom=blindtop-(fh-bottom-upper)*.36
+      self.quad(p(r,blindbottom,-.026),p(l,blindbottom,-.026),p(l,blindtop,-.026),p(r,blindtop,-.026),BLIND,(shade,shade,shade))
+     # Shallow recess returns make window openings read in direct sunlight.
+     if not curtain:
+      for u,sign in [(l,-1),(r,1)]:self.quad(p(u,level+bottom,.03),p(u,level+bottom,-.07),p(u,level+fh-upper,-.07),p(u,level+fh-upper,.03),CONCRETE,(.78,.79,.76))
+    if balconies and length>5 and f>0 and side%2==0:
+     # Slabs and framed balcony panels project from selected faces, not all faces.
+     l=.45;r=length-.45;out=1.05;h=level+.12
+     self.quad(p(l,h,.02),p(r,h,.02),p(r,h,out),p(l,h,out),CONCRETE)
+     self.quad(p(r,h,out),p(l,h,out),p(l,h+.12,out),p(r,h+.12,out),CONCRETE)
+     self.quad(p(r,h+.15,out-.04),p(l,h+.15,out-.04),p(l,h+1.0,out-.04),p(r,h+1.0,out-.04),GLASS,(.72,.77,.78))
+     self.quad(p(r,h+1.0,out),p(l,h+1.0,out),p(l,h+1.07,out),p(r,h+1.07,out),FRAME)
+   # Continuous narrow mullions do not duplicate geometry at every floor.
+   for j in range(bays+1):
+    u=j*bay;half=.045 if curtain else .22;l=max(0,u-half);r=min(length,u+half)
+    self.quad(p(r,y,.06),p(l,y,.06),p(l,top,.06),p(r,top,.06),FRAME if curtain else CONCRETE)
+  self.surface(points,top,ROOF);self.band(points,top,.24,CONCRETE)
+  # Roof membrane inset above slab, with a low perimeter parapet.
+  inner=[(x+(px-x)*.97,z+(pz-z)*.97) for px,pz in points];self.surface(inner,top+.245,ROOF)
+  return top
+ def plant(self,x,y,z,w,d):
+  self.box(x,y,z,w,.45,d,CONCRETE);self.box(x,y+.45,z,w-.15,.45,d-.15,LEAVES)
+ def roofwork(self,x,y,z,w=5,d=3):
+  self.box(x,y,z,w,1.4,d,FRAME)
+  for j in range(4):self.box(x-w*.34+j*w*.225,y+1.42,z,.12,.08,d*.8,RECESS)
+  self.box(x+w*.7,y,z,w*.3,1.1,d*.4,CONCRETE)
+ def entrance(self,z,x=0):
+  self.box(x,3.0,z,3.6,.12,2.3,FRAME);self.box(x,0,z-.5,3.8,.18,2.1,CONCRETE)
+  for sx in [-1.5,1.5]:self.box(x+sx,0,z+.5,.10,3,.10,FRAME)
+ def finish(self):models.append(self)
+
+m=Model('glass-podium-offices','office',21);h=m.shell(25,21,3,curtain=True);h=m.shell(16,14,18,x=-2,z=-1,y=h,bevel=2,curtain=True);m.roofwork(-2,h,-1);m.plant(9,9.85,6,3,4);m.entrance(11);m.finish()
+m=Model('stepped-concrete-offices','office',18);h=m.shell(24,20,3);h=m.shell(21,17,7,y=h,curtain=True);h=m.shell(16,13,5,x=-2,y=h,curtain=True);h=m.shell(11,9,3,x=-3,y=h,curtain=True);m.roofwork(-3,h,0,4,2);m.plant(8,32.3,4,2,5);m.entrance(10.5);m.finish()
+m=Model('elliptic-glass-offices','office',19);h=m.shell(23,19,2,bevel=3);h=m.shell(19,15,17,y=h,curtain=True,oval=True);m.roofwork(0,h,0);m.entrance(10);m.finish()
+m=Model('slender-glass-offices','office',23);h=m.shell(11,13,23,bevel=1.3,curtain=True);m.roofwork(0,h,0,4,2);m.entrance(7);m.finish()
+m=Model('garden-terrace-residences','residential',9);h=m.shell(24,18,4,balconies=True);m.plant(9,h+.3,4,2,7);h=m.shell(18,15,3,x=-2,y=h,balconies=True);m.plant(4,h+.3,3,2,5);h=m.shell(12,11,2,x=-4,y=h);m.roofwork(-4,h,0,3,2);m.entrance(10);m.finish()
+m=Model('balcony-podium-residences','residential',17);h=m.shell(22,19,3,curtain=True);h=m.shell(14,13,14,x=-1,y=h,bevel=1.2,balconies=True);m.roofwork(-1,h,0);m.plant(8,9.9,5,2,4);m.entrance(10);m.finish()
+m=Model('split-wing-residences','residential',10);h=m.shell(10,20,7,x=-6,balconies=True);m.roofwork(-6,h,0,3,2);h=m.shell(11,13,10,x=5,z=-3,balconies=True);m.roofwork(5,h,-3,3,2);m.shell(8,7,2,x=4,z=7,curtain=True);m.plant(5,6.7,7,5,3);m.entrance(11,-5);m.finish()
+m=Model('courtyard-concrete-residences','residential',6);m.shell(8,24,6,x=-8);m.shell(8,24,5,x=8);h=m.shell(8,8,4,z=-8);m.roofwork(0,h,-8,3,2);m.plant(0,0,0,5,8);m.entrance(12,-8);m.finish()
+m=Model('linear-balcony-apartments','residential',6);h=m.shell(21,11,6,balconies=True);m.roofwork(0,h,0,4,2);m.entrance(6);m.finish()
+m=Model('small-courtyard-apartments','residential',4);m.shell(7,15,4,x=-5);m.shell(7,10,3,x=4,z=-2);m.plant(2,0,5,3,3);m.entrance(8,-5);m.finish()
+m=Model('stepped-midrise-apartments','residential',8);h=m.shell(18,14,5,balconies=True);h=m.shell(12,11,3,x=-2,y=h,balconies=True);m.plant(6,16.3,3,2,4);m.roofwork(-2,h,0,3,2);m.entrance(8);m.finish()
+m=Model('corner-retail-gallery','commercial',3);h=m.shell(24,18,2,curtain=True);h=m.shell(14,12,1,x=-4,z=-2,y=h,curtain=True);m.plant(8,6.7,3,3,5);m.roofwork(-4,h,-2,4,2);m.entrance(10);m.finish()
+m=Model('neighborhood-mixed-use','commercial',5);h=m.shell(18,12,1,curtain=True);h=m.shell(17,11,4,y=h,balconies=True);m.roofwork(0,h,0,4,2);m.entrance(7);m.finish()
+m=Model('modern-courtyard-house','residential-low',2);h=m.shell(8,10,2,x=-3);m.shell(5,6,1,x=3,z=-2,curtain=True);m.box(3,0,4,4,.15,5,WOOD);m.plant(5,0,6,1,3);m.roofwork(-3,h,-2,1,.8);m.entrance(5.5,-3);m.finish()
+m=Model('modern-rowhouse','residential-low',3);h=m.shell(7,11,3,balconies=True);m.box(-2,0,5.55,.8,9.3,.16,WOOD);m.plant(2,0,6,1,2);m.roofwork(0,h,-2,1.2,1);m.entrance(6);m.finish()
+
+# Each model has one primitive per material, with vertex colour variation.
+doc={'asset':{'version':'2.0','generator':'Borough original modern architecture'},'scene':0,'scenes':[{'nodes':[]}],'nodes':[],'meshes':[],'materials':[{'name':name,'pbrMetallicRoughness':{'baseColorFactor':color,'metallicFactor':metal,'roughnessFactor':rough}} for name,color,metal,rough in materials],'buffers':[{'byteLength':0}],'bufferViews':[],'accessors':[]}
+binary=bytearray((ROOT/'dist/assets/asphalt-color.jpg').read_bytes())
+doc['bufferViews'].append({'buffer':0,'byteOffset':0,'byteLength':len(binary)})
+doc['images']=[{'mimeType':'image/jpeg','bufferView':0}];doc['samplers']=[{'magFilter':9729,'minFilter':9987,'wrapS':10497,'wrapT':10497}];doc['textures']=[{'source':0,'sampler':0}]
+doc['materials'][ROOF]['pbrMetallicRoughness']['baseColorTexture']={'index':0}
+
+def pack(values,kind,component=5126):
+ while len(binary)%4:binary.append(0)
+ width={'VEC3':3,'VEC2':2,'SCALAR':1}[kind];start=len(binary);fmt='f' if component==5126 else 'I';binary.extend(struct.pack('<'+fmt*len(values),*values));doc['bufferViews'].append({'buffer':0,'byteOffset':start,'byteLength':len(binary)-start});entry={'bufferView':len(doc['bufferViews'])-1,'componentType':component,'count':len(values)//width,'type':kind}
+ if kind=='VEC3':entry.update(min=[min(values[i::3]) for i in range(3)],max=[max(values[i::3]) for i in range(3)])
+ doc['accessors'].append(entry);return len(doc['accessors'])-1
+for model in models:
+ primitives=[]
+ for mat,part in sorted(model.parts.items()):
+  primitives.append({'attributes':{'POSITION':pack(part['p'],'VEC3'),'NORMAL':pack(part['n'],'VEC3'),'TEXCOORD_0':pack(part['uv'],'VEC2'),'COLOR_0':pack(part['c'],'VEC3')},'indices':pack(part['i'],'SCALAR',5125),'material':mat})
+ doc['meshes'].append({'name':model.name,'primitives':primitives});doc['scenes'][0]['nodes'].append(len(doc['nodes']));doc['nodes'].append({'name':model.name,'mesh':len(doc['meshes'])-1,'extras':{'category':model.category,'floors':model.floors,'family':'modern','source':'Borough original geometry'}})
+while len(binary)%4:binary.append(0)
+doc['buffers'][0]['byteLength']=len(binary);data=json.dumps(doc,separators=(',',':')).encode();data+=b' '*((-len(data))%4)
+glb=struct.pack('<III',0x46546c67,2,12+8+len(data)+8+len(binary))+struct.pack('<II',len(data),0x4e4f534a)+data+struct.pack('<II',len(binary),0x004e4942)+binary
+out=ROOT/'dist/assets/buildings/modern.glb';out.write_bytes(glb)
+print(json.dumps({'models':len(models),'triangles':sum(len(p['i'])//3 for m in models for p in m.parts.values()),'bytes':len(glb),'output':str(out)}))
