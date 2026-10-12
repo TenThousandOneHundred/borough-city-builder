@@ -1,18 +1,18 @@
-import {SimulationClock} from './simulation-clock.js?v=21';
-import {Residents} from './residents.js?v=21';
-import {Traffic} from './traffic.js?v=21';
-import {Vehicles} from './vehicles.js?v=21';
-import {BuildingFactory} from './building-factory.js?v=21';
-import {StreetLife} from './street-life.js?v=21';
-import {visualParcels} from './parcels.js?v=21';
-import {Graphics} from './graphics.js?v=21';
-import {Vegetation} from './vegetation.js?v=21';
+import {SimulationClock} from './simulation-clock.js?v=22';
+import {Residents} from './residents.js?v=22';
+import {Traffic} from './traffic.js?v=22';
+import {Vehicles} from './vehicles.js?v=22';
+import {BuildingFactory} from './building-factory.js?v=22';
+import {StreetLife} from './street-life.js?v=22';
+import {visualParcels} from './parcels.js?v=22';
+import {Graphics} from './graphics.js?v=22';
+import {Vegetation} from './vegetation.js?v=22';
 import {RGBELoader} from './vendor/RGBELoader.js';
 import * as THREE from './vendor/three.module.js';
 import {OrbitControls} from './vendor/OrbitControls.js';
-import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=21';
-import {Architecture} from './architecture.js?v=21';
-import {Roadworks} from './roadworks.js?v=21';
+import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=22';
+import {Architecture} from './architecture.js?v=22';
+import {Roadworks} from './roadworks.js?v=22';
 const N=48,T=4,HALF=96,zoneColors={residential:'#54b663',commercial:'#5bb1d8',industrial:'#cdb268',office:'#aa87c9'};
 export class CityView{
 constructor(canvas){this.canvas=canvas;this.scene=new THREE.Scene();this.scene.background=new THREE.Color('#aebfca');this.scene.fog=new THREE.FogExp2('#b7c6cc',.00105);
@@ -48,6 +48,8 @@ if(models||roads||trees||force)this.renderer.shadowMap.needsUpdate=true;
 if(this.overlay!=='none'&&(models||roads||zones||force))this.updateOverlay();
 if(zones||roads||force)this.updateZones();}
 
+terrainChanged(bounds,finish=false){this.landscape.refreshTerrain(this.world,bounds,finish);this.renderer.shadowMap.needsUpdate=true;if(finish){this.makeGrid();this.updateZones();}for(const car of this.cars)car.heightWorld=null;}
+showTerrainBrush(x,z,radius){this.clearLine();const points=[];for(let i=0;i<=64;i++){const a=i/64*Math.PI*2,px=x+Math.cos(a)*radius,pz=z+Math.sin(a)*radius;points.push(new THREE.Vector3(px,Math.max(.05,groundHeight(this.world,px,pz))+.2,pz));}const geometry=new THREE.BufferGeometry().setFromPoints(points);this.previewGroup.add(new THREE.Line(geometry,new THREE.LineBasicMaterial({color:'#7edcea',depthTest:false,transparent:true,opacity:.9})));}
 setZoning(on){this.zoning=on;this.updateZones()}
 zonePlane(x,y,color,opacity=.3){const geo=new THREE.PlaneGeometry(3.82,3.82,2,2);geo.rotateX(-Math.PI/2);const a=geo.attributes.position;for(let j=0;j<a.count;j++){const xx=(x+.5)*4-96+a.getX(j),zz=(y+.5)*4-96+a.getZ(j);a.setXYZ(j,xx,floorHeight(this.world,xx,zz)+.12,zz)}geo.computeVertexNormals();return new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color,transparent:true,opacity,depthWrite:false,side:THREE.DoubleSide}))}
 updateZones(){this.zoneGroup.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose()});this.zoneGroup.clear();if(!this.world||this.menu)return;const access=CityEngine.zoneAccess(this.world);this.world.tiles.forEach((t,i)=>{const z=CityEngine.ZONES[t.zone];if(t.type==='road'||t.ground==='water')return;if(z&&(!t.type||this.zoning||this.overlay==='zones'))this.zoneGroup.add(this.zonePlane(i%48,Math.floor(i/48),z.color,this.zoning?.44:.28));else if(this.zoning&&!t.type&&access.has(i))this.zoneGroup.add(this.zonePlane(i%48,Math.floor(i/48),'#b1d3d7',.12))})}
