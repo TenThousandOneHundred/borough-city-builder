@@ -27,3 +27,13 @@ test('distant geometry cuts workload and visibility excludes buildings behind th
  const camera=new THREE.PerspectiveCamera(45,1,.1,500);camera.position.set(0,8,100);camera.lookAt(0,0,0);const view={scene:new THREE.Scene(),camera,landscape:{assets:{}}},factory=new BuildingFactory(view),g=new THREE.Group();g.userData={factory:true,asset:true};const mesh=lib.models[0].root.children[0].clone();g.add(mesh);factory.rebuild(new Map([[1,g]]));assert.ok(factory.instanceBatches[0].far.count>0);assert.equal(factory.instanceBatches[0].near.count,0);
  camera.lookAt(0,8,200);factory.updateVisibility();assert.equal(factory.instanceBatches[0].far.count,0);assert.equal(factory.instanceBatches[0].near.count,0);
 });
+
+test('loaded models follow angled roads without stretching or overlapping neighbouring lots',async()=>{
+ const lib=await library(),world=E.createWorld('Asset frontage','plains',324);world.tiles.forEach(t=>Object.assign(t,{type:null,level:0}));world.money=100000;
+ E.buildRoadPath(world,[{x:10,y:10},{x:30,y:30}],'street');const index=18*48+22;world.tiles[index]={type:'office',density:'high',level:2};
+ const root=lib.create(world,index,{width:2,depth:1}),p=root.userData.plan,bounds=new THREE.Box3().setFromObject(root);
+ assert.ok(p.frontage);assert.ok(Math.abs(root.rotation.y+Math.PI/4)<1e-8);
+ const scale=root.children[0].scale;assert.equal(scale.x,scale.y);assert.equal(scale.y,scale.z);
+ assert.ok(bounds.min.x>=p.cx-4-1e-5&&bounds.max.x<=p.cx+4+1e-5);
+ assert.ok(bounds.min.z>=p.cz-2-1e-5&&bounds.max.z<=p.cz+2+1e-5);
+});

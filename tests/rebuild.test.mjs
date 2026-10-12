@@ -27,3 +27,27 @@ test('pitched roofs face upward and city material batching preserves bounds',()=
 test('rebuilt vehicles fit their lanes and have finite visible surfaces',()=>{
  const cars=new Vehicles();for(let i=0;i<9;i++){const car=cars.create(i),b=new THREE.Box3().setFromObject(car);assert.ok(b.max.x-b.min.x<.6);assert.ok(b.max.z-b.min.z<1.2);assert.ok(b.max.y<.5);car.traverse(o=>{if(o.isMesh)assert.ok([...o.geometry.attributes.position.array].every(Number.isFinite))});}
 });
+
+test('authored diagonal frontage aligns facades and keeps rotated envelopes inside their parcels',()=>{
+ const {world,factory}=fixture();world.money=100000;
+ assert.ok(E.buildRoadPath(world,[{x:10,y:10},{x:30,y:30}],'street').ok);
+ const index=18*48+22;world.tiles[index]={type:'residential',density:'medium',level:1};
+ const parcel={width:2,depth:1},p=lotPlan(world,index,parcel);
+ assert.ok(p.frontage);assert.ok(Math.abs(p.angle+Math.PI/4)<1e-8);
+ const sin=Math.abs(Math.sin(p.angle)),cos=Math.abs(Math.cos(p.angle));
+ assert.ok(cos*p.lotWidth+sin*p.lotDepth<=8+1e-8);
+ assert.ok(sin*p.lotWidth+cos*p.lotDepth<=4+1e-8);
+ const before=JSON.stringify(world),g=factory.create(world,index,parcel);
+ assert.equal(g.rotation.y,p.angle);assert.equal(JSON.stringify(world),before);
+ const bounds=new THREE.Box3().setFromObject(g);
+ assert.ok(bounds.max.x-bounds.min.x<=8.2);assert.ok(bounds.max.z-bounds.min.z<=4.2);
+});
+test('curved frontage follows changing tangents and road removal invalidates cached lookup',()=>{
+ const {world}=fixture();world.money=100000;
+ const result=E.buildRoadPath(world,[{x:10,y:25},{x:20,y:5},{x:30,y:25}],'street');assert.ok(result.ok);
+ const plans=[];
+ for(const [x,y] of [[14,22],[26,22]]){const index=y*48+x;assert.notEqual(world.tiles[index].type,'road');world.tiles[index]={type:'residential',density:'low',level:1};plans.push(lotPlan(world,index));}
+ assert.ok(plans.every(p=>p.frontage?.pathId===result.path.id));
+ assert.ok(Math.abs(Math.sin(plans[0].angle))>.2);assert.ok(Math.sin(plans[0].angle)*Math.sin(plans[1].angle)<0);
+ E.removeRoadPath(world,result.path.id);assert.equal(lotPlan(world,22*48+14).frontage,null);
+});

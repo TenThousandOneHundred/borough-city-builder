@@ -1,8 +1,8 @@
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {lotPlan} from './building-plan.js?v=19';
-import {floorHeight} from './landscape.js?v=19';
+import {lotPlan} from './building-plan.js?v=20';
+import {floorHeight} from './landscape.js?v=20';
 // Complete textured assets are loaded once, batched per material, and instanced.
 export class ModelLibrary {
  constructor(view){this.view=view;this.models=[];this.materials=new Set();this.lotGeometry=new THREE.PlaneGeometry(1,1);this.lotGeometry.rotateX(-Math.PI/2);this.ready=this.load();}
@@ -53,7 +53,7 @@ export class ModelLibrary {
   model.scale.setScalar(scale);root.add(model);root.rotation.y=p.angle;
   const lawn=category==='residential-low';this.lotMaterials ||= {};
   const lotMaterial=this.lotMaterials[lawn?'grass':'paving'] ||= this.view.landscape.material(lawn?'grass':'asphalt',lawn?2:3,lawn?'#9fb78c':'#a7aaa5');
-  const lot=new THREE.Mesh(this.lotGeometry,lotMaterial);lot.scale.set(W-.12,1,D-.12);lot.position.y=-.025;lot.receiveShadow=true;lot.userData.sharedAsset=true;root.add(lot);
+  const lot=new THREE.Mesh(this.lotGeometry,lotMaterial);lot.rotation.y=-p.angle;lot.scale.set(p.parcelWidth-.12,1,p.parcelDepth-.12);lot.position.y=-.025;lot.receiveShadow=true;lot.userData.sharedAsset=true;root.add(lot);
 
   const footprintX=asset.size.x*scale/2,footprintZ=asset.size.z*scale/2;let base=floorHeight(world,p.cx,p.cz);
   for(const x of [-footprintX,footprintX])for(const z of [-footprintZ,footprintZ])base=Math.max(base,floorHeight(world,p.cx+x*Math.cos(p.angle)+z*Math.sin(p.angle),p.cz-x*Math.sin(p.angle)+z*Math.cos(p.angle)));
