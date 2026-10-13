@@ -1,12 +1,12 @@
-import {ModelLibrary} from './model-library.js?v=33.2';
-import {buildHouse} from './house-architecture.js?v=33.2';
-import {buildUrban} from './city-architecture.js?v=33.2';
+import {ModelLibrary} from './model-library.js?v=34.0';
+import {buildHouse} from './house-architecture.js?v=34.0';
+import {buildUrban} from './city-architecture.js?v=34.0';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import * as THREE from './vendor/three.module.js';
-import {MeshBuilder} from './mesh-builder.js?v=33.2';
-import {BuildingMaterials} from './building-materials.js?v=33.2';
-import {lotPlan} from './building-plan.js?v=33.2';
-import {floorHeight} from './landscape.js?v=33.2';
+import {MeshBuilder} from './mesh-builder.js?v=34.0';
+import {BuildingMaterials} from './building-materials.js?v=34.0';
+import {lotPlan} from './building-plan.js?v=34.0';
+import {floorHeight} from './landscape.js?v=34.0';
 
 export class BuildingFactory{
  constructor(view){this.view=view;this.library=view.renderer?new ModelLibrary(view):null;this.ready=this.library?.ready||Promise.resolve();this.materials=new BuildingMaterials(view);this.batchRoot=new THREE.Group();view.scene.add(this.batchRoot);}
@@ -80,7 +80,7 @@ export class BuildingFactory{
    if(far){far.count=farCount;if(farChanged)far.instanceMatrix.needsUpdate=true;}
   }
  }
- accepts(tile){return ['residential','commercial','office','industrial'].includes(tile.type);}
+ accepts(tile){return ['residential','commercial','office','industrial'].includes(tile.type)||!!this.library?.acceptsCivic(tile);}
  create(world,index,parcel){
   const asset=this.library?.create(world,index,parcel);if(asset)return asset;
   const p=lotPlan(world,index,parcel),b=new MeshBuilder(),m=(name,t=p.tone)=>this.materials.get(name,t),fh=.64,night=this.view.night;

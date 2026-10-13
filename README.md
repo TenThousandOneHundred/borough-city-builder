@@ -229,3 +229,9 @@ The loading indicator identifies pending asset groups. After changing modern bui
 Modern buildings carry authored planter footprints and elevations. Their larger planters now contain shared broadleaf tree models instead of raised green blocks, including courtyard planting and gardens on the rear roofs of perimeter blocks. Canopies fit inside each bed after model normalization, scaling and road-facing placement. Corrected a sunken planter and moved mechanical equipment onto its supporting wing.
 
 Trees share geometry and materials with existing landscaping. Roof planting uses complete models nearby and crossed tree images beyond 18 world units; it is never removed merely because the building uses distant geometry. This is visual planting, with no new resident or traffic behavior. Regenerated original modern models retain facade detail and lossless compressed delivery.
+
+### Edition 34: civic architecture
+
+Ten original detailed models now match the health, education, police and fire catalogue: clinic, hospital, wellness centre, elementary school, high school, college, police station, headquarters, fire station and rescue station. Recessed windows, brick and painted cladding, entrance canopies, distinct wings and garage bays replace their simpler fallback forms. The complete building library now contains 51 models. Existing saves select the correct facility, including default choices in older saves.
+
+Models remain inside their existing lots and share the instanced renderer and authored distant geometry. Compressed modern-model transfer increases by 113,852 bytes. Service costs, capacity, simulation and save format are unchanged; larger facility footprints and emergency dispatch are not introduced in this release. All 149 tests pass, including model selection, street orientation, lot bounds and unchanged service state.

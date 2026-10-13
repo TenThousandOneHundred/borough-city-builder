@@ -14,7 +14,7 @@ loader.register(()=>({name:'test-images',loadTexture:()=>Promise.resolve(new THR
 async function library(){const lib=Object.create(ModelLibrary.prototype);lib.models=[];lib.materials=new Set();lib.lotGeometry=new THREE.PlaneGeometry(1,1);lib.lotGeometry.rotateX(-Math.PI/2);lib.view={renderer:{capabilities:{getMaxAnisotropy:()=>8}},landscape:{material:()=>new THREE.MeshStandardMaterial()}};
  for(const file of ['urban','industry','modern']){const data=fs.readFileSync(new URL('../dist/assets/buildings/'+file+'.glb',import.meta.url));const result=await loader.parseAsync(data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength),'');lib.ingest(result.scene);}return lib;}
 test('all complete building assets decode with finite UV-mapped geometry and valid categories',async()=>{
- const lib=await library();assert.equal(lib.models.length,41);assert.deepEqual([...new Set(lib.models.map(m=>m.category))].sort(),['commercial','industrial','office','residential','residential-low']);
+ const lib=await library();assert.equal(lib.models.length,51);assert.deepEqual([...new Set(lib.models.map(m=>m.category))].sort(),['commercial','fire','hospital','industrial','office','police','residential','residential-low','school']);
  for(const model of lib.models){assert.ok(model.size.x>0&&model.size.y>0&&model.size.z>0);assert.ok(model.root.children.length<=10);for(const mesh of model.root.children){if(mesh.material.map)assert.ok(mesh.geometry.attributes.uv);assert.ok([...mesh.geometry.attributes.position.array].every(Number.isFinite));}}
 });
 test('model placement fits saved lots uniformly and instancing survives demolition without disposing shared models',async()=>{
@@ -39,10 +39,10 @@ test('loaded models follow angled roads without stretching or overlapping neighb
 });
 
 test('modern library retains facade detail with shared materials and a bounded geometry cost',async()=>{
- const lib=await library(),modern=lib.models.filter(m=>m.family==='modern');assert.equal(modern.length,20);
+ const lib=await library(),modern=lib.models.filter(m=>m.family==='modern');assert.equal(modern.length,30);
  const materials=new Set();let triangles=0,hasWindowVariation=false;
  for(const model of modern){let count=0;for(const mesh of model.root.children){materials.add(mesh.material);count+=mesh.geometry.index.count/3;const color=mesh.geometry.attributes.color;assert.ok(color,'baked facade variation is retained');assert.ok([...color.array].every(Number.isFinite));if(new Set(color.array).size>3)hasWindowVariation=true;}assert.ok(count<(model.name.startsWith('perimeter-')?17000:6600),model.name+' triangle budget');triangles+=count;}
- assert.ok(materials.size<=10,'materials are reused across modern buildings');assert.ok(triangles<115000);assert.ok(hasWindowVariation);
+ assert.ok(materials.size<=11,'materials are reused across modern buildings');assert.ok(triangles<150000);assert.ok(hasWindowVariation);
 });
 test('medium residential and low commercial zoning do not select high-rise models',async()=>{
  const lib=await library(),world=E.createWorld('Density model QA','plains',324);
@@ -80,8 +80,8 @@ test('street setbacks remain inside owned parcels at every road angle',async()=>
 });
 
 test('brick facades retain metre-scale UVs, PBR textures and accurate packed normals',async()=>{
- const lib=await library(),bricks=lib.models.flatMap(m=>m.root.children).filter(m=>m.material.name==='modern-brick');assert.equal(bricks.length,4);
- for(const mesh of bricks){assert.ok(mesh.material.map);assert.ok(mesh.material.normalMap);assert.ok(mesh.material.roughnessMap);const uv=mesh.geometry.attributes.uv;assert.ok(Math.max(...uv.array)>10,'brick courses repeat along the full wing');}
+ const lib=await library(),bricks=lib.models.flatMap(m=>m.root.children).filter(m=>m.material.name==='modern-brick');assert.equal(bricks.length,10);
+ for(const mesh of bricks){assert.ok(mesh.material.map);assert.ok(mesh.material.normalMap);assert.ok(mesh.material.roughnessMap);const uv=mesh.geometry.attributes.uv;const p=mesh.geometry.attributes.position;for(let i=0;i<p.count;i+=4){const metres=Math.hypot(p.getX(i+1)-p.getX(i),p.getY(i+1)-p.getY(i),p.getZ(i+1)-p.getZ(i));assert.ok(Math.abs(uv.getX(i+1)-uv.getX(i)-metres/2)<1e-5,'brick texture maintains two-metre repeat scale');}}
  for(const model of lib.models.filter(m=>m.family==='modern'))for(const mesh of model.root.children){const n=mesh.geometry.attributes.normal;assert.ok(n.normalized);assert.ok(n.array instanceof Int8Array);for(let i=0;i<n.count;i++){const length=Math.hypot(n.getX(i),n.getY(i),n.getZ(i));assert.ok(Math.abs(length-1)<.012,'lighting normals retain unit length');}}
 });
 
@@ -114,4 +114,22 @@ test('building creation attaches shared trees above authored roofs and inside co
  const root=lib.create(w,i,{width:3,depth:3}),gardens=root.children.find(o=>o.userData.buildingGardens);assert.ok(gardens.children.length>=4);
  const b=new THREE.Box3().setFromObject(gardens);assert.ok(b.max.y>6.5,'planting stands above the ten-floor rear roof');assert.ok(b.min.y<.2,'ground courtyard planting is also retained');
  gardens.traverse(o=>{if(o.isMesh)assert.equal(o.geometry,mesh.geometry)});
+});
+
+test('all ten civic catalogue options select distinct complete models without changing service state',async()=>{
+ const lib=await library(),world=E.createWorld('Civic models','plains',812),index=24*48+24;
+ const factory=new BuildingFactory({scene:new THREE.Scene(),landscape:{assets:{}}});factory.library=lib;
+ const ids=['clinic','hospital','wellness','elementary','highschool','college','police','headquarters','fire','rescue'],names=new Set();
+ for(const building of ids){
+  const spec=E.BUILDINGS[building];world.tiles[index]={type:spec.type,building,level:1,variant:0};world.tiles[index+48].type='road';const before=JSON.stringify(world);
+  assert.equal(factory.accepts(world.tiles[index]),true);const root=factory.create(world,index);names.add(root.userData.model);
+  assert.equal(root.userData.model,'civic-'+building);assert.equal(root.userData.asset,true);assert.equal(root.userData.plan.angle,0);
+  const size=new THREE.Box3().setFromObject(root).getSize(new THREE.Vector3());assert.ok(size.x<=4.001&&size.z<=4.001,building+' remains on its owned lot');
+  assert.equal(JSON.stringify(world),before,'rendering preserves costs, capacity and saves');
+ }
+ assert.equal(names.size,10);
+ for(const [type,id]of [['hospital','clinic'],['school','elementary'],['police','police'],['fire','fire']]){
+  world.tiles[index]={type,level:1,variant:0};assert.equal(factory.create(world,index).userData.model,'civic-'+id,'legacy saves receive their default facility');
+ }
+ const empty=new BuildingFactory({scene:new THREE.Scene(),landscape:{assets:{}}});assert.equal(empty.accepts({type:'hospital',building:'clinic'}),false,'missing assets retain the existing service renderer');
 });

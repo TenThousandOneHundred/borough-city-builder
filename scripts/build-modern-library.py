@@ -18,12 +18,13 @@ materials=[
  ('modern-blind',[.47,.45,.39,1],0,.94),
  ('modern-glass-occupied',[.10,.18,.21,1],.68,.18),
  ('modern-brick',[.88,.86,.82,1],0,.9),
+ ('modern-painted',[.84,.86,.83,1],0,.78),
 ]
-CONCRETE,GLASS,FRAME,ROOF,WOOD,LEAVES,RECESS,BLIND,OCCUPIED,BRICK=range(len(materials))
+CONCRETE,GLASS,FRAME,ROOF,WOOD,LEAVES,RECESS,BLIND,OCCUPIED,BRICK,PAINT=range(len(materials))
 models=[]
 class Model:
- def __init__(self,name,category,floors):
-  self.name,self.category,self.floors=name,category,floors;self.detail=False;self.gardens=[];self.parts=defaultdict(lambda:{'p':[],'n':[],'uv':[],'c':[],'i':[],'far':[]})
+ def __init__(self,name,category,floors,building=None):
+  self.name,self.category,self.floors=name,category,floors;self.building=building;self.detail=False;self.gardens=[];self.parts=defaultdict(lambda:{'p':[],'n':[],'uv':[],'c':[],'i':[],'far':[]})
  def quad(self,a,b,c,d,mat,color=(1,1,1)):
   part=self.parts[mat];start=len(part['p'])//3;u=[b[i]-a[i] for i in range(3)];v=[c[i]-a[i] for i in range(3)];n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];length=math.sqrt(sum(x*x for x in n))
   if length<1e-8:return
@@ -182,6 +183,44 @@ for x in [-16,-8,0,8,16]:m.box(x,3.1,15.5,6.5,.16,2,FRAME)
 m.finish()
 m=courtyard('perimeter-campus-offices','office',10,44,32,tint=(.72,.76,.73));m.finish()
 
+# Compact urban service facilities fit the game's existing owned lots. These
+# are distinct complete models, selected by the saved catalogue ID.
+def civic(name,category,floors):
+ return Model('civic-'+name,category,floors,building=name)
+def health_sign(m,x,y,z):
+ m.box(x,y,z,1.8,1.8,.12,PAINT,(.12,.32,.62))
+ for dx in [-.48,.48]:m.box(x+dx,y+.3,z+.075,.2,1.2,.045,PAINT)
+ m.box(x,y+.82,z+.075,1.1,.2,.045,PAINT)
+def shutter(m,x,z,w=3):
+ m.box(x,0,z,w,2.7,.12,FRAME)
+ for i in range(12):m.box(x,.12+i*.21,z+.08,w-.16,.17,.04,PAINT,(.65,.67,.64))
+ m.box(x,1.6,z+.12,w-.35,.42,.04,GLASS)
+def canopy(m,x,z,w=4):
+ m.box(x,2.85,z,w,.18,2,FRAME)
+ for dx in [-w/2+.16,w/2-.16]:m.box(x+dx,0,z+.7,.14,2.85,.14,PAINT)
+ m.box(x,.02,z,w+.3,.1,2.3,ROOF)
+
+m=civic('clinic','hospital',2);h=m.shell(13,11,2,cladding=PAINT);m.roofwork(-2,h,-2,3,2);canopy(m,0,6);health_sign(m,4,3.5,5.6);m.plant(-5,.05,7,2,2);m.finish()
+m=civic('hospital','hospital',6);h=m.shell(15,13,2,cladding=PAINT);m.shell(12,10,4,x=-1,z=-1,y=h,cladding=PAINT);m.roofwork(-1,19.2,-1,4,2);canopy(m,-2,7);health_sign(m,5,3.5,6.6);m.box(4,3,7,5,.2,1.8,PAINT,(.15,.35,.58));m.finish()
+m=civic('wellness','hospital',1);h=m.shell(7,13,1,x=-3,cladding=BRICK);m.shell(6,7,1,x=3,z=-3,curtain=True);m.roofwork(-3,h,-2,2,1.5);canopy(m,-3,7);health_sign(m,-3,1.2,6.6);m.plant(4,0,4,3,3);m.finish()
+
+m=civic('elementary','school',2);h=m.shell(5,14,2,x=-5,cladding=BRICK);m.shell(10,5,2,x=2,z=-4.5,cladding=BRICK);m.roofwork(-5,h,-3,2,2);canopy(m,-4,7.5);m.box(2,.02,3,8,.08,6,PAINT,(.28,.40,.34));
+for x in [-1.5,5.5]:m.box(x,.12,3,.06,.015,5,PAINT)
+for z in [.5,5.5]:m.box(2,.12,z,7,.015,.06,PAINT)
+m.plant(6,0,-.5,2,2);m.finish()
+m=civic('highschool','school',3);h=m.shell(15,8,3,z=-3,cladding=BRICK);m.shell(8,7,2,x=-3,z=4,cladding=PAINT);m.roofwork(3,h,-3,3,2);canopy(m,-3,8);m.box(5,.05,4,3,.12,5,ROOF);m.plant(5,0,7,3,2);m.finish()
+m=civic('college','school',4);h=m.shell(8,15,4,x=-4,cladding=BRICK);m.shell(7,8,3,x=3,z=-3,curtain=True);m.roofwork(-4,h,-3,3,2);canopy(m,-3,8);m.plant(4,0,4,3,4);m.finish()
+
+m=civic('police','police',2);h=m.shell(14,11,2,cladding=PAINT);m.roofwork(-3,h,-2,3,2);canopy(m,0,6);m.box(0,3.05,5.65,10,.55,.12,PAINT,(.12,.25,.45));m.box(4,0,6,2,.15,1.6,ROOF);m.finish()
+m=civic('headquarters','police',5);h=m.shell(15,13,2,cladding=PAINT);m.shell(10,10,3,x=-2,z=-1,y=h,curtain=True);m.roofwork(-2,16,-1,3,2);canopy(m,0,7);m.box(0,3.05,6.65,11,.55,.12,PAINT,(.12,.25,.45));m.cylinder(-5,16.1,-3,.07,3,FRAME);m.finish()
+
+m=civic('fire','fire',2);h=m.shell(15,12,1,cladding=BRICK);m.shell(5,9,1,x=-5,z=-1,y=h,cladding=BRICK)
+for x in [-1.5,3.5]:shutter(m,x,6.1,3.7)
+m.box(1,2.85,6.25,10,.26,.12,PAINT,(.65,.10,.055));m.roofwork(-5,6.4,-2,2,2);m.box(1,.02,7.3,11,.1,2,ROOF);m.finish()
+m=civic('rescue','fire',4);h=m.shell(16,12,1,cladding=BRICK);m.shell(5,7,3,x=-5,z=-2,y=h,cladding=PAINT)
+for x in [-1,4]:shutter(m,x,6.1,3.7)
+m.box(1.5,2.85,6.25,11,.26,.12,PAINT,(.65,.10,.055));m.roofwork(-5,12.8,-2,2,2);m.box(1.5,.02,7.3,11,.1,2,ROOF);m.finish()
+
 # Each model has one primitive per material, with vertex colour variation.
 doc={'asset':{'version':'2.0','generator':'Borough original modern architecture'},'extensionsUsed':['KHR_mesh_quantization'],'extensionsRequired':['KHR_mesh_quantization'],'scene':0,'scenes':[{'nodes':[]}],'nodes':[],'meshes':[],'materials':[{'name':name,'pbrMetallicRoughness':{'baseColorFactor':color,'metallicFactor':metal,'roughnessFactor':rough}} for name,color,metal,rough in materials],'buffers':[{'byteLength':0}],'bufferViews':[],'accessors':[]}
 binary=bytearray()
@@ -217,7 +256,7 @@ for model in models:
  primitives=[]
  for mat,part in sorted(model.parts.items()):
   primitives.append({'attributes':{'POSITION':pack(part['p'],'VEC3'),'NORMAL':pack_normal(part['n']),'TEXCOORD_0':pack(part['uv'],'VEC2'),'COLOR_0':pack([v for i in range(0,len(part['c']),3) for v in [*[round(max(0,min(1,c))*255) for c in part['c'][i:i+3]],255]],'VEC4',5121)},'indices':pack(part['i'],'SCALAR',5123 if max(part['i'])<65536 else 5125),'material':mat})
- doc['meshes'].append({'name':model.name,'primitives':primitives});doc['scenes'][0]['nodes'].append(len(doc['nodes']));doc['nodes'].append({'name':model.name,'mesh':len(doc['meshes'])-1,'extras':{'category':model.category,'floors':model.floors,'family':'modern','gardens':model.gardens,'source':'Borough original geometry'}})
+ doc['meshes'].append({'name':model.name,'primitives':primitives});doc['scenes'][0]['nodes'].append(len(doc['nodes']));doc['nodes'].append({'name':model.name,'mesh':len(doc['meshes'])-1,'extras':{'category':model.category,'building':model.building,'floors':model.floors,'family':'modern','gardens':model.gardens,'source':'Borough original geometry'}})
 while len(binary)%4:binary.append(0)
 doc['buffers'][0]['byteLength']=len(binary);data=json.dumps(doc,separators=(',',':')).encode();data+=b' '*((-len(data))%4)
 glb=struct.pack('<III',0x46546c67,2,12+8+len(data)+8+len(binary))+struct.pack('<II',len(data),0x4e4f534a)+data+struct.pack('<II',len(binary),0x004e4942)+binary
