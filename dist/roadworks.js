@@ -1,9 +1,9 @@
-import {streetStations,atDistance,distanceSection,streetSurface,pavementMaterial} from './street-geometry.js?v=26.0';
-import {signalPhase} from './junctions.js?v=26.0';
-import {outsidePortals} from './traffic.js?v=26.0';
-import {batchStatic} from './static-batch.js?v=26.0';
+import {streetStations,atDistance,distanceSection,streetSurface,pavementMaterial} from './street-geometry.js?v=26.1';
+import {signalPhase} from './junctions.js?v=26.1';
+import {outsidePortals} from './traffic.js?v=26.1';
+import {batchStatic} from './static-batch.js?v=26.1';
 import * as THREE from './vendor/three.module.js';
-import {floorHeight,groundHeight,wetness} from './landscape.js?v=26.0';
+import {floorHeight,groundHeight,wetness} from './landscape.js?v=26.1';
 export class Roadworks{
 constructor(v){this.v=v;this.group=new THREE.Group();v.scene.add(this.group);this.lamps=[];this.lampMaterial=new THREE.MeshStandardMaterial({color:'#e5e2ca',emissive:'#ffe2a0',emissiveIntensity:v.night?3:0,roughness:.3});this.walkMaterial=pavementMaterial();this.lightPoolMaterial=new THREE.MeshBasicMaterial({color:'#ffe0a0',transparent:true,opacity:.22,depthWrite:false,blending:THREE.AdditiveBlending});this.lightPoolMaterial.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 poolUV;').replace('#include <uv_vertex>','#include <uv_vertex>\npoolUV=uv;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 poolUV;').replace('#include <color_fragment>','#include <color_fragment>\ndiffuseColor.a*=pow(max(0.,1.-length(poolUV*2.-1.)),1.8);');};this.lightPoolMaterial.customProgramCacheKey=()=> 'street-light-pool-v1';this.signalGroup=new THREE.Group();v.scene.add(this.signalGroup);}
 clear(){this.group.traverse(o=>{if(o.geometry&&o.geometry!==this.v.unitBox)o.geometry.dispose()});this.group.clear();this.lamps=[];this.signalKey=null;}

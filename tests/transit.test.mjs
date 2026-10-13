@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import E from '../dist/engine.js';
 import {Traffic} from '../dist/traffic.js';
 import {Residents} from '../dist/residents.js';
-import {Transit,createBusLine} from '../dist/transit.js';
+import {Transit,createBusLine,stopPosition} from '../dist/transit.js';
 function world(){const w=E.createWorld('Bus test','plains',44);for(const t of w.tiles)Object.assign(t,{type:null,level:0,people:0,tree:false});for(let x=0;x<28;x++)Object.assign(w.tiles[24*48+x],{type:'road',roadType:'street',level:1});for(const [x,type,people]of [[1,'bus',0],[4,'residential',6],[20,'office',0],[23,'commercial',0]])Object.assign(w.tiles[23*48+x],{type,level:1,people});return w;}
 function sim(w,create=true){const traffic=new Traffic(w,E);traffic.residentsEnabled=true;for(let i=0;i<32;i++)traffic.addAgent();if(create)assert.ok(createBusLine(w,traffic,[24*48+4,24*48+22]).ok);const transit=new Transit(w,traffic),residents=new Residents(w,traffic,transit);return {traffic,transit,residents,w};}
 function advance(s,seconds){for(let t=0;t<seconds;t+=.05){s.traffic.update(.05);s.transit.update(.05);s.residents.update(.05);}}
@@ -33,4 +33,38 @@ test('mixed car and bus instancing retains each complete vehicle geometry',async
 });
 test('reserved bus slots do not suppress ordinary outside arrivals',()=>{
  const w=world(),traffic=new Traffic(w,E);traffic.residentsEnabled=true;for(let i=0;i<8;i++)Object.assign(traffic.addAgent(),{active:true,kind:'bus',hold:true,x:i,z:40});const visitor=traffic.addAgent();assert.ok(traffic.begin(visitor));assert.equal(visitor.kind,undefined);assert.equal(visitor.phase,'inbound');
+});
+
+test('cached stop catchments preserve line choice and ties across homes and destinations',()=>{
+ const s=sim(world());for(const stops of [[4,10,22],[4,22]])assert.ok(createBusLine(s.w,s.traffic,stops.map(x=>24*48+x)).ok);s.transit.rebuild();
+ const point=i=>({x:(i%48-24)*4+2,z:(Math.floor(i/48)-24)*4+2});
+ const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
+ for(let x=0;x<28;x++)for(let y=0;y<28;y++){
+  const from=23*48+x,to=23*48+y,r={id:1,location:from};let expected=null;
+  if(distance(point(from),point(to))>=10)for(const entry of s.transit.entries.values())for(let a=0;a<entry.line.stops.length;a++)for(let b=0;b<entry.line.stops.length;b++){
+   if(a===b)continue;const first=stopPosition(s.traffic,entry.line.stops[a]),last=stopPosition(s.traffic,entry.line.stops[b]),walk=distance(point(from),first)+distance(point(to),last);
+   if(distance(point(from),first)>16||distance(point(to),last)>16||walk>distance(point(from),point(to))*.9)continue;
+   if(!expected||walk<expected.walk)expected={line:entry.line.id,board:a,alight:b,walk};
+  }
+  assert.equal(s.transit.request(r,to,'work'),!!expected);
+  if(expected)assert.deepEqual([r.transit.line,r.transit.board,r.transit.alight],[expected.line,expected.board,expected.alight]);
+ }
+});
+test('warm transit requests avoid geometry reads and road changes refresh stop catchments',()=>{
+ const s=sim(world()),get=s.traffic.positions.get.bind(s.traffic.positions);let reads=0;s.traffic.positions.get=i=>{reads++;return get(i);};
+ for(let i=0;i<100;i++)assert.ok(s.transit.request({id:1,location:23*48+4},23*48+20,'work'));
+ assert.equal(reads,0);const entry=s.transit.entries.values().next().value,old=structuredClone(entry.stopPositions);
+ for(let x=0;x<28;x++)s.w.tiles[24*48+x].roadType='avenue';s.traffic.rebuild(s.w);s.transit.update(.05);
+ assert.notDeepEqual(entry.stopPositions,old);assert.equal(s.transit.journeyCache.size,0);
+});
+test('simultaneously dwelling lines board only their passengers and retain capacity',()=>{
+ const s=sim(world());assert.ok(createBusLine(s.w,s.traffic,[24*48+4,24*48+22]).ok);s.transit.rebuild();
+ const people=[];for(const entry of s.transit.entries.values()){
+  Object.assign(entry.line.vehicle,{phase:'dwell',leg:0,dwell:4});entry.agent.hold=true;
+  for(let i=0;i<30;i++)people.push({id:people.length+1,transit:{line:entry.line.id,board:0,alight:1,from:23*48+4,to:23*48+20,purpose:'work',phase:'wait',x:0,z:0}});
+ }
+ s.w.citizens.residents=people;s.transit.update(.05);
+ for(const entry of s.transit.entries.values()){
+  const group=people.filter(r=>r.transit.line===entry.line.id);assert.equal(group.filter(r=>r.transit.phase==='ride').length,24);assert.equal(group.filter(r=>r.transit.phase==='wait').length,6);assert.equal(entry.line.boardings,24);
+ }
 });
