@@ -1,10 +1,13 @@
-import {Junctions,smoothRoute} from './junctions.js?v=37.2';
+import {TrafficSpatial} from './traffic-spatial.js?v=38';
+import {Junctions,smoothRoute} from './junctions.js?v=38';
+// Car slots grow with population; saved road trips always have room to resume.
+export function carCapacity(world){const population=world.tiles.reduce((n,t)=>n+(t.type==='residential'&&!t.construction?(t.people||0):0),0),saved=world.citizens?.residents.filter(r=>r.trip).length||0;return Math.max(32,Math.min(512,Math.ceil(population/4)),saved);}
 // Destination-based road trips. No random placement or per-frame route searches.
 export const roadPoint=i=>({x:(i%48+.5)*4-96,z:(Math.floor(i/48)+.5)*4-96});
 export function outsidePortals(world){return world.tiles.flatMap((t,i)=>{const x=i%48,y=Math.floor(i/48);if(t.type!=='road'||x!==0&&x!==47&&y!==0&&y!==47)return[];const direction=x===0?[-1,0]:x===47?[1,0]:y===0?[0,-1]:[0,1],p=roadPoint(i);return[{id:i,...p,dx:direction[0],dz:direction[1],outside:{x:p.x+direction[0]*80,z:p.z+direction[1]*80}}];});}
 const neighbors=i=>[i%48>0?i-1:-1,i%48<47?i+1:-1,i>=48?i-48:-1,i<2256?i+48:-1].filter(i=>i>=0);
 export class Traffic {
- constructor(world,engine){this.engine=engine;this.agents=[];this.sequence=0;this.spawnClock=0;this.completed=0;this.time=0;this.rebuild(world);}
+ constructor(world,engine){this.engine=engine;this.spatial=new TrafficSpatial();this.agents=[];this.sequence=0;this.spawnClock=0;this.completed=0;this.time=0;this.rebuild(world);}
  rebuild(world){this.world=world;this.portals=outsidePortals(world);this.graph=new Map();this.samples=new Map();this.positions=new Map();this.routeCache=new Map();this.searchCache=new Map();
  for(const path of world.roadPaths||[]){const samples=this.engine.sampleRoad(path.controls).map(p=>({x:(p.x+.5)*4-96,z:(p.y+.5)*4-96}));const mapping=new Map();for(const i of path.tiles){const p=roadPoint(i);let best=0,d=Infinity;samples.forEach((s,j)=>{const v=(s.x-p.x)**2+(s.z-p.z)**2;if(v<d){d=v;best=j}});mapping.set(i,best);if(!this.positions.has(i))this.positions.set(i,samples[best]);}this.samples.set(path.id,{samples,mapping});}
  for(let i=0;i<world.tiles.length;i++)if(world.tiles[i].type==='road'){const t=world.tiles[i];this.graph.set(i,neighbors(i).filter(j=>{if(world.tiles[j].type!=='road')return false;if(!this.engine.ROADS[t.roadType]?.oneway)return true;for(const id of t.pathIds||[]){const map=this.samples.get(id)?.mapping;if(map?.has(j))return map.get(j)>map.get(i);}return j>i;}));}
@@ -26,16 +29,18 @@ export class Traffic {
  begin(a){const choices=this.residentsEnabled?this.trips.filter(t=>this.world.tiles[t.destination].type!=='residential'):this.trips;if(!choices.length||this.residentsEnabled&&this.agents.filter(a=>a.active&&!a.residentId&&a.kind!=='bus').length>=6)return false;const trip=choices[this.sequence++%choices.length],start=trip.inbound[0];if(this.agents.some(b=>b!==a&&b.active&&Math.hypot(b.x-start.x,b.z-start.z)<3))return false;Object.assign(a,{hold:false,previousX:undefined,previousZ:undefined,speed:0,stopTime:0,stopJunction:null,residentId:null,arrived:false,active:true,trip,phase:'inbound',points:trip.inbound,segment:0,distance:0,dwell:0,x:start.x,z:start.z});return true;}
  update(dt){if(dt<=0)return;for(let left=dt;left>1e-8;left-=.05)this.step(Math.min(.05,left));}
  step(dt){this.time+=dt;this.spawnClock+=dt;if(this.spawnClock>=2-1e-8){const free=this.agents.find(a=>!a.active&&a.kind!=='bus');if(free&&this.begin(free))this.spawnClock=0;else this.spawnClock=Math.min(this.spawnClock,2);}
+ const indexed=this.agents.length>=48;if(indexed)this.spatial.reset(this.agents);
  for(const a of this.agents){if(!a.active||a.hold)continue;if(a.dwell>0){a.dwell-=dt;if(a.dwell<=0){a.phase='outbound';a.points=a.trip.outbound;a.segment=0;a.distance=0;a.speed=0;}continue;}
  const p=a.points[a.segment],q=a.points[a.segment+1];if(!q){if(a.phase==='inbound')a.dwell=4;else{a.active=false;a.arrived=true;this.completed++;}continue;}
  const heading=Math.atan2(q.x-p.x,q.z-p.z),forward={x:Math.sin(heading),z:Math.cos(heading)};
  let clearance=this.junctions.limit(a,this.time,dt,this.world.trafficPolicy||'signals',this.agents);
- for(const b of this.agents){if(b===a||!b.active||b.dwell)continue;const dx=b.x-a.x,dz=b.z-a.z,ahead=dx*forward.x+dz*forward.z,lateral=Math.abs(dx*forward.z-dz*forward.x);if(ahead>0&&lateral<.65&&Math.cos(b.heading-heading)>.3&&ahead-((a.length||.9)+(b.length||.9))*.5-.75<clearance){clearance=Math.max(0,ahead-((a.length||.9)+(b.length||.9))*.5-.75);a.waitReason='Vehicle queue';}}
+ for(const b of (indexed?this.spatial.corridor(a,forward):this.agents)){if(b===a||!b.active||b.dwell)continue;const dx=b.x-a.x,dz=b.z-a.z,ahead=dx*forward.x+dz*forward.z,lateral=Math.abs(dx*forward.z-dz*forward.x);if(ahead>0&&lateral<.65&&Math.cos(b.heading-heading)>.3&&ahead-((a.length||.9)+(b.length||.9))*.5-.75<clearance){clearance=Math.max(0,ahead-((a.length||.9)+(b.length||.9))*.5-.75);a.waitReason='Vehicle queue';}}
  // A car queued outside the junction must not reserve space ahead of its leader.
  if(a.waitReason==='Vehicle queue'&&clearance<.2)for(const gate of this.junctions.route(a.points).gates){const j=gate.junction;if(j.owner===a&&Math.hypot(a.x-j.x,a.z-j.z)>j.radius)j.owner=null;}
  const tile=this.world.tiles[Math.floor((a.z+96)/4)*48+Math.floor((a.x+96)/4)],cruise=tile?.roadType==='highway'?8:tile?.roadType==='gravel'?3:5;
  const target=Math.min(cruise,Math.sqrt(Math.max(0,clearance)*6));a.speed=Math.min(target,(a.speed||0)+dt*3);let move=Math.min(dt*a.speed,clearance);if(move>0.02)a.waitReason='';
  while(move>1e-8&&a.active){const p=a.points[a.segment],q=a.points[a.segment+1];if(!q){if(a.phase==='inbound')a.dwell=4;else{a.active=false;a.arrived=true;this.completed++;}break;}const length=Math.hypot(q.x-p.x,q.z-p.z);if(length<.001){a.segment++;continue;}const step=Math.min(move,length-a.distance);a.distance+=step;move-=step;const f=a.distance/length;a.x=p.x+(q.x-p.x)*f;a.z=p.z+(q.z-p.z)*f;a.heading=Math.atan2(q.x-p.x,q.z-p.z);if(a.distance>=length-1e-6){a.segment++;a.distance=0;}}
+ if(indexed)this.spatial.move(a);
  }
  }
  get summary(){const moving=this.agents.filter(a=>a.active&&!a.dwell);return {junctions:this.junctions.items.length,queued:moving.filter(a=>(a.speed||0)<.2&&a.waitReason).length,averageSpeed:moving.length?moving.reduce((s,a)=>s+(a.speed||0),0)/moving.length:0};}

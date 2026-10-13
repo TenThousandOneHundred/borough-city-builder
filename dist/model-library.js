@@ -1,11 +1,11 @@
-import {loadBinary} from './asset-transfer.js?v=37.2';
-import {SiteDetails} from './site-details.js?v=37.2';
-import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=37.2';
+import {loadBinary} from './asset-transfer.js?v=38';
+import {SiteDetails} from './site-details.js?v=38';
+import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=38';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {lotPlan} from './building-plan.js?v=37.2';
-import {floorHeight} from './landscape.js?v=37.2';
+import {lotPlan} from './building-plan.js?v=38';
+import {floorHeight} from './landscape.js?v=38';
 const IDENTITY=new THREE.Matrix4();
 const civicDefaults={hospital:'clinic',school:'elementary',police:'police',fire:'fire'};
 // Complete textured assets are loaded once, batched per material, and instanced.
@@ -15,7 +15,7 @@ export class ModelLibrary {
   const loader=new GLTFLoader();
   // Fetch the distant indices alongside the models instead of adding another
   // large download after all three catalogues have finished.
-  const distant=Promise.all([fetch(new URL('./assets/buildings/lod.json?v=37.2',import.meta.url)).then(r=>{if(!r.ok)throw Error(r.status);return r.json()}),loadBinary(new URL('./assets/buildings/lod.bin?v=37.2',import.meta.url))]).then(value=>({value}),error=>({error}));
+  const distant=Promise.all([fetch(new URL('./assets/buildings/lod.json?v=38',import.meta.url)).then(r=>{if(!r.ok)throw Error(r.status);return r.json()}),loadBinary(new URL('./assets/buildings/lod.bin?v=38',import.meta.url))]).then(value=>({value}),error=>({error}));
   await Promise.all(['urban','industry','modern'].map(async file=>{
    try{const url=new URL(`./assets/buildings/${file}.glb?v=${file==='modern'?'37.2':21}`,import.meta.url),{scene}=file==='modern'?await loader.parseAsync(await loadBinary(url),new URL('.',url).href):await loader.loadAsync(url.href);
     this.ingest(scene);
