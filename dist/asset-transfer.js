@@ -2,12 +2,20 @@
 // Decode a lossless gzip copy in the browser; older browsers retain the raw path.
 export async function loadBinary(url,{fetcher=globalThis.fetch,Decompressor=globalThis.DecompressionStream,timeoutMs=45000}={}){
  const read=async(target,compressed)=>{
-  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);
+  const controller=new AbortController();let timer;
+  const heartbeat=()=>{clearTimeout(timer);timer=setTimeout(()=>controller.abort(),timeoutMs);};
+  heartbeat();
   try{
    const response=await fetcher(target,{signal:controller.signal});
    if(!response.ok)throw new Error(`Asset request failed: ${response.status}`);
-   if(!compressed)return await response.arrayBuffer();
-   return await new Response(response.body.pipeThrough(new Decompressor('gzip'))).arrayBuffer();
+   // Bound inactivity, not total transfer time: a slow connection that keeps
+   // delivering bytes must not lose its detailed models halfway through.
+   const reader=response.body.getReader(),chunks=[];let length=0;
+   for(;;){const {done,value}=await reader.read();if(done)break;chunks.push(value);length+=value.byteLength;heartbeat();}
+   clearTimeout(timer);
+   const bytes=new Uint8Array(length);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}
+   if(!compressed)return bytes.buffer;
+   return await new Response(new Blob([bytes]).stream().pipeThrough(new Decompressor('gzip'))).arrayBuffer();
   }finally{clearTimeout(timer);}
  };
  if(Decompressor){

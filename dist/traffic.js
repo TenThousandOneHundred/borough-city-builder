@@ -1,4 +1,4 @@
-import {Junctions,smoothRoute} from './junctions.js?v=32.0';
+import {Junctions,smoothRoute} from './junctions.js?v=32.1';
 // Destination-based road trips. No random placement or per-frame route searches.
 export const roadPoint=i=>({x:(i%48+.5)*4-96,z:(Math.floor(i/48)+.5)*4-96});
 export function outsidePortals(world){return world.tiles.flatMap((t,i)=>{const x=i%48,y=Math.floor(i/48);if(t.type!=='road'||x!==0&&x!==47&&y!==0&&y!==47)return[];const direction=x===0?[-1,0]:x===47?[1,0]:y===0?[0,-1]:[0,1],p=roadPoint(i);return[{id:i,...p,dx:direction[0],dz:direction[1],outside:{x:p.x+direction[0]*80,z:p.z+direction[1]*80}}];});}

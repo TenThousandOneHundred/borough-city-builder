@@ -220,6 +220,6 @@ The reproducible 201-lot CPU benchmark (`node scripts/benchmark-rebuild.mjs`) co
 
 ### Edition 32: lossless asset downloads
 
-Modern buildings and distant indices now download as gzip copies (17,253,780 bytes to 3,959,500 bytes, 77% less transfer). Browser decompression restores the original bytes, including every vertex, texture and index. Distant indices begin downloading alongside the building catalogues. Unsupported browsers, missing archives and corrupt archives fall back to the original assets. Requests for these two assets have bounded timeouts. Other asset loaders retain their existing behavior.
+Modern buildings and distant indices now download as gzip copies (17,253,780 bytes to 3,959,500 bytes, 77% less transfer). Browser decompression restores the original bytes, including every vertex, texture and index. Distant indices begin downloading alongside the building catalogues. Unsupported browsers, missing archives and corrupt archives fall back to the original assets. Requests for these two assets abort after 45 seconds without incoming data; slow transfers continue while bytes arrive. Other asset loaders retain their existing behavior.
 
 The loading indicator identifies pending asset groups. After changing modern buildings or LOD data, run `node scripts/compress-assets.mjs`; CI verifies the archives decode exactly to the current originals with `node scripts/compress-assets.mjs --check`.
