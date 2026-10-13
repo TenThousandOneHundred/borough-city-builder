@@ -289,3 +289,9 @@ Drawn roads now share an intersection surface instead of crossing over each othe
 Signals now stand beside the actual approach sidewalks with smaller, correctly scaled heads. Their colors still use the existing traffic controllers. Road and sidewalk surface heights are consistent across old and drawn roads, and building access walks meet the sidewalk height.
 
 Intersection detection uses a spatial hash to limit segment comparisons. Sampled render centerlines are shared with the road renderer, and static road geometry still rebuilds on network edits rather than camera movement. Tests compare vehicle positions and simulation time with and without repeated pavement rebuilds. This release does not claim a measured FPS gain or change the traffic routing/control model.
+
+## Edition 43: pitched neighborhood houses
+
+Low-density zoning now selects eight original house models: cottages, brick and winged bungalows, dormered and porch-front family homes, paired houses, and narrow townhouses. Real gable/hip roof planes, eaves, recessed sash windows, gutters, chimneys, and porch posts replace the previous taller low-density blocks. Detached housing and townhouse choices use their appropriate forms deterministically, including after reload.
+
+The eight designs add 13,744 triangles across the asset library and 129,589 compressed bytes. They share the existing 13 materials and instancing system. Distant geometry retains the roof silhouette and every glass pane while omitting small roof courses, gutters and sills. No traffic, walking, or simulation timing behavior changes. The full suite passes 190 tests; asset compression round-trips exactly. Local browser comparison uses the same 68-lot world and camera position. This release improves neighborhood architecture; it does not establish Cities: Skylines II equivalence or a measured FPS improvement.

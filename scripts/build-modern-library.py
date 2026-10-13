@@ -26,7 +26,7 @@ CONCRETE,GLASS,FRAME,ROOF,WOOD,LEAVES,RECESS,BLIND,OCCUPIED,BRICK,PAINT,SHOP_GLA
 models=[]
 class Model:
  def __init__(self,name,category,floors,building=None):
-  self.name,self.category,self.floors=name,category,floors;self.building=building;self.site=False;self.detail=False;self.gardens=[];self.streetFronts=[];self.parts=defaultdict(lambda:{'p':[],'n':[],'uv':[],'c':[],'i':[],'far':[]})
+  self.name,self.category,self.floors=name,category,floors;self.building=building;self.site=False;self.houseForm=None;self.roofForm=None;self.detail=False;self.gardens=[];self.streetFronts=[];self.parts=defaultdict(lambda:{'p':[],'n':[],'uv':[],'c':[],'i':[],'far':[]})
  def quad(self,a,b,c,d,mat,color=(1,1,1),uvs=None):
   part=self.parts[mat];start=len(part['p'])//3;u=[b[i]-a[i] for i in range(3)];v=[c[i]-a[i] for i in range(3)];n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];length=math.sqrt(sum(x*x for x in n))
   if length<1e-8:return
@@ -178,6 +178,105 @@ class Model:
   self.box(x,3.0,z,3.6,.12,2.3,FRAME);self.box(x,0,z-.5,3.8,.18,2.1,CONCRETE)
   for sx in [-1.5,1.5]:self.box(x+sx,0,z+.5,.10,3,.10,FRAME)
  def finish(self):models.append(self)
+
+# Domestic architecture has smaller, individually framed openings, pitched
+# roof planes and human-scale covered entries. Dimensions remain in metres.
+def dwelling(name,w,d,floors,form='detached',roof='gable',tint=(.85,.88,.80),brick=False,siding=False,porch=True):
+ m=Model(name,'residential-low',floors);m.houseForm=form;m.roofForm=roof
+ domestic_block(m,w,d,floors,tint=tint,brick=brick,siding=siding,paired=form=='semi')
+ pitched_roof(m,0,0,w,d,floors*2.85,2.1 if floors==1 else 2.7,hip=min(w,d)*.23 if roof=='hip' else 0,tint=(.82,.83,.79) if brick else (.74,.78,.79))
+ if porch:
+  for front in list(m.streetFronts):covered_entry(m,front['position'][0],d/2+.95,3.1,1.9)
+ # Chimney, vent cap and rainwater pipes break the silhouette at realistic scale.
+ m.box(-w*.26,floors*2.85+1.1,-d*.26,.65,2.0,.75,BRICK)
+ m.box(-w*.26,floors*2.85+3.1,-d*.26,.82,.14,.92,CONCRETE)
+ return m
+
+def domestic_block(m,w,d,floors,x=0,z=0,tint=(.8,.84,.78),brick=False,siding=False,paired=False):
+ h=floors*2.85;cladding=BRICK if brick else PAINT
+ points=[(x-w/2,z-d/2),(x+w/2,z-d/2),(x+w/2,z+d/2),(x-w/2,z+d/2)]
+ m.box(x,0,z,w+.10,.16,d+.10,CONCRETE,(.8,.8,.75))
+ for side,(a,b) in enumerate(zip(points,points[1:]+points[:1])):
+  dx,dz=b[0]-a[0],b[1]-a[1];length=math.hypot(dx,dz);tx,tz=dx/length,dz/length;nx,nz=tz,-tx;front=nz>.9
+  def p(u,y,out=0):return(a[0]+tx*u+nx*out,y,a[1]+tz*u+nz*out)
+  def panel(l,r,lo,hi):
+   if hi<=lo or r<=l:return
+   if not siding:m.quad(p(r,lo,.02),p(l,lo,.02),p(l,hi,.02),p(r,hi,.02),cladding,tint);return
+   n=max(1,math.ceil((hi-lo)/.19))
+   for k in range(n):
+    y0=lo+(hi-lo)*k/n;y1=lo+(hi-lo)*(k+1)/n;c=tuple(v*(.96+(k*13+side*7)%9*.008) for v in tint)
+    m.quad(p(r,y0,.04),p(l,y0,.04),p(l,y1,.015),p(r,y1,.015),PAINT,c)
+  bays=max(2,round(length/3.2));bay=length/bays
+  for f in range(floors):
+   base=f*2.85
+   for j in range(bays):
+    door=front and f==0 and (j in [0,bays-1] if paired else j==bays//2)
+    centre=(j+.5)*bay;opening=1.0 if door else min(1.45,bay-.65);l=centre-opening/2;r=centre+opening/2;lo=base+(.08 if door else .86);hi=base+(2.2 if door else 2.28)
+    panel(j*bay,l,base,base+2.85);panel(r,(j+1)*bay,base,base+2.85);panel(l,r,base,lo);panel(l,r,hi,base+2.85)
+    m.quad(p(r,lo,-.12),p(l,lo,-.12),p(l,hi,-.12),p(r,hi,-.12),WOOD if door else OCCUPIED if (j+side+f)%4==0 else GLASS,(.75,.79,.79))
+    for u in [l,r]:m.quad(p(u,lo,.035),p(u,lo,-.12),p(u,hi,-.12),p(u,hi,.035),CONCRETE,(.70,.72,.69))
+    for u in [l-.055,r+.055]:m.quad(p(u+.055,lo-.055,.065),p(u-.055,lo-.055,.065),p(u-.055,hi+.055,.065),p(u+.055,hi+.055,.065),PAINT)
+    for y in [lo-.055,hi+.055]:m.quad(p(r+.11,y-.055,.07),p(l-.11,y-.055,.07),p(l-.11,y+.055,.07),p(r+.11,y+.055,.07),PAINT)
+    if door:
+     m.streetFronts.append({'kind':'entrance','position':list(p(centre,.08,.08)),'normal':[nx,nz],'width':opening})
+     m.quad(p(r-.15,1.12,-.09),p(r-.20,1.12,-.09),p(r-.20,1.25,-.09),p(r-.15,1.25,-.09),FRAME)
+     m.quad(p(r-.15,1.35,-.10),p(l+.15,1.35,-.10),p(l+.15,2.02,-.10),p(r-.15,2.02,-.10),GLASS)
+    else:
+     # Central sash and projecting sill remain separate from recessed glass.
+     m.quad(p(centre+.022,lo,-.06),p(centre-.022,lo,-.06),p(centre-.022,hi,-.06),p(centre+.022,hi,-.06),PAINT)
+     m.quad(p(r,base+1.52,-.06),p(l,base+1.52,-.06),p(l,base+1.565,-.06),p(r,base+1.565,-.06),PAINT)
+     m.detail=True;m.quad(p(l-.14,lo-.08,.19),p(r+.14,lo-.08,.19),p(r+.14,lo-.08,-.04),p(l-.14,lo-.08,-.04),CONCRETE);m.detail=False
+ return h
+
+def pitched_roof(m,x,z,w,d,y,rise,hip=0,tint=(.78,.81,.82),gutters=True):
+ W=w+.7;D=d+.7;a=(x-W/2,y,z+D/2);b=(x+W/2,y,z+D/2);c=(x+W/2,y,z-D/2);e=(x-W/2,y,z-D/2);rf=(x,y+rise,z+D/2-hip);rb=(x,y+rise,z-D/2+hip)
+ def facet(q):
+  # Roof texture coordinates use physical distance, not one image per roof.
+  u=math.dist(q[0],q[1])/2;v=math.dist(q[1],q[2])/2;m.quad(*q,ROOF,tint,uvs=[(0,0),(u,0),(u,v),(0,v)])
+ facet([a,rf,rb,e]);facet([b,c,rb,rf])
+ if hip:facet([a,b,rf,a]);facet([c,e,rb,c])
+ else:
+  # Solid gable ends support the two roof planes beneath the overhang.
+  front=z+d/2;back=z-d/2
+  m.quad((x-w/2,y,front),(x+w/2,y,front),(x,y+rise,front),(x-w/2,y,front),PAINT,(.78,.80,.74))
+  m.quad((x+w/2,y,back),(x-w/2,y,back),(x,y+rise,back),(x+w/2,y,back),PAINT,(.78,.80,.74))
+ # Fascia boards and a ridge cap are retained at all distances.
+ for side in [-1,1]:m.box(x+side*W/2,y-.13,z,.12,.18,D,PAINT,(.75,.78,.74))
+ m.box(x,y+rise-.025,z,.15,.12,max(.15,D-2*hip),ROOF,tint)
+ # Overlapping courses follow the roof slope. They drop from distant topology,
+ # while the full roof planes, ridge, windows and walls remain unchanged.
+ m.detail=True
+ for side in [-1,1]:
+  rows=max(4,round(math.hypot(W/2,rise)/.24))
+  for k in range(1,rows):
+   t=k/rows;xx=x+side*W/2*(1-t);yy=y+rise*t+.018;z0=z-D/2+hip*t;z1=z+D/2-hip*t
+   course=[(xx,yy,z0),(xx,yy,z1),(xx+side*.032,yy-.008,z1),(xx+side*.032,yy-.008,z0)]
+   m.quad(*(course if side>0 else course[::-1]),ROOF,tuple(v*.7 for v in tint))
+ if gutters:
+  for side in [-1,1]:
+   m.box(x+side*(W/2+.035),y-.05,z,.10,.10,D,FRAME)
+   m.cylinder(x+side*(w/2+.07),.06,z-d/2+.20,.045,max(.1,y-.11),FRAME,6)
+ m.detail=False
+
+def covered_entry(m,x,z,w,d):
+ m.box(x,.025,z,w,.14,d,WOOD,(.85,.9,.87))
+ for dx in [-w/2+.16,w/2-.16]:m.box(x+dx,.16,z+d/2-.16,.14,2.4,.14,PAINT)
+ pitched_roof(m,x,z,w,d,2.62,.7,hip=0,tint=(.74,.78,.79),gutters=False)
+ for k in range(2):m.box(x,.02+k*.055,z+d/2+.18-k*.14,1.35,.055,.28,CONCRETE)
+
+def dormer(m,x,z,y):
+ m.box(x,y,z,1.8,1.45,2.2,PAINT,(.73,.78,.74));m.box(x,y+.35,z+1.11,1.04,.87,.035,GLASS);m.box(x,y+.33,z+1.14,1.19,.075,.09,PAINT)
+ for dx in [-.56,.56]:m.box(x+dx,y+.33,z+1.15,.08,.98,.10,PAINT)
+ m.box(x,y+1.26,z+1.15,1.19,.08,.1,PAINT);pitched_roof(m,x,z,1.8,2.2,y+1.45,.65,gutters=False)
+
+m=dwelling('gabled-garden-cottage',8.4,10.4,1,tint=(.72,.81,.80),siding=True);m.finish()
+m=dwelling('hipped-brick-bungalow',11,10,1,roof='hip',tint=(.90,.74,.60),brick=True);m.finish()
+m=dwelling('dormer-detached-home',8.5,11,2,tint=(.90,.85,.72),siding=True);dormer(m,-2.2,1,6.6);m.finish()
+m=dwelling('covered-porch-family-home',10,10.8,2,tint=(.70,.78,.84),siding=True,porch=False);covered_entry(m,-1.7,6.1,6.6,2.4);m.finish()
+m=dwelling('cross-gable-family-home',8.2,10,2,tint=(.85,.78,.67),brick=True);domestic_block(m,5,6,1,x=5,z=-1,tint=(.79,.81,.74));pitched_roof(m,5,-1,5,6,2.85,1.6);m.finish()
+m=dwelling('brick-paired-homes',12,11,2,form='semi',roof='hip',tint=(.88,.67,.54),brick=True);m.finish()
+m=dwelling('narrow-gabled-townhouse',6.6,12,2,form='terrace',tint=(.76,.77,.73),brick=True);dormer(m,-1.5,1,6.65);m.finish()
+m=dwelling('garden-wing-bungalow',9,10,1,tint=(.83,.86,.77),siding=True);domestic_block(m,5,7,1,x=5.5,z=-1.5,tint=(.7,.76,.78),siding=True);pitched_roof(m,5.5,-1.5,5,7,2.85,1.5,hip=1.1);m.finish()
 
 m=Model('glass-podium-offices','office',21);h=m.shell(25,21,3,curtain=True);h=m.shell(16,14,18,x=-2,z=-1,y=h,bevel=2,curtain=True);m.roofwork(-2,h,-1);m.plant(9,9.85,6,3,4);m.entrance(11);m.finish()
 m=Model('stepped-concrete-offices','office',18);h=m.shell(24,20,3);h=m.shell(21,17,7,y=h,curtain=True);h=m.shell(16,13,5,x=-2,y=h,curtain=True);h=m.shell(11,9,3,x=-3,y=h,curtain=True);m.roofwork(-3,h,0,4,2);m.plant(8,32.3,4,2,5);m.entrance(10.5);m.finish()
@@ -354,7 +453,7 @@ for model in models:
  primitives=[]
  for mat,part in sorted(model.parts.items()):
   primitives.append({'attributes':{'POSITION':pack(part['p'],'VEC3'),'NORMAL':pack_normal(part['n']),'TEXCOORD_0':pack(part['uv'],'VEC2'),'COLOR_0':pack([v for i in range(0,len(part['c']),3) for v in [*[round(max(0,min(1,c))*255) for c in part['c'][i:i+3]],255]],'VEC4',5121)},'indices':pack(part['i'],'SCALAR',5123 if max(part['i'])<65536 else 5125),'material':mat})
- doc['meshes'].append({'name':model.name,'primitives':primitives});doc['scenes'][0]['nodes'].append(len(doc['nodes']));doc['nodes'].append({'name':model.name,'mesh':len(doc['meshes'])-1,'extras':{'category':model.category,'building':model.building,'site':model.site,'floors':model.floors,'family':'modern','gardens':model.gardens,'streetFronts':model.streetFronts,'source':'Borough original geometry'}})
+ doc['meshes'].append({'name':model.name,'primitives':primitives});doc['scenes'][0]['nodes'].append(len(doc['nodes']));doc['nodes'].append({'name':model.name,'mesh':len(doc['meshes'])-1,'extras':{'category':model.category,'building':model.building,'site':model.site,'houseForm':model.houseForm,'roofForm':model.roofForm,'floors':model.floors,'family':'modern','gardens':model.gardens,'streetFronts':model.streetFronts,'source':'Borough original geometry'}})
 while len(binary)%4:binary.append(0)
 doc['buffers'][0]['byteLength']=len(binary);data=json.dumps(doc,separators=(',',':')).encode();data+=b' '*((-len(data))%4)
 glb=struct.pack('<III',0x46546c67,2,12+8+len(data)+8+len(binary))+struct.pack('<II',len(data),0x4e4f534a)+data+struct.pack('<II',len(binary),0x004e4942)+binary
