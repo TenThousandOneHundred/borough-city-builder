@@ -151,3 +151,10 @@ test('modern street fronts have ground-level entrances and shared transparent sh
  const manifest=JSON.parse(fs.readFileSync(new URL('../dist/assets/buildings/lod.json',import.meta.url))),data=fs.readFileSync(new URL('../dist/assets/buildings/lod.bin',import.meta.url));lib.ingestLod(manifest,data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength));
  for(const m of modern)for(const mesh of m.root.children)if(['modern-shop-glass','modern-shop-sign'].includes(mesh.material.name))assert.deepEqual(mesh.geometry.userData.lod.index.array,new Uint32Array(mesh.geometry.index.array),'distant storefronts retain glazing and signs');
 });
+
+test('complete buildings and grounds remain inside the zoning cells reserved by rotated sites',async()=>{
+ const {visualParcels}=await import('../dist/parcels.js'),lib=await library(),world=E.createWorld('Rotated assets','plains',39);world.money=1000000;for(const t of world.tiles)Object.assign(t,{type:null,level:0,ground:'land'});E.buildRoadPath(world,[{x:10,y:30},{x:24,y:8},{x:38,y:30}],'street');for(let y=15;y<34;y++)for(let x=8;x<41;x++){const t=world.tiles[y*48+x];if(t.type!=='road')Object.assign(t,{type:'residential',density:'medium',level:2,variant:(x+y)%4});}
+ const parcels=[...new Set(visualParcels(world).values())].filter(p=>p.oriented),before=JSON.stringify(world);assert.ok(parcels.length>10);
+ const point=new THREE.Vector3();for(const parcel of parcels){const root=lib.create(world,parcel.owner,parcel),owned=new Set(parcel.members);root.updateMatrixWorld(true);assert.equal(root.rotation.y,parcel.oriented.angle);root.traverse(mesh=>{if(!mesh.isMesh)return;const pos=mesh.geometry.attributes.position;for(let i=0;i<pos.count;i++){point.fromBufferAttribute(pos,i).applyMatrix4(mesh.matrixWorld);const cell=Math.floor((point.z+96)/4)*48+Math.floor((point.x+96)/4);assert.ok(owned.has(cell),'model or grounds escaped the owned cells');}});}
+ assert.equal(JSON.stringify(world),before);
+});

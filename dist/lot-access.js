@@ -13,14 +13,14 @@ export function lotAccess(world,plan,base,engine,height,roadHeight){
  const halfWidth=plan.parcelWidth/2-.035,halfDepth=plan.parcelDepth/2-.035;
  const reach=(f.x-plan.cx)*dx+(f.z-plan.cz)*dz-width/2-sidewalk+.025;
  if(reach<=0)return null;
- const startAt=offset=>Math.min(Math.abs(dx)>1e-8?(Math.sign(dx)*halfWidth-tx*offset)/dx:Infinity,Math.abs(dz)>1e-8?(Math.sign(dz)*halfDepth-tz*offset)/dz:Infinity)-.035;
+ const startAt=offset=>plan.oriented?plan.lotDepth/2-.07:Math.min(Math.abs(dx)>1e-8?(Math.sign(dx)*halfWidth-tx*offset)/dx:Infinity,Math.abs(dz)>1e-8?(Math.sign(dz)*halfDepth-tz*offset)/dz:Infinity)-.035;
  const centreStart=startAt(0),gap=reach-centreStart;
  if(gap<.04||gap>6)return null;
  const desired=plan.low?.48:plan.type==='industrial'?.9:Math.min(2.8,plan.lotWidth*.7);
  const owned=(x,z)=>Math.abs(x-plan.cx)<=plan.parcelWidth/2+.01&&Math.abs(z-plan.cz)<=plan.parcelDepth/2+.01;
  const allowed=(x,z)=>{
   const gx=Math.floor((x+96)/4),gy=Math.floor((z+96)/4);if(gx<0||gy<0||gx>=48||gy>=48)return false;
-  const index=gy*48+gx,t=world.tiles[index];if(t.ground==='water')return false;if(owned(x,z))return true;
+  const index=gy*48+gx,t=world.tiles[index];if(t.ground==='water')return false;if(plan.ownedCells?plan.ownedCells.includes(index):owned(x,z))return true;
   if(t.type==='road')return f.pathId?(t.pathIds||[]).includes(f.pathId):index===f.roadIndex;
   return !t.type&&!t.construction;
  };

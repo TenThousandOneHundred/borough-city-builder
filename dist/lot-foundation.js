@@ -1,8 +1,9 @@
 import * as THREE from './vendor/three.module.js';
 export function lotPerimeter(plan){
- const w=plan.parcelWidth/2-.06,d=plan.parcelDepth/2-.06,points=[];
+ const w=(plan.oriented?plan.lotWidth:plan.parcelWidth)/2-.06,d=(plan.oriented?plan.lotDepth:plan.parcelDepth)/2-.06,points=[];
  const corners=[[-w,-d],[w,-d],[w,d],[-w,d]];
  for(let side=0;side<4;side++){const a=corners[side],b=corners[(side+1)%4],steps=Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/2);for(let i=0;i<steps;i++)points.push({x:a[0]+(b[0]-a[0])*i/steps,z:a[1]+(b[1]-a[1])*i/steps});}
+ if(plan.oriented){const c=Math.cos(plan.angle),s=Math.sin(plan.angle);return points.map(p=>({x:p.x*c+p.z*s,z:-p.x*s+p.z*c}));}
  return points;
 }
 // The lot remains horizontal; each retaining-wall foot follows actual ground.

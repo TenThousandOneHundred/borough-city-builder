@@ -14,7 +14,7 @@ function segments(path){
 }
 export function lotPlan(world,index,parcel){
  const tile=world.tiles[index],width=parcel?.width||1,depth=parcel?.depth||1;
- const cx=(index%48+.5)*4-96+(width-1)*2,cz=(Math.floor(index/48)+.5)*4-96+(depth-1)*2;
+ let cx=(index%48+.5)*4-96+(width-1)*2,cz=(Math.floor(index/48)+.5)*4-96+(depth-1)*2;
  let seed=(Math.imul(index+17,73856093)^Math.imul(world.seed,19349663))>>>0;
  const next=()=>{seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;return(seed>>>0)/4294967296;};
  const variation=next(),style=Math.floor(next()*6),tone=Math.floor(next()*5);
@@ -34,11 +34,12 @@ export function lotPlan(world,index,parcel){
    angle=Math.atan2(-vz*side,vx*side);frontage={pathId:id,x,z};
   }
  }
+ if(parcel?.oriented){({cx,cz,angle,frontage}=parcel.oriented);}
  const sin=Math.abs(Math.sin(angle)),cos=Math.abs(Math.cos(angle)),rotated=sin>.70710678;
  let lotWidth=(rotated?depth:width)*4,lotDepth=(rotated?width:depth)*4;
  // Fit the rotated envelope within the owned parcel: no overlap with roads or neighbours.
  const fit=Math.min(1,width*4/(cos*lotWidth+sin*lotDepth),depth*4/(sin*lotWidth+cos*lotDepth));
- lotWidth*=fit;lotDepth*=fit;
+ lotWidth*=fit;lotDepth*=fit;if(parcel?.oriented){lotWidth=parcel.oriented.width;lotDepth=parcel.oriented.depth;}
  const type=tile.type,density=tile.density||'high',low=type==='residential'&&density==='low';
  let floors;
  if(low)floors=style===0?1:2;
@@ -46,5 +47,5 @@ export function lotPlan(world,index,parcel){
  else if(type==='industrial')floors=1;
  else if(density==='medium'||tile.building==='apartments')floors=3+style%4;
  else{const large=width*depth>1;floors=type==='office'?(large?8:5)+Math.floor(variation*16):(large?5:3)+Math.floor(variation*10);}
- return{index,type,density,low,style,tone,variation,floors,angle,frontage,cx,cz,lotWidth,lotDepth,parcelWidth:width*4,parcelDepth:depth*4,seed:seed>>>0,level:tile.level};
+ return{oriented:!!parcel?.oriented,ownedCells:parcel?.oriented?parcel.members:undefined,index,type,density,low,style,tone,variation,floors,angle,frontage,cx,cz,lotWidth,lotDepth,parcelWidth:width*4,parcelDepth:depth*4,seed:seed>>>0,level:tile.level};
 }
