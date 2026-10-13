@@ -15,7 +15,7 @@ async function library(){const lib=Object.create(ModelLibrary.prototype);lib.mod
  for(const file of ['urban','industry','modern']){const data=fs.readFileSync(new URL('../dist/assets/buildings/'+file+'.glb',import.meta.url));const result=await loader.parseAsync(data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength),'');lib.ingest(result.scene);}return lib;}
 test('all complete building assets decode with finite UV-mapped geometry and valid categories',async()=>{
  const lib=await library();assert.equal(lib.models.length,51);assert.deepEqual([...new Set(lib.models.map(m=>m.category))].sort(),['commercial','fire','hospital','industrial','office','police','residential','residential-low','school']);
- for(const model of lib.models){assert.ok(model.size.x>0&&model.size.y>0&&model.size.z>0);assert.ok(model.root.children.length<=10);for(const mesh of model.root.children){if(mesh.material.map)assert.ok(mesh.geometry.attributes.uv);assert.ok([...mesh.geometry.attributes.position.array].every(Number.isFinite));}}
+ for(const model of lib.models){assert.ok(model.size.x>0&&model.size.y>0&&model.size.z>0);assert.ok(model.root.children.length<=(model.category==='commercial'?13:10));for(const mesh of model.root.children){if(mesh.material.map)assert.ok(mesh.geometry.attributes.uv);assert.ok([...mesh.geometry.attributes.position.array].every(Number.isFinite));}}
 });
 test('model placement fits saved lots uniformly and instancing survives demolition without disposing shared models',async()=>{
  const lib=await library(),world=E.createWorld('Model test','flat',324),index=20*48+20;world.tiles[index]={type:'office',density:'high',level:2};const before=JSON.stringify(world),parcel={width:2,depth:3};const g=lib.create(world,index,parcel),s=g.children[0].scale;assert.equal(s.x,s.y);assert.equal(s.y,s.z);const bounds=new THREE.Box3().setFromObject(g);assert.ok(bounds.max.x-bounds.min.x<8);assert.ok(bounds.max.z-bounds.min.z<12);assert.equal(JSON.stringify(world),before);
@@ -42,7 +42,7 @@ test('modern library retains facade detail with shared materials and a bounded g
  const lib=await library(),modern=lib.models.filter(m=>m.family==='modern');assert.equal(modern.length,30);
  const materials=new Set();let triangles=0,hasWindowVariation=false;
  for(const model of modern){let count=0;for(const mesh of model.root.children){materials.add(mesh.material);count+=mesh.geometry.index.count/3;const color=mesh.geometry.attributes.color;assert.ok(color,'baked facade variation is retained');assert.ok([...color.array].every(Number.isFinite));if(new Set(color.array).size>3)hasWindowVariation=true;}assert.ok(count<(model.name.startsWith('perimeter-')?17000:6600),model.name+' triangle budget');triangles+=count;}
- assert.ok(materials.size<=11,'materials are reused across modern buildings');assert.ok(triangles<150000);assert.ok(hasWindowVariation);
+ assert.ok(materials.size<=13,'materials are reused across modern buildings');assert.ok(triangles<150000);assert.ok(hasWindowVariation);
 });
 test('medium residential and low commercial zoning do not select high-rise models',async()=>{
  const lib=await library(),world=E.createWorld('Density model QA','plains',324);
@@ -132,4 +132,22 @@ test('all ten civic catalogue options select distinct complete models without ch
   world.tiles[index]={type,level:1,variant:0};assert.equal(factory.create(world,index).userData.model,'civic-'+id,'legacy saves receive their default facility');
  }
  const empty=new BuildingFactory({scene:new THREE.Scene(),landscape:{assets:{}}});assert.equal(empty.accepts({type:'hospital',building:'clinic'}),false,'missing assets retain the existing service renderer');
+});
+
+
+test('modern street fronts have ground-level entrances and shared transparent shop glazing with room backs',async()=>{
+ const lib=await library(),modern=lib.models.filter(m=>m.family==='modern');let entrances=0,shops=0;
+ for(const model of modern){
+  assert.ok(model.streetFronts.length>0,model.name+' has an authored entrance');
+  for(const front of model.streetFronts){entrances++;assert.ok(front.position.every(Number.isFinite));assert.ok(Math.abs(front.position[1]-.08)<1e-6);assert.ok(front.width>.7&&front.width<3.5);assert.ok(front.normal[1]>.9);}
+  const glazing=model.root.children.find(m=>m.material.name==='modern-shop-glass');
+  if(model.category==='commercial'){
+   shops++;assert.ok(glazing);assert.equal(glazing.material.transparent,true);assert.ok(glazing.material.opacity>0&&glazing.material.opacity<.5);
+   assert.ok(model.root.children.some(m=>m.material.name==='modern-recess'),'opaque recessed room backs retained');
+   const sign=model.root.children.find(m=>m.material.name==='modern-shop-sign');assert.ok(sign?.material.map);assert.ok([...sign.geometry.attributes.uv.array].every(v=>v>=0&&v<=1));
+  }else assert.equal(glazing,undefined,'residential and civic upper glazing remains opaque');
+ }
+ assert.equal(shops,3);assert.ok(entrances>=55);
+ const manifest=JSON.parse(fs.readFileSync(new URL('../dist/assets/buildings/lod.json',import.meta.url))),data=fs.readFileSync(new URL('../dist/assets/buildings/lod.bin',import.meta.url));lib.ingestLod(manifest,data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength));
+ for(const m of modern)for(const mesh of m.root.children)if(['modern-shop-glass','modern-shop-sign'].includes(mesh.material.name))assert.deepEqual(mesh.geometry.userData.lod.index.array,new Uint32Array(mesh.geometry.index.array),'distant storefronts retain glazing and signs');
 });

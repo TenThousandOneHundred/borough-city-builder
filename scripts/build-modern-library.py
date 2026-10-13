@@ -4,7 +4,7 @@ setbacks, balconies and rooftop plant are geometry rather than painted boxes.
 No commercial-game assets or dependencies are used.
 """
 import math, json, struct, pathlib, io
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from collections import defaultdict
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 materials=[
@@ -19,18 +19,20 @@ materials=[
  ('modern-glass-occupied',[.10,.18,.21,1],.68,.18),
  ('modern-brick',[.88,.86,.82,1],0,.9),
  ('modern-painted',[.84,.86,.83,1],0,.78),
+ ('modern-shop-glass',[.55,.65,.66,.38],.1,.18),
+ ('modern-shop-sign',[1,1,1,1],0,.82),
 ]
-CONCRETE,GLASS,FRAME,ROOF,WOOD,LEAVES,RECESS,BLIND,OCCUPIED,BRICK,PAINT=range(len(materials))
+CONCRETE,GLASS,FRAME,ROOF,WOOD,LEAVES,RECESS,BLIND,OCCUPIED,BRICK,PAINT,SHOP_GLASS,SIGN=range(len(materials))
 models=[]
 class Model:
  def __init__(self,name,category,floors,building=None):
-  self.name,self.category,self.floors=name,category,floors;self.building=building;self.detail=False;self.gardens=[];self.parts=defaultdict(lambda:{'p':[],'n':[],'uv':[],'c':[],'i':[],'far':[]})
- def quad(self,a,b,c,d,mat,color=(1,1,1)):
+  self.name,self.category,self.floors=name,category,floors;self.building=building;self.detail=False;self.gardens=[];self.streetFronts=[];self.parts=defaultdict(lambda:{'p':[],'n':[],'uv':[],'c':[],'i':[],'far':[]})
+ def quad(self,a,b,c,d,mat,color=(1,1,1),uvs=None):
   part=self.parts[mat];start=len(part['p'])//3;u=[b[i]-a[i] for i in range(3)];v=[c[i]-a[i] for i in range(3)];n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];length=math.sqrt(sum(x*x for x in n))
   if length<1e-8:return
   n=[x/length for x in n]
   uw=math.sqrt(sum(t*t for t in u))/2 if mat==BRICK else 1;vh=math.dist(b,c)/2 if mat==BRICK else 1
-  for pos,uv in zip([a,b,c,d],[(0,0),(uw,0),(uw,vh),(0,vh)]):part['p']+=list(pos);part['n']+=n;part['uv']+=list(uv);part['c']+=list(color)
+  for pos,uv in zip([a,b,c,d],uvs or [(0,0),(uw,0),(uw,vh),(0,vh)]):part['p']+=list(pos);part['n']+=n;part['uv']+=list(uv);part['c']+=list(color)
   indices=[start,start+1,start+2]+([start,start+2,start+3] if a!=d else [])
   part['i']+=indices
   if not self.detail:part['far']+=indices
@@ -53,19 +55,44 @@ class Model:
   for side,(a,b) in enumerate(zip(points,points[1:]+points[:1])):
    dx,dz=b[0]-a[0],b[1]-a[1];length=math.hypot(dx,dz);tx,tz=dx/length,dz/length;nx,nz=tz,-tx
    def p(u,v,out=0):return (a[0]+tx*u+nx*out,v,a[1]+tz*u+nz*out)
-   self.quad(p(length,y,-.1),p(0,y,-.1),p(0,top,-.1),p(length,top,-.1),RECESS)
+   front=nz>.9 and length>3 and y==0
+   shop=front and self.category=='commercial'
+   # Ground-floor shop windows have shallow rooms behind real glazing.
+   # Upper windows retain their existing opaque/reflected glazing and detail.
+   if not shop or floors>1:self.quad(p(length,y+fh if shop else y,-.1),p(0,y+fh if shop else y,-.1),p(0,top,-.1),p(length,top,-.1),RECESS)
    bays=max(1,round(length/(1.6 if curtain else 2.6)));bay=length/bays
    for f in range(floors):
-    level=y+f*fh;bottom=.32 if curtain else .75;upper=.13 if curtain else .38
+    level=y+f*fh;retail=shop and f==0;bottom=.12 if retail else .32 if curtain else .75;upper=.55 if retail else .13 if curtain else .38
     for lo,hi in [(level,level+bottom),(level+fh-upper,level+fh)]:self.quad(p(length,lo,.025),p(0,lo,.025),p(0,hi,.025),p(length,hi,.025),FRAME if curtain else cladding,(1,1,1) if curtain else tint)
     for j in range(bays):
      margin=.045 if curtain else .24;l=j*bay+margin;r=(j+1)*bay-margin;shade=.74+((j*17+f*31+side*11)%19)/65
-     self.quad(p(r,level+bottom,-.035),p(l,level+bottom,-.035),p(l,level+fh-upper,-.035),p(r,level+fh-upper,-.035),OCCUPIED if (j*17+f*31+side*11)%4==1 else GLASS,(shade,shade,min(1,shade+.04)))
+     door=front and f==0 and (j%3==1 if retail else j==bays//2)
+     sill=.08 if door else bottom
+     if retail:
+      self.shop_room(p,l,r,level,fh-upper,j,door)
+      material=SHOP_GLASS
+     else:material=OCCUPIED if (j*17+f*31+side*11)%4==1 else GLASS
+     # A door overlays the low sill band so the opening reaches its threshold.
+     self.quad(p(r,level+sill,.035 if door else -.035),p(l,level+sill,.035 if door else -.035),p(l,level+fh-upper,.035 if door else -.035),p(r,level+fh-upper,.035 if door else -.035),material,(shade,shade,min(1,shade+.04)))
+     if door:
+      centre=(l+r)/2
+      self.streetFronts.append({'kind':'shop' if retail else 'entrance','position':list(p(centre,level+.08,.08)),'normal':[nx,nz],'width':r-l})
+      for u in [l,r,centre]:self.quad(p(u+.035,level+.08,.085),p(u-.035,level+.08,.085),p(u-.035,level+fh-upper,.085),p(u+.035,level+fh-upper,.085),FRAME)
+      self.quad(p(r,level+.08,.12),p(l,level+.08,.12),p(l,level+.08,-.02),p(r,level+.08,-.02),CONCRETE)
+      self.detail=True
+      for u in [centre-.14,centre+.14]:self.quad(p(u+.02,level+1,.13),p(u-.02,level+1,.13),p(u-.02,level+1.5,.13),p(u+.02,level+1.5,.13),CONCRETE)
+      self.detail=False
+     if retail and j%3==0:
+      sl=j*bay+margin;sr=min(bays,j+3)*bay-margin
+      band=abs(sum(ord(c) for c in self.name)+j//3)%4;v0=(band+.06)/4;v1=(band+.94)/4
+      self.quad(p(sl,level+3.1,.02),p(sr,level+3.1,.02),p(sr,level+3.1,.85),p(sl,level+3.1,.85),FRAME)
+      for u in [sl,sr]:self.quad(p(u,level+2.73,.02),p(u,level+2.73,.85),p(u,level+3.1,.85),p(u,level+3.1,.02),FRAME)
+      self.quad(p(sr,level+2.73,.86),p(sl,level+2.73,.86),p(sl,level+3.08,.86),p(sr,level+3.08,.86),SIGN,uvs=[(0,v1),(1,v1),(1,v0),(0,v0)])
      if (j*17+f*31+side*11)%9<2 and f>0:
       blindtop=level+fh-upper;blindbottom=blindtop-(fh-bottom-upper)*.36
       self.quad(p(r,blindbottom,-.026),p(l,blindbottom,-.026),p(l,blindtop,-.026),p(r,blindtop,-.026),BLIND,(shade,shade,shade))
      # Shallow recess returns make window openings read in direct sunlight.
-     if not curtain:
+     if not curtain and not door:
       self.detail=True
       self.quad(p(l,level+bottom-.07,.14),p(r,level+bottom-.07,.14),p(r,level+bottom,-.07),p(l,level+bottom,-.07),CONCRETE,tint)
       self.quad(p(r,level+fh-upper,.03),p(l,level+fh-upper,.03),p(l,level+fh-upper,-.07),p(r,level+fh-upper,-.07),CONCRETE,tint)
@@ -98,6 +125,23 @@ class Model:
    self.quad((c[0],top,c[1]),(e[0],top,e[1]),(e[0],top+.65,e[1]),(c[0],top+.65,c[1]),CONCRETE,tint)
    self.quad((a[0],top+.65,a[1]),(c[0],top+.65,c[1]),(e[0],top+.65,e[1]),(b[0],top+.65,b[1]),CONCRETE,tint)
   return top
+ def shop_room(self,p,l,r,y,top,variant,door=False):
+  # An opaque room back survives in distant topology; small furniture can drop.
+  warm=[(.68,.64,.53),(.57,.63,.59),(.64,.59,.53),(.52,.60,.65)][variant%4]
+  self.quad(p(r,y+.1,-.9),p(l,y+.1,-.9),p(l,y+top,-.9),p(r,y+top,-.9),RECESS,warm)
+  for u in [l,r]:
+   corners=[p(u,y+.1,-.03),p(u,y+.1,-.9),p(u,y+top,-.9),p(u,y+top,-.03)]
+   self.quad(*(corners[::-1] if u==l else corners),RECESS,warm)
+  self.quad(p(l,y+.1,-.9),p(r,y+.1,-.9),p(r,y+.1,-.02),p(l,y+.1,-.02),WOOD)
+  self.quad(p(r,y+top,-.9),p(l,y+top,-.9),p(l,y+top,-.02),p(r,y+top,-.02),PAINT)
+  if door:return
+  self.detail=True
+  for h in [.65,1.25,1.85]:
+   self.quad(p(r-.12,y+h,-.67),p(l+.12,y+h,-.67),p(l+.12,y+h+.09,-.67),p(r-.12,y+h+.09,-.67),WOOD)
+   for n in range(3):
+    u=l+(n+.5)*(r-l)/3;w=min(.24,(r-l)/5)
+    self.quad(p(u+w/2,y+h+.09,-.7),p(u-w/2,y+h+.09,-.7),p(u-w/2,y+h+.36,-.7),p(u+w/2,y+h+.36,-.7),PAINT,[(.68,.42,.28),(.35,.51,.48),(.78,.71,.48)][n])
+  self.detail=False
  def plant(self,x,y,z,w,d):
   self.box(x,y,z,w,.45,d,CONCRETE)
   large=min(w,d)>=1.5
@@ -179,7 +223,7 @@ m=courtyard('perimeter-terrace-residences','residential',9,48,34,tint=(.95,.72,.
 m=courtyard('perimeter-tower-residences','residential',10,46,32,tint=(.72,.80,.82));h=m.shell(14,9,5,x=-12,z=-11.5,y=32,curtain=True);m.roofwork(-12,h,-11.5,4,2);m.floors=15;m.finish()
 m=courtyard('perimeter-mixed-use','commercial',6,44,30,tint=(.86,.67,.51))
 # Street-level canopies run along the retail frontage, leaving entrances between.
-for x in [-16,-8,0,8,16]:m.box(x,3.1,15.5,6.5,.16,2,FRAME)
+# Individual sign-fronted canopies are generated with each storefront bay.
 m.finish()
 m=courtyard('perimeter-campus-offices','office',10,44,32,tint=(.72,.76,.73));m.finish()
 
@@ -238,6 +282,20 @@ doc['materials'][ROOF]['pbrMetallicRoughness']['baseColorTexture']={'index':0}
 doc['materials'][BRICK]['pbrMetallicRoughness'].update(baseColorTexture={'index':1},metallicRoughnessTexture={'index':3})
 doc['materials'][BRICK]['normalTexture']={'index':2,'scale':.4}
 
+# A small original sign atlas is shared by every shopfront.
+signs=Image.new('RGB',(512,256));draw=ImageDraw.Draw(signs)
+try:font=ImageFont.truetype('/System/Library/Fonts/Supplemental/Arial Bold.ttf',36)
+except OSError:font=ImageFont.load_default(size=36)
+for row,(label,color) in enumerate([('MARKET','#3e514b'),('CAFE','#675342'),('BOOKS','#485b6a'),('STUDIO','#625b52')]):
+ draw.rectangle((0,row*64,512,(row+1)*64),fill=color)
+ draw.text((256,row*64+32),label,font=font,anchor='mm',fill='#e8e4d7',stroke_width=0)
+buffer=io.BytesIO();signs.save(buffer,format='PNG',optimize=True);raw=buffer.getvalue()
+while len(binary)%4:binary.append(0)
+start=len(binary);binary.extend(raw);doc['bufferViews'].append({'buffer':0,'byteOffset':start,'byteLength':len(raw)})
+doc['images'].append({'mimeType':'image/png','bufferView':len(doc['bufferViews'])-1});doc['textures'].append({'source':len(doc['images'])-1,'sampler':0})
+doc['materials'][SIGN]['pbrMetallicRoughness']['baseColorTexture']={'index':len(doc['textures'])-1}
+doc['materials'][SHOP_GLASS].update(alphaMode='BLEND',doubleSided=False)
+
 def pack_normal(values):
  while len(binary)%4:binary.append(0)
  start=len(binary)
@@ -256,7 +314,7 @@ for model in models:
  primitives=[]
  for mat,part in sorted(model.parts.items()):
   primitives.append({'attributes':{'POSITION':pack(part['p'],'VEC3'),'NORMAL':pack_normal(part['n']),'TEXCOORD_0':pack(part['uv'],'VEC2'),'COLOR_0':pack([v for i in range(0,len(part['c']),3) for v in [*[round(max(0,min(1,c))*255) for c in part['c'][i:i+3]],255]],'VEC4',5121)},'indices':pack(part['i'],'SCALAR',5123 if max(part['i'])<65536 else 5125),'material':mat})
- doc['meshes'].append({'name':model.name,'primitives':primitives});doc['scenes'][0]['nodes'].append(len(doc['nodes']));doc['nodes'].append({'name':model.name,'mesh':len(doc['meshes'])-1,'extras':{'category':model.category,'building':model.building,'floors':model.floors,'family':'modern','gardens':model.gardens,'source':'Borough original geometry'}})
+ doc['meshes'].append({'name':model.name,'primitives':primitives});doc['scenes'][0]['nodes'].append(len(doc['nodes']));doc['nodes'].append({'name':model.name,'mesh':len(doc['meshes'])-1,'extras':{'category':model.category,'building':model.building,'floors':model.floors,'family':'modern','gardens':model.gardens,'streetFronts':model.streetFronts,'source':'Borough original geometry'}})
 while len(binary)%4:binary.append(0)
 doc['buffers'][0]['byteLength']=len(binary);data=json.dumps(doc,separators=(',',':')).encode();data+=b' '*((-len(data))%4)
 glb=struct.pack('<III',0x46546c67,2,12+8+len(data)+8+len(binary))+struct.pack('<II',len(data),0x4e4f534a)+data+struct.pack('<II',len(binary),0x004e4942)+binary
