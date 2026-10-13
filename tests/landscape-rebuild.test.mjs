@@ -49,3 +49,9 @@ test('retaining walls meet sampled ground and stay inside the owned lot at road 
   assert.ok([...p.array].every(Number.isFinite));
  }
 });
+
+test('trees occupy supported ground and reject steep slopes in every direction',async()=>{
+ const {supportsTree}=await import('../dist/tree-placement.js'),w={seed:40};
+ for(let a=0;a<Math.PI*2;a+=.2){const slope=m=>(world,x,z)=>x*Math.cos(a)*m+z*Math.sin(a)*m;assert.ok(supportsTree(w,17,-22,slope(.69)));assert.equal(supportsTree(w,17,-22,slope(.71)),false);}
+ assert.ok(supportsTree(w,0,0,()=>2));assert.equal(supportsTree(w,0,0,()=>NaN),false);assert.deepEqual(w,{seed:40});
+});
