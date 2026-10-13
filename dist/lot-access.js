@@ -5,8 +5,8 @@ import * as THREE from './vendor/three.module.js';
 export function lotAccess(world,plan,base,engine,height,roadHeight){
  const f=plan.frontage;if(!f)return null;
  let width,sidewalk,raise;
- if(f.pathId){const path=world.roadPaths?.find(p=>p.id===f.pathId),spec=path&&engine.ROADS[path.type];if(!spec?.sidewalk)return null;width=spec.width;sidewalk=.38;raise=.19;}
- else{const road=world.tiles[f.roadIndex];if(road?.type!=='road'||road.ground==='water')return null;width=road.roadWidth===2?3.15:2.45;sidewalk=.42;raise=.085;}
+ if(f.pathId){const path=world.roadPaths?.find(p=>p.id===f.pathId),spec=path&&engine.ROADS[path.type];if(!spec?.sidewalk)return null;width=spec.width;sidewalk=.38;raise=.14;}
+ else{const road=world.tiles[f.roadIndex];if(road?.type!=='road'||road.ground==='water')return null;width=road.roadWidth===2?3.15:2.45;sidewalk=.42;raise=.14;}
  const dx=Math.sin(plan.angle),dz=Math.cos(plan.angle),tx=dz,tz=-dx;
  // Beyond a road endpoint, a normal-facing strip would miss the sidewalk.
  if(Math.abs((f.x-plan.cx)*tx+(f.z-plan.cz)*tz)>.35)return null;

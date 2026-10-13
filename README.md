@@ -281,3 +281,11 @@ New health, education, police and fire facilities reserve complete sites from 40
 Choose a facility, press **R** to rotate, and click to place. The complete footprint is previewed; blocked sites spend no money. Road access can reach any site edge, capacity and upkeep count once, and inspecting or bulldozing any occupied cell addresses the whole facility. Facilities retain their ownership and orientation through manual save, five-minute autosave, save-and-exit, and backup import.
 
 Facility road-access calculations inspect the perimeter rather than allocating and searching every occupied cell. Preview geometry is reused while the hovered site and validity remain unchanged. The 10 additional campus models use the existing shared materials and lossless asset compression; the modern catalogue is 11,495,408 raw bytes / 2,571,457 compressed bytes. This is not a measured FPS improvement. Traffic, bus, resident and walking clocks remain independent of render visibility.
+
+### Edition 42: connected intersection surfaces
+
+Drawn roads now share an intersection surface instead of crossing over each other's sidewalks, median strips and lane paint. The geometric planner handles four-way crossings, T-junctions, angled approaches, different carriageway widths, curves, and connections to older grid roads. Corner curbs follow the open approach mouths; crossings receive zebra markings and incoming stop lines. Branches ending inside another street's pavement extend visually to that street's centerline without changing their saved controls.
+
+Signals now stand beside the actual approach sidewalks with smaller, correctly scaled heads. Their colors still use the existing traffic controllers. Road and sidewalk surface heights are consistent across old and drawn roads, and building access walks meet the sidewalk height.
+
+Intersection detection uses a spatial hash to limit segment comparisons. Sampled render centerlines are shared with the road renderer, and static road geometry still rebuilds on network edits rather than camera movement. Tests compare vehicle positions and simulation time with and without repeated pavement rebuilds. This release does not claim a measured FPS gain or change the traffic routing/control model.

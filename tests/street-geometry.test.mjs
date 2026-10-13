@@ -40,3 +40,9 @@ test('road material cache refreshes when asynchronous textures arrive, then reus
  const r=new Roadworks(v),w=E.createWorld('Loading streets','plains',4);r.outside=()=>{};r.build(w);assert.equal(r.asphalt.map,null);
  const initial=r.asphalt;v.landscape.assets['asphalt-color']=new THREE.Texture();r.build(w);assert.notEqual(r.asphalt,initial);assert.ok(r.asphalt.map);const ready=r.asphalt;r.build(w);assert.equal(r.asphalt,ready);assert.equal(creations,2);
 });
+
+test('legacy bridge decks support the unified pavement height instead of floating below it',()=>{
+ const v=view(),boxes=[],box=v.box;v.box=function(...args){boxes.push(args);return box.apply(this,args);};v.landscape={assets:{},material:()=>v.mat('#555555')};
+ const r=new Roadworks(v),w=E.createWorld('Bridge support','plains',42);w.tiles[24*48+10].ground='water';r.outside=()=>{};r.build(w);
+ const deck=boxes.find(([,x,y,z,width,height])=>width===4&&height===.55);assert.ok(deck);const [,x,y,z,,thickness]=deck;assert.ok(Math.abs(y+thickness/2-(r.height(w,x,z)+.075))<1e-8);
+});

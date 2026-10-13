@@ -2,6 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from '../dist/vendor/three.module.js';
 import {lotAccess} from '../dist/lot-access.js';
+import {floorHeight} from '../dist/landscape.js';
 import {lotPlan} from '../dist/building-plan.js';
 import {Roadworks} from '../dist/roadworks.js';
 import E from '../dist/engine.js';
@@ -16,7 +17,7 @@ test('street-facing urban aprons and narrow private walks reach the sidewalk wit
  for(const type of ['office','residential']){
   const {w,p}=fixture(type),before=JSON.stringify(w),g=lotAccess(w,p,.04,E,ground,road);assert.ok(g);
   const pos=g.attributes.position,n=g.attributes.normal;assert.ok([...pos.array].every(Number.isFinite));for(let i=0;i<n.count;i++)assert.ok(n.getY(i)>0);
-  const box=new THREE.Box3().setFromBufferAttribute(pos);assert.ok(Math.abs(box.max.z-(p.frontage.z-2.45/2-.42+.025))<1e-5);assert.ok(Math.abs(box.max.y-.185)<1e-5);
+  const box=new THREE.Box3().setFromBufferAttribute(pos);assert.ok(Math.abs(box.max.z-(p.frontage.z-2.45/2-.42+.025))<1e-5);assert.ok(Math.abs(box.max.y-.24)<1e-5);
   assert.ok(g.userData.span===(type==='office'?2.8:.48));assert.equal(JSON.stringify(w),before);
  }
 });
@@ -34,7 +35,7 @@ test('rotated frontages start on their owned parcel and join curved-road sidewal
   const i=y*48+x;if(w.tiles[i].type==='road')continue;w.tiles[i].type='office';w.tiles[i].level=1;
   const p=lotPlan(w,i),g=lotAccess(w,p,.04,E,ground,road);w.tiles[i].type=null;if(!g)continue;
   count++;assert.ok(p.frontage.pathId);if(Math.abs(Math.sin(p.angle))>.01)angled++;const n=g.attributes.normal;for(let j=0;j<n.count;j++)assert.ok(n.getY(j)>0);
-  const pos=g.attributes.position;assert.ok(Math.max(...Array.from({length:pos.count},(_,j)=>pos.getY(j)))>=.289);
+  const pos=g.attributes.position;assert.ok(Math.max(...Array.from({length:pos.count},(_,j)=>pos.getY(j)))>=.239);
  }
  assert.ok(count>=3,'several lots along the bend connect');assert.ok(angled>=3,'multiple rotated lots connect');
 });
@@ -44,7 +45,7 @@ test('access paving follows gentle terrain and omits an abrupt unbuildable cliff
  assert.equal(lotAccess(w,p,8,E,ground,road),null);
 });
 test('access surfaces batch by material and are removed when a building is demolished',()=>{
- const {w,p}=fixture(),v={scene:new THREE.Scene(),unitBox:new THREE.BoxGeometry(1,1,1),night:false},r=new Roadworks(v),root=new THREE.Group();root.position.y=.04;root.userData={plan:p,asset:true};
+ const {w,p}=fixture(),v={scene:new THREE.Scene(),unitBox:new THREE.BoxGeometry(1,1,1),night:false},r=new Roadworks(v),root=new THREE.Group();root.position.y=floorHeight(w,p.cx,p.cz)+.04;root.userData={plan:p,asset:true};
  r.buildAccess(w,new Map([[p.index,root]]));assert.ok(r.accessGroup.children.length);let disposed=0;r.accessGroup.children[0].geometry.addEventListener('dispose',()=>disposed++);
  r.buildAccess(w,new Map());assert.equal(r.accessGroup.children.length,0);assert.equal(disposed,1);
 });
