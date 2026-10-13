@@ -1,19 +1,19 @@
-import {Transit,transitLeg,stopPosition} from './transit.js?v=27.0';
-import {SimulationClock} from './simulation-clock.js?v=27.0';
-import {Residents} from './residents.js?v=27.0';
-import {Traffic} from './traffic.js?v=27.0';
-import {Vehicles} from './vehicles.js?v=27.0';
-import {BuildingFactory} from './building-factory.js?v=27.0';
-import {StreetLife} from './street-life.js?v=27.0';
-import {visualParcels} from './parcels.js?v=27.0';
-import {Graphics} from './graphics.js?v=27.0';
-import {Vegetation} from './vegetation.js?v=27.0';
+import {Transit,transitLeg,stopPosition} from './transit.js?v=28.0';
+import {SimulationClock} from './simulation-clock.js?v=28.0';
+import {Residents} from './residents.js?v=28.0';
+import {Traffic} from './traffic.js?v=28.0';
+import {Vehicles} from './vehicles.js?v=28.0';
+import {BuildingFactory} from './building-factory.js?v=28.0';
+import {StreetLife} from './street-life.js?v=28.0';
+import {visualParcels} from './parcels.js?v=28.0';
+import {Graphics} from './graphics.js?v=28.0';
+import {Vegetation} from './vegetation.js?v=28.0';
 import {RGBELoader} from './vendor/RGBELoader.js';
 import * as THREE from './vendor/three.module.js';
 import {OrbitControls} from './vendor/OrbitControls.js';
-import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=27.0';
-import {Architecture} from './architecture.js?v=27.0';
-import {Roadworks} from './roadworks.js?v=27.0';
+import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=28.0';
+import {Architecture} from './architecture.js?v=28.0';
+import {Roadworks} from './roadworks.js?v=28.0';
 const N=48,T=4,HALF=96,zoneColors={residential:'#54b663',commercial:'#5bb1d8',industrial:'#cdb268',office:'#aa87c9'};
 export class CityView{
 constructor(canvas){this.assetsReady=false;this.loadingElement=document.getElementById('sceneLoading');this.canvas=canvas;this.scene=new THREE.Scene();this.scene.background=new THREE.Color('#aebfca');this.scene.fog=new THREE.FogExp2('#b7c6cc',.00105);
@@ -28,7 +28,7 @@ set running(value){this.simulationClock?.setRunning(value);this._running=!!value
 get simSpeed(){return this._simSpeed||1;}
 set simSpeed(value){this.simulationClock?.setSpeed(value);this._simSpeed=value;}
 async loadEnvironment(){try{const texture=await new RGBELoader().loadAsync(new URL('./assets/daylight.hdr',import.meta.url).href);texture.mapping=THREE.EquirectangularReflectionMapping;const pmrem=new THREE.PMREMGenerator(this.renderer),target=pmrem.fromEquirectangular(texture);this.environmentTarget?.dispose();this.environmentTarget=target;this.scene.environment=target.texture;this.scene.environmentIntensity=.38;this.skyTexture=texture;if(!this.night)this.scene.background=texture;this.scene.backgroundIntensity=.7;this.scene.backgroundBlurriness=.08;pmrem.dispose()}catch(e){console.warn('Daylight fallback:',e.message)}}
-focusWorld(menu){const developed=this.world.tiles.map((t,i)=>t.type&&t.type!=='road'?i:-1).filter(i=>i>=0);let x=-30,z=2;if(developed.length){x=developed.reduce((a,i)=>a+(i%48+.5)*4-96,0)/developed.length;z=developed.reduce((a,i)=>a+(Math.floor(i/48)+.5)*4-96,0)/developed.length}this.controls.target.set(x,1,z);if(menu){x=3;z=-5;this.controls.target.set(x,4,z);}this.camera.position.set(x-(menu?18:27),menu?15:23,z+(menu?21:35));this.controls.update()}
+focusWorld(menu){const developed=this.world.tiles.map((t,i)=>t.type&&t.type!=='road'?i:-1).filter(i=>i>=0);let x=-30,z=2;if(developed.length){x=developed.reduce((a,i)=>a+(i%48+.5)*4-96,0)/developed.length;z=developed.reduce((a,i)=>a+(Math.floor(i/48)+.5)*4-96,0)/developed.length}const base=this.world.landformVersion===1&&!menu?floorHeight(this.world,x,z):0;this.controls.target.set(x,base+1,z);if(menu){x=3;z=-5;this.controls.target.set(x,4,z);}this.camera.position.set(x-(menu?18:27),menu?15:base+23,z+(menu?21:35));this.controls.update()}
 environment(){const c=document.createElement('canvas');c.width=512;c.height=256;const x=c.getContext('2d'),g=x.createLinearGradient(0,0,0,256);g.addColorStop(0,'#7ea0ba');g.addColorStop(.45,'#c8d8dd');g.addColorStop(.51,'#d3d8ce');g.addColorStop(.62,'#a6aa8c');g.addColorStop(1,'#737e63');x.fillStyle=g;x.fillRect(0,0,512,256);const glow=x.createRadialGradient(155,55,1,155,55,55);glow.addColorStop(0,'#fff4d8');glow.addColorStop(.05,'#fff4d8b0');glow.addColorStop(1,'#f5eee000');x.fillStyle=glow;x.fillRect(80,0,150,120);const texture=new THREE.CanvasTexture(c);texture.mapping=THREE.EquirectangularReflectionMapping;texture.colorSpace=THREE.SRGBColorSpace;const pmrem=new THREE.PMREMGenerator(this.renderer);const target=pmrem.fromEquirectangular(texture);this.scene.environment=target.texture;this.environmentTarget=target;pmrem.dispose();texture.dispose();}
 mat(color){if(!this.materials.has(color))this.materials.set(color,new THREE.MeshStandardMaterial({color,roughness:.78}));return this.materials.get(color)}
 box(group,x,y,z,sx,sy,sz,color,shadow=true){const m=new THREE.Mesh(this.unitBox,this.mat(color));m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=shadow;m.receiveShadow=true;group.add(m);return m}

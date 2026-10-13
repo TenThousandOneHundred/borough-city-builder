@@ -1,12 +1,12 @@
-import {ModelLibrary} from './model-library.js?v=27.0';
-import {buildHouse} from './house-architecture.js?v=27.0';
-import {buildUrban} from './city-architecture.js?v=27.0';
+import {ModelLibrary} from './model-library.js?v=28.0';
+import {buildHouse} from './house-architecture.js?v=28.0';
+import {buildUrban} from './city-architecture.js?v=28.0';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import * as THREE from './vendor/three.module.js';
-import {MeshBuilder} from './mesh-builder.js?v=27.0';
-import {BuildingMaterials} from './building-materials.js?v=27.0';
-import {lotPlan} from './building-plan.js?v=27.0';
-import {floorHeight} from './landscape.js?v=27.0';
+import {MeshBuilder} from './mesh-builder.js?v=28.0';
+import {BuildingMaterials} from './building-materials.js?v=28.0';
+import {lotPlan} from './building-plan.js?v=28.0';
+import {floorHeight} from './landscape.js?v=28.0';
 
 export class BuildingFactory{
  constructor(view){this.view=view;this.library=view.renderer?new ModelLibrary(view):null;this.ready=this.library?.ready||Promise.resolve();this.materials=new BuildingMaterials(view);this.batchRoot=new THREE.Group();view.scene.add(this.batchRoot);}
@@ -14,7 +14,7 @@ export class BuildingFactory{
   this.batchRoot.traverse(o=>{if(o.isInstancedMesh)o.dispose();if(!o.userData.sharedAsset)o.geometry?.dispose();});this.batchRoot.clear();const batches=new Map(),instances=new Map();
   for(const root of buildings.values()){
    if(!root.userData.factory)continue;root.updateMatrixWorld(true);
-   if(root.userData.asset){const sphere=new THREE.Box3().setFromObject(root).getBoundingSphere(new THREE.Sphere());sphere.lodDistance=root.userData.lodDistance;root.traverse(o=>{if(!o.isMesh)return;const key=o.geometry.uuid+':'+o.material.uuid;if(!instances.has(key))instances.set(key,{geometry:o.geometry,material:o.material,transforms:[]});instances.get(key).transforms.push({matrix:o.matrixWorld.clone(),sphere});});continue;}
+   if(root.userData.asset){const sphere=new THREE.Box3().setFromObject(root).getBoundingSphere(new THREE.Sphere());sphere.lodDistance=root.userData.lodDistance;root.traverse(o=>{if(!o.isMesh)return;if(!o.userData.sharedAsset){const geometry=o.geometry.clone().applyMatrix4(o.matrixWorld);if(!batches.has(o.material))batches.set(o.material,[]);batches.get(o.material).push(geometry);return;}const key=o.geometry.uuid+':'+o.material.uuid;if(!instances.has(key))instances.set(key,{geometry:o.geometry,material:o.material,transforms:[]});instances.get(key).transforms.push({matrix:o.matrixWorld.clone(),sphere});});continue;}
    root.traverse(o=>{if(!o.isMesh)return;const geometry=o.geometry.clone().applyMatrix4(o.matrixWorld);if(!batches.has(o.material))batches.set(o.material,[]);batches.get(o.material).push(geometry);});
   }
   this.instanceBatches=[];

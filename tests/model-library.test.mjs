@@ -19,7 +19,7 @@ test('all complete building assets decode with finite UV-mapped geometry and val
 });
 test('model placement fits saved lots uniformly and instancing survives demolition without disposing shared models',async()=>{
  const lib=await library(),world=E.createWorld('Model test','flat',324),index=20*48+20;world.tiles[index]={type:'office',density:'high',level:2};const before=JSON.stringify(world),parcel={width:2,depth:3};const g=lib.create(world,index,parcel),s=g.children[0].scale;assert.equal(s.x,s.y);assert.equal(s.y,s.z);const bounds=new THREE.Box3().setFromObject(g);assert.ok(bounds.max.x-bounds.min.x<8);assert.ok(bounds.max.z-bounds.min.z<12);assert.equal(JSON.stringify(world),before);
- const view={scene:new THREE.Scene(),landscape:{assets:{}}},factory=new BuildingFactory(view);let disposed=false;g.children[0].children[0].geometry.addEventListener('dispose',()=>disposed=true);factory.rebuild(new Map([[index,g]]));assert.ok(factory.batchRoot.children.every(o=>o.isInstancedMesh));factory.rebuild(new Map());assert.equal(factory.batchRoot.children.length,0);assert.equal(disposed,false);
+ const view={scene:new THREE.Scene(),landscape:{assets:{}}},factory=new BuildingFactory(view);let disposed=false;g.children[0].children[0].geometry.addEventListener('dispose',()=>disposed=true);factory.rebuild(new Map([[index,g]]));assert.ok(factory.batchRoot.children.filter(o=>o.userData.sharedAsset).every(o=>o.isInstancedMesh));assert.ok(factory.batchRoot.children.filter(o=>!o.isInstancedMesh).length<=1,'retaining walls merge into one shared-material draw');factory.rebuild(new Map());assert.equal(factory.batchRoot.children.length,0);assert.equal(disposed,false);
 });
 test('distant geometry cuts workload and visibility excludes buildings behind the camera',async()=>{
  const lib=await library(),bytes=fs.readFileSync(new URL('../dist/assets/buildings/lod.bin',import.meta.url));lib.ingestLod(JSON.parse(fs.readFileSync(new URL('../dist/assets/buildings/lod.json',import.meta.url))),bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.length));
@@ -83,4 +83,10 @@ test('brick facades retain metre-scale UVs, PBR textures and accurate packed nor
  const lib=await library(),bricks=lib.models.flatMap(m=>m.root.children).filter(m=>m.material.name==='modern-brick');assert.equal(bricks.length,4);
  for(const mesh of bricks){assert.ok(mesh.material.map);assert.ok(mesh.material.normalMap);assert.ok(mesh.material.roughnessMap);const uv=mesh.geometry.attributes.uv;assert.ok(Math.max(...uv.array)>10,'brick courses repeat along the full wing');}
  for(const model of lib.models.filter(m=>m.family==='modern'))for(const mesh of model.root.children){const n=mesh.geometry.attributes.normal;assert.ok(n.normalized);assert.ok(n.array instanceof Int8Array);for(let i=0;i<n.count;i++){const length=Math.hypot(n.getX(i),n.getY(i),n.getZ(i));assert.ok(Math.abs(length-1)<.012,'lighting normals retain unit length');}}
+});
+
+test('a hillside district batches all terrain foundations without losing wall geometry',async()=>{
+ const lib=await library(),world=E.createWorld('Hillside foundation QA','river',427),buildings=new Map();let vertices=0,walls=0;
+ for(let x=5;x<23;x+=3){const index=8*48+x;world.tiles[index]={type:'residential',density:'medium',level:2};const root=lib.create(world,index,{width:3,depth:2});root.traverse(o=>{if(o.isMesh&&!o.userData.sharedAsset){walls++;vertices+=o.geometry.attributes.position.count;}});buildings.set(index,root);}
+ assert.ok(walls>=5);const factory=new BuildingFactory({scene:new THREE.Scene(),landscape:{assets:{}}});factory.rebuild(buildings);const combined=factory.batchRoot.children.filter(o=>!o.isInstancedMesh);assert.equal(combined.length,1);assert.equal(combined[0].geometry.attributes.position.count,vertices);assert.ok(combined[0].receiveShadow);assert.ok(combined[0].castShadow);
 });

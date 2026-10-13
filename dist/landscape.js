@@ -1,11 +1,12 @@
-import {streetStations,atDistance} from './street-geometry.js?v=27.0';
-import {terrainOffset} from './terrain-edit.js?v=27.0';
-import {outsidePortals} from './traffic.js?v=27.0';
-import {ScannedRocks} from './scanned-rocks.js?v=27.0';
-import {groundCover} from './ground-cover.js?v=27.0';
-import {terrainField} from './terrain-field.js?v=27.0';
-import {reflectedWater} from './water.js?v=27.0';
-import {naturalTerrain} from './terrain-material.js?v=27.0';
+import {inlandRelief} from './landforms.js?v=28.0';
+import {streetStations,atDistance} from './street-geometry.js?v=28.0';
+import {terrainOffset} from './terrain-edit.js?v=28.0';
+import {outsidePortals} from './traffic.js?v=28.0';
+import {ScannedRocks} from './scanned-rocks.js?v=28.0';
+import {groundCover} from './ground-cover.js?v=28.0';
+import {terrainField} from './terrain-field.js?v=28.0';
+import {reflectedWater} from './water.js?v=28.0';
+import {naturalTerrain} from './terrain-material.js?v=28.0';
 import * as THREE from './vendor/three.module.js';
 export const TILE=4,SIZE=48,HALF=96;
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),smooth=t=>t*t*(3-2*t);
@@ -17,7 +18,7 @@ function field(w){if(waterFields.has(w))return waterFields.get(w);const f=new Fl
 function baseWetness(w,x,z){const gx=(x+HALF)/TILE-.5,gy=(z+HALF)/TILE-.5;if(w.terrain==='river'){const distance=Math.abs(gx-(34+Math.sin(gy/7+w.seed%9)*3));return smooth(clamp((3.35-distance)/2.1,0,1))}if(w.terrain==='islands'){const level=Math.sin(gx/7)+Math.cos(gy/8)+Math.sin((gx+gy)/9);return smooth(clamp((level-.72)/.65,0,1))}return 0}
 export function wetness(w,x,z){const offset=terrainOffset(w,x,z);if(Math.abs(offset)<.0001)return baseWetness(w,x,z);return smooth(clamp((.65-groundHeight(w,x,z))/1.3,0,1));}
 function valleyFalloff(w,x,z){if(w.terrain==='river'){const gx=(x+96)/4-.5,gy=(z+96)/4-.5,d=Math.abs(gx-(34+Math.sin(gy/7+w.seed%9)*3))*4;return smooth(clamp((d-10)/65,0,1))}return 1-smooth(clamp(baseWetness(w,x,z)*3,0,1))}
-export function groundHeight(w,x,z){const water=baseWetness(w,x,z),inland=.35+noise(x*.012,z*.012,w.seed)*1.6+noise(x*.028,z*.028,w.seed+3)*.7+noise(x*.09,z*.09,w.seed+17)*.12;const edge=smooth(clamp((Math.max(Math.abs(x),Math.abs(z))-98)/150,0,1)),hills=edge*terrainField(w.seed).sample(x,z),bank=smooth(clamp(water*1.85,0,1));return inland*(1-bank)+hills*valleyFalloff(w,x,z)-bank*1.6+terrainOffset(w,x,z);}
+export function groundHeight(w,x,z){const water=baseWetness(w,x,z),inland=.35+noise(x*.012,z*.012,w.seed)*1.6+noise(x*.028,z*.028,w.seed+3)*.7+noise(x*.09,z*.09,w.seed+17)*.12;const edge=smooth(clamp((Math.max(Math.abs(x),Math.abs(z))-98)/150,0,1)),hills=edge*terrainField(w.seed).sample(x,z),bank=smooth(clamp(water*1.85,0,1));return inland*(1-bank)+hills*valleyFalloff(w,x,z)-bank*1.6+inlandRelief(w,x,z,water)+terrainOffset(w,x,z);}
 export function terrainColor(w,x,z){const wet=wetness(w,x,z),variation=noise(x*.037,z*.037,w.seed+51),c=new THREE.Color('#c8e0ad').lerp(new THREE.Color('#d4dfb3'),variation*.7);c.lerp(new THREE.Color('#c3bda6'),smooth(clamp(wet*3,0,1)));const slope=Math.abs(groundHeight(w,x+1,z)-groundHeight(w,x-1,z))+Math.abs(groundHeight(w,x,z+1)-groundHeight(w,x,z-1));c.lerp(new THREE.Color('#959a8d'),clamp((slope-1.2)*.28,0,.8));return c.multiplyScalar(.93+noise(x*.14,z*.14,w.seed+21)*.13)}
 export function floorHeight(w,x,z){return Math.max(.2,groundHeight(w,x,z))}
 export class Landscape{

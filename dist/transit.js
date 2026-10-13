@@ -1,4 +1,4 @@
-import {roadPoint} from './traffic.js?v=27.0';
+import {roadPoint} from './traffic.js?v=28.0';
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const nearby=(engine,i)=>engine.neighbors(i);
 export function stopPosition(traffic,stop){const p=traffic.positions.get(stop)||roadPoint(stop),neighbors=traffic.graph.get(stop)||[],q=neighbors.map(i=>traffic.positions.get(i)||roadPoint(i)).find(q=>dist(p,q)>.01);if(!q)return p;let dx=q.x-p.x,dz=q.z-p.z;if(dx<0||Math.abs(dx)<.001&&dz<0){dx=-dx;dz=-dz;}const length=Math.hypot(dx,dz)||1,width=traffic.engine.ROADS[traffic.world.tiles[stop].roadType]?.width||2.45,offset=width/2-.28;return {x:p.x-dz/length*offset,z:p.z+dx/length*offset};}

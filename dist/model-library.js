@@ -1,8 +1,9 @@
+import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=28.0';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {lotPlan} from './building-plan.js?v=27.0';
-import {floorHeight} from './landscape.js?v=27.0';
+import {lotPlan} from './building-plan.js?v=28.0';
+import {floorHeight} from './landscape.js?v=28.0';
 const IDENTITY=new THREE.Matrix4();
 // Complete textured assets are loaded once, batched per material, and instanced.
 export class ModelLibrary {
@@ -110,6 +111,10 @@ export class ModelLibrary {
 
   const footprintX=asset.size.x*scale/2,footprintZ=asset.size.z*scale/2;let base=floorHeight(world,p.cx,p.cz);
   for(const x of [-footprintX,footprintX])for(const z of [-footprintZ,footprintZ])base=Math.max(base,floorHeight(world,p.cx+x*Math.cos(p.angle)+(z+setback)*Math.sin(p.angle),p.cz-x*Math.sin(p.angle)+(z+setback)*Math.cos(p.angle)));
+  if(world.landformVersion===1)for(const point of lotPerimeter(p))base=Math.max(base,floorHeight(world,p.cx+point.x,p.cz+point.z));
+  const foundation=lotFoundation(world,p,base+.04,floorHeight);if(foundation){if(!this.foundationMaterial){const material=this.view.landscape.material('brick',1,'#9b9e94');material.onBeforeCompile=shader=>{shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`#ifdef USE_MAP
+vec3 sampleColor=texture2D(map,vMapUv).rgb;float grain=dot(sampleColor,vec3(.3,.59,.11));diffuseColor.rgb*=.55+grain*.9;
+#endif`);};material.customProgramCacheKey=()=> 'borough-retaining-masonry-28';this.foundationMaterial=material;}const wall=new THREE.Mesh(foundation,this.foundationMaterial);wall.rotation.y=-p.angle;wall.castShadow=wall.receiveShadow=true;root.add(wall);}
   root.position.set(p.cx,base+.04,p.cz);root.userData={factory:true,asset:true,model:asset.name,plan:p,lodDistance:asset.family==='modern'?64:undefined};return root;
  }
 }
