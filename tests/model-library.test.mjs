@@ -14,7 +14,7 @@ loader.register(()=>({name:'test-images',loadTexture:()=>Promise.resolve(new THR
 async function library(){const lib=Object.create(ModelLibrary.prototype);lib.models=[];lib.materials=new Set();lib.lotGeometry=new THREE.PlaneGeometry(1,1);lib.lotGeometry.rotateX(-Math.PI/2);lib.view={renderer:{capabilities:{getMaxAnisotropy:()=>8}},landscape:{material:()=>new THREE.MeshStandardMaterial()}};
  for(const file of ['urban','industry','modern']){const data=fs.readFileSync(new URL('../dist/assets/buildings/'+file+'.glb',import.meta.url));const result=await loader.parseAsync(data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength),'');lib.ingest(result.scene);}return lib;}
 test('all complete building assets decode with finite UV-mapped geometry and valid categories',async()=>{
- const lib=await library();assert.equal(lib.models.length,36);assert.deepEqual([...new Set(lib.models.map(m=>m.category))].sort(),['commercial','industrial','office','residential','residential-low']);
+ const lib=await library();assert.equal(lib.models.length,41);assert.deepEqual([...new Set(lib.models.map(m=>m.category))].sort(),['commercial','industrial','office','residential','residential-low']);
  for(const model of lib.models){assert.ok(model.size.x>0&&model.size.y>0&&model.size.z>0);assert.ok(model.root.children.length<=10);for(const mesh of model.root.children){if(mesh.material.map)assert.ok(mesh.geometry.attributes.uv);assert.ok([...mesh.geometry.attributes.position.array].every(Number.isFinite));}}
 });
 test('model placement fits saved lots uniformly and instancing survives demolition without disposing shared models',async()=>{
@@ -39,10 +39,10 @@ test('loaded models follow angled roads without stretching or overlapping neighb
 });
 
 test('modern library retains facade detail with shared materials and a bounded geometry cost',async()=>{
- const lib=await library(),modern=lib.models.filter(m=>m.family==='modern');assert.equal(modern.length,15);
+ const lib=await library(),modern=lib.models.filter(m=>m.family==='modern');assert.equal(modern.length,20);
  const materials=new Set();let triangles=0,hasWindowVariation=false;
- for(const model of modern){let count=0;for(const mesh of model.root.children){materials.add(mesh.material);count+=mesh.geometry.index.count/3;const color=mesh.geometry.attributes.color;assert.ok(color,'baked facade variation is retained');assert.ok([...color.array].every(Number.isFinite));if(new Set(color.array).size>3)hasWindowVariation=true;}assert.ok(count<5000,model.name+' triangle budget');triangles+=count;}
- assert.ok(materials.size<=9,'materials are reused across modern buildings');assert.ok(triangles<40000);assert.ok(hasWindowVariation);
+ for(const model of modern){let count=0;for(const mesh of model.root.children){materials.add(mesh.material);count+=mesh.geometry.index.count/3;const color=mesh.geometry.attributes.color;assert.ok(color,'baked facade variation is retained');assert.ok([...color.array].every(Number.isFinite));if(new Set(color.array).size>3)hasWindowVariation=true;}assert.ok(count<(model.name.startsWith('perimeter-')?10500:5000),model.name+' triangle budget');triangles+=count;}
+ assert.ok(materials.size<=9,'materials are reused across modern buildings');assert.ok(triangles<80000);assert.ok(hasWindowVariation);
 });
 test('medium residential and low commercial zoning do not select high-rise models',async()=>{
  const lib=await library(),world=E.createWorld('Density model QA','plains',324);
@@ -53,4 +53,28 @@ test('night lighting illuminates selected modern windows while balconies and oth
  const lib=await library(),glass=[...lib.materials].filter(m=>m.name.startsWith('modern-glass'));assert.equal(glass.length,2);lib.setNight(true);
  assert.equal(glass.find(m=>m.name==='modern-glass').emissiveIntensity,0);assert.ok(glass.find(m=>m.name==='modern-glass-occupied').emissiveIntensity>0);
  lib.setNight(false);assert.ok(glass.every(m=>m.emissiveIntensity===0));
+});
+
+test('large zoned parcels select full-scale perimeter blocks and retain open courtyards',async()=>{
+ const lib=await library(),world=E.createWorld('Block coverage','plains',324),index=20*48+20;
+ for(const [type,density]of [['residential','medium'],['residential','high'],['commercial','high'],['office','high']]){
+  world.tiles[index]={type,density,level:2};const before=JSON.stringify(world),root=lib.create(world,index,{width:3,depth:2}),asset=lib.models.find(m=>m.name===root.userData.model),model=root.children[0];
+  assert.ok(type==='office'||asset.name.startsWith('perimeter-'),type+' '+asset.name);assert.equal(model.scale.x,.2);
+  assert.ok(asset.size.x*asset.size.z*.04/(12*8)>.55,type+' '+asset.name+' coverage '+asset.size.x*asset.size.z*.04/(12*8));assert.equal(JSON.stringify(world),before);
+  // Ray through the centre of the court must reach its planted ground, not a roof.
+  if(!asset.name.startsWith('perimeter-'))continue;
+  model.updateMatrixWorld(true);const ray=new THREE.Raycaster(new THREE.Vector3(0,30,0),new THREE.Vector3(0,-1,0));
+  const hits=ray.intersectObject(model,true);assert.ok(hits.length);assert.ok(hits[0].point.y<.4,'courtyard is open to the sky');
+ }
+});
+test('street setbacks remain inside owned parcels at every road angle',async()=>{
+ const lib=await library();
+ for(const degree of [0,15,30,45,60,75,90,135,180,225,270]){
+  const world=E.createWorld('Frontage bounds','plains',324);world.tiles.forEach(t=>Object.assign(t,{type:null,level:0}));world.money=100000;
+  const angle=degree*Math.PI/180,dx=Math.cos(angle)*8,dy=Math.sin(angle)*8;
+  E.buildRoadPath(world,[{x:22-dx,y:22-dy},{x:22+dx,y:22+dy}],'street');
+  const index=25*48+24;world.tiles[index]={type:'commercial',density:'high',level:2};const root=lib.create(world,index,{width:3,depth:2}),p=root.userData.plan,b=new THREE.Box3().setFromObject(root);
+  assert.ok(b.min.x>=p.cx-6-1e-5&&b.max.x<=p.cx+6+1e-5,degree+' x');
+  assert.ok(b.min.z>=p.cz-4-1e-5&&b.max.z<=p.cz+4+1e-5,degree+' z');
+ }
 });

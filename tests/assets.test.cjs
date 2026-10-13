@@ -30,14 +30,22 @@ for(const file of ['buildings/urban.glb','buildings/industry.glb','buildings/mod
  for(const view of gltf.bufferViews)assert.ok((view.byteOffset||0)+view.byteLength<=gltf.buffers[view.buffer].byteLength);
  for(const image of gltf.images||[])assert.ok(gltf.bufferViews[image.bufferView],'embedded texture');
  for(const mesh of gltf.meshes)for(const primitive of mesh.primitives){assert.ok(gltf.accessors[primitive.attributes.POSITION]);assert.ok(gltf.materials[primitive.material]);}
+ if(file==='buildings/modern.glb'){
+  for(const mesh of gltf.meshes)for(const primitive of mesh.primitives){
+   const colors=gltf.accessors[primitive.attributes.COLOR_0],indices=gltf.accessors[primitive.indices];
+   assert.equal(colors.componentType,5121);assert.equal(colors.normalized,true);assert.equal(colors.type,'VEC4','byte vertex colors stay four-byte aligned');
+   assert.equal(indices.componentType,5123,'modern parts fit compact lossless indices');
+  }
+  assert.ok(data.length<7*1024*1024,'full modern geometry uses compact vertex encoding');
+ }
  if(file.startsWith('buildings/')){
   const roots=gltf.scenes[gltf.scene||0].nodes;buildingCount+=roots.length;
   const triangles=index=>{const node=gltf.nodes[index];return (node.mesh===undefined?0:gltf.meshes[node.mesh].primitives.reduce((n,p)=>n+gltf.accessors[p.indices ?? p.attributes.POSITION].count/3,0))+(node.children||[]).reduce((n,i)=>n+triangles(i),0)};
   for(const index of roots){assert.ok(gltf.nodes[index].extras.category);assert.ok(triangles(index)<200000,'complete building triangle budget');}
  }
 }
-assert.equal(buildingCount,36);
-console.log('36 complete GLB buildings and scanned coast verified');
+assert.equal(buildingCount,41);
+console.log('41 complete GLB buildings and scanned coast verified');
 const coastData=fs.readFileSync(path.join(root,'assets/coast.glb')),coast=JSON.parse(coastData.toString('utf8',20,20+coastData.readUInt32LE(12)));
 assert.ok(coast.meshes.reduce((total,m)=>total+m.primitives.reduce((n,p)=>n+coast.accessors[p.indices??p.attributes.POSITION].count/3,0),0)<5000,'coastal patch triangle budget');
 assert.ok(fs.statSync(path.join(root,'assets/buildings/lod.bin')).size<10*1024*1024,'distant geometry download budget');

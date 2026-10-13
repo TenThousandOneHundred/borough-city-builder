@@ -27,7 +27,8 @@ class Model:
   if length<1e-8:return
   n=[x/length for x in n]
   for pos,uv in zip([a,b,c,d],[(0,0),(1,0),(1,1),(0,1)]):part['p']+=list(pos);part['n']+=n;part['uv']+=list(uv);part['c']+=list(color)
-  part['i'] += [start,start+1,start+2,start,start+2,start+3]
+  part['i'] += [start,start+1,start+2]
+  if a!=d:part['i'] += [start,start+2,start+3]
  def box(self,x,y,z,w,h,d,mat=CONCRETE,color=(1,1,1)):
   a,b=x-w/2,x+w/2;c,e=y,y+h;f,g=z-d/2,z+d/2
   for q in [((a,c,g),(b,c,g),(b,e,g),(a,e,g)),((b,c,f),(a,c,f),(a,e,f),(b,e,f)),((b,c,g),(b,c,f),(b,e,f),(b,e,g)),((a,c,f),(a,c,g),(a,e,g),(a,e,f)),((a,e,g),(b,e,g),(b,e,f),(a,e,f))]:self.quad(*q,mat,color)
@@ -40,7 +41,7 @@ class Model:
  def band(self,points,y,h,mat=CONCRETE,color=(1,1,1)):
   for a,b in zip(points,points[1:]+points[:1]):self.quad((b[0],y,b[1]),(a[0],y,a[1]),(a[0],y+h,a[1]),(b[0],y+h,b[1]),mat,color)
   self.surface(points,y+h,mat,color)
- def shell(self,w,d,floors,x=0,z=0,y=0,bevel=.7,balconies=False,curtain=False,oval=False):
+ def shell(self,w,d,floors,x=0,z=0,y=0,bevel=.7,balconies=False,curtain=False,oval=False,tint=(1,1,1)):
   points=([(x+w/2*math.cos(j*math.tau/32),z+d/2*math.sin(j*math.tau/32)) for j in range(32)] if oval else self.ring(w,d,bevel,x,z))
   fh=3.2;top=y+floors*fh
   # Recessed dark walls sit behind individual panes and facade structure.
@@ -51,7 +52,7 @@ class Model:
    bays=max(1,round(length/(1.6 if curtain else 2.6)));bay=length/bays
    for f in range(floors):
     level=y+f*fh;bottom=.32 if curtain else .75;upper=.13 if curtain else .38
-    for lo,hi in [(level,level+bottom),(level+fh-upper,level+fh)]:self.quad(p(length,lo,.025),p(0,lo,.025),p(0,hi,.025),p(length,hi,.025),FRAME if curtain else CONCRETE)
+    for lo,hi in [(level,level+bottom),(level+fh-upper,level+fh)]:self.quad(p(length,lo,.025),p(0,lo,.025),p(0,hi,.025),p(length,hi,.025),FRAME if curtain else CONCRETE,(1,1,1) if curtain else tint)
     for j in range(bays):
      margin=.045 if curtain else .24;l=j*bay+margin;r=(j+1)*bay-margin;shade=.74+((j*17+f*31+side*11)%19)/65
      self.quad(p(r,level+bottom,-.035),p(l,level+bottom,-.035),p(l,level+fh-upper,-.035),p(r,level+fh-upper,-.035),OCCUPIED if (j*17+f*31+side*11)%4==1 else GLASS,(shade,shade,min(1,shade+.04)))
@@ -71,8 +72,8 @@ class Model:
    # Continuous narrow mullions do not duplicate geometry at every floor.
    for j in range(bays+1):
     u=j*bay;half=.045 if curtain else .22;l=max(0,u-half);r=min(length,u+half)
-    self.quad(p(r,y,.06),p(l,y,.06),p(l,top,.06),p(r,top,.06),FRAME if curtain else CONCRETE)
-  self.surface(points,top,ROOF);self.band(points,top,.24,CONCRETE)
+    self.quad(p(r,y,.06),p(l,y,.06),p(l,top,.06),p(r,top,.06),FRAME if curtain else CONCRETE,(1,1,1) if curtain else tint)
+  self.surface(points,top,ROOF);self.band(points,top,.24,CONCRETE,tint)
   # Roof membrane inset above slab, with a low perimeter parapet.
   inner=[(x+(px-x)*.97,z+(pz-z)*.97) for px,pz in points];self.surface(inner,top+.245,ROOF)
   return top
@@ -103,6 +104,32 @@ m=Model('neighborhood-mixed-use','commercial',5);h=m.shell(18,12,1,curtain=True)
 m=Model('modern-courtyard-house','residential-low',2);h=m.shell(8,10,2,x=-3);m.shell(5,6,1,x=3,z=-2,curtain=True);m.box(3,0,4,4,.15,5,WOOD);m.plant(5,0,6,1,3);m.roofwork(-3,h,-2,1,.8);m.entrance(5.5,-3);m.finish()
 m=Model('modern-rowhouse','residential-low',3);h=m.shell(7,11,3,balconies=True);m.box(-2,0,5.55,.8,9.3,.16,WOOD);m.plant(2,0,6,1,2);m.roofwork(0,h,-2,1.2,1);m.entrance(6);m.finish()
 
+# Perimeter blocks use actual metre-sized wings around an open courtyard.
+# Their larger footprint fills consolidated zones without enlarging windows.
+def courtyard(name,category,floors,w=46,d=32,tint=(.86,.83,.74)):
+ m=Model(name,category,floors)
+ # Separate wings leave a planted, ground-level central court; no solid podium.
+ h=m.shell(w,9,floors,z=-(d-9)/2,bevel=.35,tint=tint)
+ m.shell(w,9,floors-1,z=(d-9)/2,bevel=.35,tint=tint,balconies=category=='residential')
+ m.shell(9,d-18,floors-1,x=-(w-9)/2,bevel=.35,tint=tint)
+ m.shell(9,d-18,floors-2,x=(w-9)/2,bevel=.35,tint=tint)
+ m.roofwork(-w*.28,h,-(d-9)/2,5,2)
+ for x in [-w*.22,w*.22]:
+  m.plant(x,0,0,5,5)
+  m.entrance(d/2+.35,x)
+ # Benches and walkways make the courtyard read as usable shared space.
+ m.box(0,.02,0,w-18,.08,1.8,ROOF)
+ for x in [-6,6]:m.box(x,.45,3,3,.18,.6,WOOD)
+ return m
+m=courtyard('perimeter-garden-apartments','residential',6);m.finish()
+m=courtyard('perimeter-terrace-residences','residential',9,48,34,tint=(.95,.72,.55));m.plant(15,22.7,12,7,2);m.finish()
+m=courtyard('perimeter-tower-residences','residential',10,46,32,tint=(.72,.80,.82));h=m.shell(14,9,5,x=-12,z=-11.5,y=32,curtain=True);m.roofwork(-12,h,-11.5,4,2);m.floors=15;m.finish()
+m=courtyard('perimeter-mixed-use','commercial',6,44,30,tint=(.86,.67,.51))
+# Street-level canopies run along the retail frontage, leaving entrances between.
+for x in [-16,-8,0,8,16]:m.box(x,3.1,15.5,6.5,.16,2,FRAME)
+m.finish()
+m=courtyard('perimeter-campus-offices','office',10,44,32,tint=(.72,.76,.73));m.finish()
+
 # Each model has one primitive per material, with vertex colour variation.
 doc={'asset':{'version':'2.0','generator':'Borough original modern architecture'},'scene':0,'scenes':[{'nodes':[]}],'nodes':[],'meshes':[],'materials':[{'name':name,'pbrMetallicRoughness':{'baseColorFactor':color,'metallicFactor':metal,'roughnessFactor':rough}} for name,color,metal,rough in materials],'buffers':[{'byteLength':0}],'bufferViews':[],'accessors':[]}
 binary=bytearray((ROOT/'dist/assets/asphalt-color.jpg').read_bytes())
@@ -112,13 +139,14 @@ doc['materials'][ROOF]['pbrMetallicRoughness']['baseColorTexture']={'index':0}
 
 def pack(values,kind,component=5126):
  while len(binary)%4:binary.append(0)
- width={'VEC3':3,'VEC2':2,'SCALAR':1}[kind];start=len(binary);fmt='f' if component==5126 else 'I';binary.extend(struct.pack('<'+fmt*len(values),*values));doc['bufferViews'].append({'buffer':0,'byteOffset':start,'byteLength':len(binary)-start});entry={'bufferView':len(doc['bufferViews'])-1,'componentType':component,'count':len(values)//width,'type':kind}
+ width={'VEC4':4,'VEC3':3,'VEC2':2,'SCALAR':1}[kind];start=len(binary);fmt={5126:'f',5125:'I',5123:'H',5121:'B'}[component];binary.extend(struct.pack('<'+fmt*len(values),*values));doc['bufferViews'].append({'buffer':0,'byteOffset':start,'byteLength':len(binary)-start});entry={'bufferView':len(doc['bufferViews'])-1,'componentType':component,'count':len(values)//width,'type':kind}
+ if component==5121:entry['normalized']=True
  if kind=='VEC3':entry.update(min=[min(values[i::3]) for i in range(3)],max=[max(values[i::3]) for i in range(3)])
  doc['accessors'].append(entry);return len(doc['accessors'])-1
 for model in models:
  primitives=[]
  for mat,part in sorted(model.parts.items()):
-  primitives.append({'attributes':{'POSITION':pack(part['p'],'VEC3'),'NORMAL':pack(part['n'],'VEC3'),'TEXCOORD_0':pack(part['uv'],'VEC2'),'COLOR_0':pack(part['c'],'VEC3')},'indices':pack(part['i'],'SCALAR',5125),'material':mat})
+  primitives.append({'attributes':{'POSITION':pack(part['p'],'VEC3'),'NORMAL':pack(part['n'],'VEC3'),'TEXCOORD_0':pack(part['uv'],'VEC2'),'COLOR_0':pack([v for i in range(0,len(part['c']),3) for v in [*[round(max(0,min(1,c))*255) for c in part['c'][i:i+3]],255]],'VEC4',5121)},'indices':pack(part['i'],'SCALAR',5123 if max(part['i'])<65536 else 5125),'material':mat})
  doc['meshes'].append({'name':model.name,'primitives':primitives});doc['scenes'][0]['nodes'].append(len(doc['nodes']));doc['nodes'].append({'name':model.name,'mesh':len(doc['meshes'])-1,'extras':{'category':model.category,'floors':model.floors,'family':'modern','source':'Borough original geometry'}})
 while len(binary)%4:binary.append(0)
 doc['buffers'][0]['byteLength']=len(binary);data=json.dumps(doc,separators=(',',':')).encode();data+=b' '*((-len(data))%4)
