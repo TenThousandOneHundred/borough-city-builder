@@ -35,6 +35,7 @@ export function lotPlan(world,index,parcel){
   }
  }
  if(parcel?.oriented){({cx,cz,angle,frontage}=parcel.oriented);}
+ if(parcel?.facility)angle=parcel.rotation*Math.PI/2;
  const sin=Math.abs(Math.sin(angle)),cos=Math.abs(Math.cos(angle)),rotated=sin>.70710678;
  let lotWidth=(rotated?depth:width)*4,lotDepth=(rotated?width:depth)*4;
  // Fit the rotated envelope within the owned parcel: no overlap with roads or neighbours.
@@ -47,5 +48,5 @@ export function lotPlan(world,index,parcel){
  else if(type==='industrial')floors=1;
  else if(density==='medium'||tile.building==='apartments')floors=3+style%4;
  else{const large=width*depth>1;floors=type==='office'?(large?8:5)+Math.floor(variation*16):(large?5:3)+Math.floor(variation*10);}
- return{oriented:!!parcel?.oriented,ownedCells:parcel?.oriented?parcel.members:undefined,index,type,density,low,style,tone,variation,floors,angle,frontage,cx,cz,lotWidth,lotDepth,parcelWidth:width*4,parcelDepth:depth*4,seed:seed>>>0,level:tile.level};
+ return{facility:!!parcel?.facility,oriented:!!parcel?.oriented,ownedCells:parcel?.oriented?parcel.members:undefined,index,type,density,low,style,tone,variation,floors,angle,frontage,cx,cz,lotWidth,lotDepth,parcelWidth:width*4,parcelDepth:depth*4,seed:seed>>>0,level:tile.level};
 }

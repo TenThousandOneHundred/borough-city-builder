@@ -26,7 +26,7 @@ CONCRETE,GLASS,FRAME,ROOF,WOOD,LEAVES,RECESS,BLIND,OCCUPIED,BRICK,PAINT,SHOP_GLA
 models=[]
 class Model:
  def __init__(self,name,category,floors,building=None):
-  self.name,self.category,self.floors=name,category,floors;self.building=building;self.detail=False;self.gardens=[];self.streetFronts=[];self.parts=defaultdict(lambda:{'p':[],'n':[],'uv':[],'c':[],'i':[],'far':[]})
+  self.name,self.category,self.floors=name,category,floors;self.building=building;self.site=False;self.detail=False;self.gardens=[];self.streetFronts=[];self.parts=defaultdict(lambda:{'p':[],'n':[],'uv':[],'c':[],'i':[],'far':[]})
  def quad(self,a,b,c,d,mat,color=(1,1,1),uvs=None):
   part=self.parts[mat];start=len(part['p'])//3;u=[b[i]-a[i] for i in range(3)];v=[c[i]-a[i] for i in range(3)];n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];length=math.sqrt(sum(x*x for x in n))
   if length<1e-8:return
@@ -265,6 +265,46 @@ m=civic('rescue','fire',4);h=m.shell(16,12,1,cladding=BRICK);m.shell(5,7,3,x=-5,
 for x in [-1,4]:shutter(m,x,6.1,3.7)
 m.box(1.5,2.85,6.25,11,.26,.12,PAINT,(.65,.10,.055));m.roofwork(-5,12.8,-2,2,2);m.box(1.5,.02,7.3,11,.1,2,ROOF);m.finish()
 
+# Full-sized facilities retain metre-scale storeys, windows and entrances.
+# Each saved civic site selects one complete campus rather than scaled-up doors.
+def campus(name,category,floors):
+ m=Model('site-'+name,category,floors,building=name);m.site=True;return m
+def court(m,x,z,w,d):
+ m.box(x,.04,z,w,.1,d,PAINT,(.25,.38,.34))
+ for dx in [-w/2+.5,w/2-.5]:m.box(x+dx,.145,z,.08,.015,d-1,PAINT)
+ for dz in [-d/2+.5,0,d/2-.5]:m.box(x,.145,z+dz,w-1,.015,.08,PAINT)
+ # Basketball supports preserve human scale.
+ for dz in [-d/2+1,d/2-1]:
+  m.box(x,0,z+dz,.12,3,.12,FRAME);m.box(x,2.5,z+dz,1.8,.9,.08,PAINT)
+def parking(m,x,z,count):
+ m.box(x,.02,z,count*2.6,.08,5.5,ROOF)
+ for n in range(count+1):m.box(x-count*1.3+n*2.6,.105,z,.08,.012,5.1,PAINT)
+
+m=campus('clinic','hospital',2);h=m.shell(25,17,2,z=-3,cladding=PAINT);m.shell(8,8,1,x=-8,z=9,curtain=True);canopy(m,0,6,6);health_sign(m,8,3.5,5.6);m.roofwork(-5,h,-5);m.plant(10,0,10,4,5);parking(m,-3,15,6);m.finish()
+m=campus('hospital','hospital',7)
+h=m.shell(58,24,2,z=4,cladding=PAINT);m.shell(43,15,5,x=-5,z=-7,y=h,cladding=PAINT);m.shell(15,20,3,x=22,z=-12,cladding=PAINT)
+m.shell(15,9,1,x=-16,z=20,curtain=True);canopy(m,-16,25,10);canopy(m,18,17,9);health_sign(m,25,4,16.1)
+for x in [-17,-3,10]:m.roofwork(x,22.4,-8,5,3)
+m.box(18,.03,23,20,.1,10,ROOF);parking(m,-16,-24,11);m.plant(-33,0,4,4,12);m.plant(32,0,19,4,8);m.finish()
+m=campus('wellness','hospital',1);m.shell(10,26,1,x=-10,z=-2,cladding=BRICK);m.shell(19,10,1,x=4,z=-10,curtain=True);m.shell(8,9,1,x=10,z=0,cladding=PAINT);canopy(m,-10,12,6);health_sign(m,-10,1.1,11.1);m.plant(0,0,3,5,6);m.terrace(7,.02,10,8,5);parking(m,-6,16,4);m.roofwork(-10,3.2,-8,3,2);m.finish()
+
+m=campus('elementary','school',2);h=m.shell(43,11,2,z=-10,cladding=BRICK);m.shell(10,22,2,x=-17,z=5,cladding=BRICK);m.shell(14,18,1,x=17,z=3,cladding=PAINT);canopy(m,-17,17,6);court(m,0,8,14,16);m.plant(0,0,-1,5,2);m.roofwork(-9,h,-10,5,3);m.finish()
+m=campus('highschool','school',3);h=m.shell(63,14,3,z=-16,cladding=BRICK);m.shell(13,27,2,x=-25,z=4,cladding=BRICK);m.shell(20,27,2,x=24,z=4,cladding=PAINT);m.shell(14,8,1,x=-3,z=-5,curtain=True);canopy(m,-3,0,7);court(m,-1,13,20,20);m.roofwork(-16,h,-17);m.roofwork(23,6.4,3,6,3);m.plant(-29,0,23,6,4);m.plant(29,0,23,6,4);m.finish()
+m=campus('college','school',5);h=m.shell(15,44,5,x=-34,z=-1,cladding=BRICK);m.shell(45,13,4,x=-4,z=-17,curtain=True);m.shell(22,27,3,x=30,z=-8,cladding=PAINT);m.shell(14,16,2,x=27,z=14,cladding=BRICK);m.shell(10,8,1,x=-24,z=15,curtain=True);canopy(m,-24,20,7);m.box(-2,.02,5,30,.08,3,ROOF)
+for x in [-13,5]:m.plant(x,0,10,6,9);m.terrace(x,.02,21,8,4)
+for x,y,z in [(-34,16,-12),(-10,12.8,-17),(30,9.6,-12)]:m.roofwork(x,y,z,5,3)
+m.finish()
+
+m=campus('police','police',2);h=m.shell(26,19,2,z=-5,cladding=PAINT);m.shell(12,6,1,z=7,curtain=True);canopy(m,0,11,6);m.box(0,3.1,4.65,18,.55,.12,PAINT,(.12,.25,.45));m.roofwork(-6,h,-7);parking(m,0,16,9);m.plant(-15,0,7,3,7);m.finish()
+m=campus('headquarters','police',6);h=m.shell(43,27,2,z=-2,cladding=PAINT);m.shell(25,18,4,x=-7,z=-6,y=h,curtain=True);m.shell(14,12,1,x=11,z=17,curtain=True);canopy(m,11,24,9);m.box(11,3.1,23.2,12,.55,.12,PAINT,(.12,.25,.45));m.roofwork(-10,19.2,-7,6,3);m.cylinder(-16,19.8,-11,.1,5,FRAME);parking(m,0,-23,14);m.plant(-20,0,19,5,8);m.finish()
+
+m=campus('fire','fire',2);h=m.shell(29,21,1,z=-3,cladding=BRICK);m.shell(8,18,1,x=-10,z=-4,y=h,cladding=BRICK)
+for x in [-2,3,8]:shutter(m,x,7.6,4)
+m.box(3,2.85,7.75,15,.26,.12,PAINT,(.65,.10,.055));m.box(3,.02,13,19,.1,9,ROOF);canopy(m,-10,8,4);m.roofwork(-10,6.4,-6,3,2);m.plant(-14,0,12,2,4);m.finish()
+m=campus('rescue','fire',5);h=m.shell(47,22,1,z=-4,cladding=BRICK);m.shell(10,16,2,x=-17,z=-6,y=h,cladding=PAINT);m.shell(7,7,5,x=19,z=-9,cladding=BRICK)
+for x in [-7,-2,3,8,13]:shutter(m,x,7.1,4)
+m.box(3,2.85,7.25,25,.26,.12,PAINT,(.65,.10,.055));m.box(3,.02,12.5,30,.1,9,ROOF);canopy(m,-17,8,6);m.roofwork(-17,9.6,-7,4,2);m.plant(-24,0,12,3,6);m.finish()
+
 # Each model has one primitive per material, with vertex colour variation.
 doc={'asset':{'version':'2.0','generator':'Borough original modern architecture'},'extensionsUsed':['KHR_mesh_quantization'],'extensionsRequired':['KHR_mesh_quantization'],'scene':0,'scenes':[{'nodes':[]}],'nodes':[],'meshes':[],'materials':[{'name':name,'pbrMetallicRoughness':{'baseColorFactor':color,'metallicFactor':metal,'roughnessFactor':rough}} for name,color,metal,rough in materials],'buffers':[{'byteLength':0}],'bufferViews':[],'accessors':[]}
 binary=bytearray()
@@ -314,7 +354,7 @@ for model in models:
  primitives=[]
  for mat,part in sorted(model.parts.items()):
   primitives.append({'attributes':{'POSITION':pack(part['p'],'VEC3'),'NORMAL':pack_normal(part['n']),'TEXCOORD_0':pack(part['uv'],'VEC2'),'COLOR_0':pack([v for i in range(0,len(part['c']),3) for v in [*[round(max(0,min(1,c))*255) for c in part['c'][i:i+3]],255]],'VEC4',5121)},'indices':pack(part['i'],'SCALAR',5123 if max(part['i'])<65536 else 5125),'material':mat})
- doc['meshes'].append({'name':model.name,'primitives':primitives});doc['scenes'][0]['nodes'].append(len(doc['nodes']));doc['nodes'].append({'name':model.name,'mesh':len(doc['meshes'])-1,'extras':{'category':model.category,'building':model.building,'floors':model.floors,'family':'modern','gardens':model.gardens,'streetFronts':model.streetFronts,'source':'Borough original geometry'}})
+ doc['meshes'].append({'name':model.name,'primitives':primitives});doc['scenes'][0]['nodes'].append(len(doc['nodes']));doc['nodes'].append({'name':model.name,'mesh':len(doc['meshes'])-1,'extras':{'category':model.category,'building':model.building,'site':model.site,'floors':model.floors,'family':'modern','gardens':model.gardens,'streetFronts':model.streetFronts,'source':'Borough original geometry'}})
 while len(binary)%4:binary.append(0)
 doc['buffers'][0]['byteLength']=len(binary);data=json.dumps(doc,separators=(',',':')).encode();data+=b' '*((-len(data))%4)
 glb=struct.pack('<III',0x46546c67,2,12+8+len(data)+8+len(binary))+struct.pack('<II',len(data),0x4e4f534a)+data+struct.pack('<II',len(binary),0x004e4942)+binary

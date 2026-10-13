@@ -1,21 +1,21 @@
-import {trackAssetGroups} from './asset-transfer.js?v=40.1';
-import {buildFootpaths} from './footpaths.js?v=40.1';
-import {Transit,transitLeg,stopPosition} from './transit.js?v=40.1';
-import {SimulationClock} from './simulation-clock.js?v=40.1';
-import {Residents} from './residents.js?v=40.1';
-import {Traffic,carCapacity} from './traffic.js?v=40.1';
-import {Vehicles} from './vehicles.js?v=40.1';
-import {BuildingFactory} from './building-factory.js?v=40.1';
-import {StreetLife} from './street-life.js?v=40.1';
-import {visualParcels} from './parcels.js?v=40.1';
-import {Graphics} from './graphics.js?v=40.1';
-import {Vegetation} from './vegetation.js?v=40.1';
+import {trackAssetGroups} from './asset-transfer.js?v=41';
+import {buildFootpaths} from './footpaths.js?v=41';
+import {Transit,transitLeg,stopPosition} from './transit.js?v=41';
+import {SimulationClock} from './simulation-clock.js?v=41';
+import {Residents} from './residents.js?v=41';
+import {Traffic,carCapacity} from './traffic.js?v=41';
+import {Vehicles} from './vehicles.js?v=41';
+import {BuildingFactory} from './building-factory.js?v=41';
+import {StreetLife} from './street-life.js?v=41';
+import {visualParcels} from './parcels.js?v=41';
+import {Graphics} from './graphics.js?v=41';
+import {Vegetation} from './vegetation.js?v=41';
 import {RGBELoader} from './vendor/RGBELoader.js';
 import * as THREE from './vendor/three.module.js';
 import {OrbitControls} from './vendor/OrbitControls.js';
-import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=40.1';
-import {Architecture} from './architecture.js?v=40.1';
-import {Roadworks} from './roadworks.js?v=40.1';
+import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=41';
+import {Architecture} from './architecture.js?v=41';
+import {Roadworks} from './roadworks.js?v=41';
 const N=48,T=4,HALF=96,zoneColors={residential:'#54b663',commercial:'#5bb1d8',industrial:'#cdb268',office:'#aa87c9'};
 export class CityView{
 constructor(canvas){this.assetsReady=false;this.loadingElement=document.getElementById('sceneLoading');this.canvas=canvas;this.scene=new THREE.Scene();this.scene.background=new THREE.Color('#aebfca');this.scene.fog=new THREE.FogExp2('#b7c6cc',.00105);
@@ -51,7 +51,7 @@ this.world.tiles.forEach((t,i)=>{const parcel=parcels.get(i),oldState=this.rende
 const near=isService&&this.camera.position.distanceToSquared(new THREE.Vector3((i%48+.5)*4-96,0,(Math.floor(i/48)+.5)*4-96))<38*38;
 const state={destination:!!(t.level>0&&!t.construction&&this.models.accepts(t)),road:t.type==='road'?[t.roadWidth,t.roadType,t.pathIds?.join(),t.ground].join(':'):'',trees:[t.type,t.zone,t.tree].join(':'),zone:[t.zone,t.type,t.construction].join(':'),occupied:!!t.construction||!!t.type&&t.type!=='road',visual:[parcel?.key,t.type,t.construction,t.level,t.density,t.building,t.variant,this.night,this.overlay,this.detailEnabled,near].join(':')};
 destinations ||= oldState?.destination!==state.destination;roads ||= oldState?.road!==state.road;trees ||= oldState?.trees!==state.trees;zones ||= oldState?.zone!==state.zone;occupancy ||= oldState?.occupied!==state.occupied;
-if(force||frontageChanged||oldState?.visual!==state.visual){const old=this.buildings.get(i);if(old){models=true;this.tileGroup.remove(old);this.disposeGroup(old);this.buildings.delete(i)}if(this.assetsReady!==false&&(!parcel||parcel.owner===i)&&(t.construction||t.type&&t.type!=='road'&&t.level>0)){models=true;const x=(i%48+.5)*4-96,z=(Math.floor(i/48)+.5)*4-96,g=t.construction?this.architecture.construction(t,x,z,this.world):(this.models.accepts(t)?this.models.create(this.world,i,parcel):this.architecture.model(t,x,z,this.world));if(this.overlay==='zones'&&zoneColors[t.type])g.traverse(o=>{if(o.isMesh)o.material=this.mat(zoneColors[t.type])});if(!g.userData.factory)this.tileGroup.add(g);this.buildings.set(i,g)}}this.renderStates[i]=state;});
+if(force||frontageChanged||oldState?.visual!==state.visual){const old=this.buildings.get(i);if(old){models=true;this.tileGroup.remove(old);this.disposeGroup(old);this.buildings.delete(i)}if(this.assetsReady!==false&&(!parcel||parcel.owner===i)&&(t.construction||t.type&&t.type!=='road'&&t.level>0)){models=true;const x=(i%48+.5)*4-96+(parcel?.facility?(parcel.width-1)*2:0),z=(Math.floor(i/48)+.5)*4-96+(parcel?.facility?(parcel.depth-1)*2:0),g=t.construction?this.architecture.construction(t,x,z,this.world):(this.models.accepts(t)?this.models.create(this.world,i,parcel):this.architecture.model(t,x,z,this.world));if(this.overlay==='zones'&&zoneColors[t.type])g.traverse(o=>{if(o.isMesh)o.material=this.mat(zoneColors[t.type])});if(!g.userData.factory)this.tileGroup.add(g);this.buildings.set(i,g)}}this.renderStates[i]=state;});
 if(models||force)this.models.rebuild(this.buildings);
 if(models||roads||occupancy||force)this.roadworks.buildAccess(this.world,this.buildings);
 const paths=this.walkRevision!==(this.world.walkRevision||0);this.walkRevision=this.world.walkRevision||0;if(paths||force)this.drawFootpaths();
@@ -86,9 +86,21 @@ setNight(v){if(this.night===v)return;this.night=v;this.models.library?.setNight(
 getRoadPoint(x,y){if(!this.getTile(x,y))return null;let p={x:Math.max(0,Math.min(47,(this.point.x+96)/4-.5)),y:Math.max(0,Math.min(47,(this.point.z+96)/4-.5))};const tile={x:Math.round(p.x),y:Math.round(p.y)};if(this.world.tiles[tile.y*48+tile.x].type==='road'&&Math.hypot(p.x-tile.x,p.y-tile.y)<.65)p=tile;for(const path of [...(this.world.roadPaths||[]),...(this.world.walkPaths||[])])for(const end of [path.controls[0],path.controls.at(-1)])if(Math.hypot(p.x-end.x,p.y-end.y)<.7)p={...end};return p}
 showRoadPreview(controls,type,valid){this.clearLine();const points=CityEngine.sampleRoad(controls).map(p=>({x:(p.x+.5)*4-96,z:(p.y+.5)*4-96}));const mat=new THREE.MeshBasicMaterial({color:valid?'#71d2ec':'#f08065',transparent:true,opacity:.62,side:THREE.DoubleSide});const mesh=this.roadworks.ribbon(this.world,points,type==='path'?.65:CityEngine.ROADS[type].width,0,mat,.28);this.roadworks.group.remove(mesh);this.previewGroup.add(mesh);}
 getTile(clientX,clientY){const r=this.canvas.getBoundingClientRect();this.ndc.set((clientX-r.left)/r.width*2-1,-(clientY-r.top)/r.height*2+1);this.ray.setFromCamera(this.ndc,this.camera);const targets=[this.landscape.ground,this.landscape.water].filter(Boolean),hit=this.ray.intersectObjects(targets,false)[0];if(hit)this.point.copy(hit.point);else if(!this.ray.ray.intersectPlane(this.plane,this.point))return null;const x=Math.floor((this.point.x+96)/4),y=Math.floor((this.point.z+96)/4);return x>=0&&y>=0&&x<48&&y<48?{x,y}:null}
-hover(tile,remove=false){this.cursor.visible=!!tile;if(tile){let x=(tile.x+.5)*4-96,z=(tile.y+.5)*4-96;this.cursor.material.color.set(remove?'#ff7959':'#62cbff');this.cursor.position.set(x,floorHeight(this.world,x,z)+.3,z)}}
+showFacilityPreview(q,remove=false){
+ const key=[remove,q.ok,q.owner,q.site?.width,q.site?.depth,q.site?.rotation,this.world.elevationRevision].join('/');
+ this.cursor.visible=false;if(this.facilityPreviewKey===key)return;this.clearLine();this.facilityPreviewKey=key;
+ if(!q.cells?.length)return;
+ const color=remove?'#ff7959':q.ok?'#71d2ec':'#f08065';
+ for(const i of q.cells)this.previewGroup.add(this.zonePlane(i%48,Math.floor(i/48),color,.48));
+ if(remove)return;
+ const x=(q.owner%48+q.site.width/2)*4-96,z=(Math.floor(q.owner/48)+q.site.depth/2)*4-96,a=q.site.rotation*Math.PI/2;
+ const along=q.site.rotation%2?q.site.width:q.site.depth,d=along*2;
+ const points=[[0,0],[0,d],[.65,d-.9],[0,d],[-.65,d-.9]].map(([u,v])=>{const px=x+u*Math.cos(a)+v*Math.sin(a),pz=z-u*Math.sin(a)+v*Math.cos(a);return new THREE.Vector3(px,floorHeight(this.world,px,pz)+.4,pz)});
+ this.previewGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points),new THREE.LineBasicMaterial({color,depthTest:false})));
+}
+hover(tile,remove=false){if(remove&&tile){const i=tile.y*48+tile.x,owner=CityEngine.facilityOwner(this.world,i),site=this.world.tiles[owner].facilitySite;if(site){this.showFacilityPreview({ok:true,owner,site,cells:CityEngine.facilityCells(this.world,i)},true);return;}}if(this.facilityPreviewKey)this.clearLine();this.cursor.visible=!!tile;if(tile){let x=(tile.x+.5)*4-96,z=(tile.y+.5)*4-96;this.cursor.material.color.set(remove?'#ff7959':'#62cbff');this.cursor.position.set(x,floorHeight(this.world,x,z)+.3,z)}}
 showLine(a,b){this.clearLine();if(!a||!b)return;for(let t of CityEngine.lineTiles(a,b)){let p=new THREE.Mesh(new THREE.PlaneGeometry(3.65,3.65),new THREE.MeshBasicMaterial({color:'#65cfff',transparent:true,opacity:.5,side:THREE.DoubleSide}));p.rotation.x=-Math.PI/2;let x=(t.x+.5)*4-96,z=(t.y+.5)*4-96;p.position.set(x,this.roadworks.height(this.world,x,z)+.25,z);this.previewGroup.add(p)}}
-clearLine(){this.previewGroup.children.forEach(o=>{o.geometry.dispose();o.material.dispose()});this.previewGroup.clear()}
+clearLine(){this.facilityPreviewKey=null;this.previewGroup.children.forEach(o=>{o.geometry.dispose();o.material.dispose()});this.previewGroup.clear()}
 setBuild(v){this.grid.visible=v;this.controls.touches.ONE=v?null:THREE.TOUCH.ROTATE}
 pan(dx,dz){this.controls.target.x+=dx;this.controls.target.z+=dz;this.camera.position.x+=dx;this.camera.position.z+=dz}
 center(){this.focusWorld(false)}

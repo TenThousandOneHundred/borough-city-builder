@@ -24,3 +24,16 @@ test('rotated rectangle coverage includes every interior sample and rejects off-
 test('oriented retaining boundaries follow the street-facing site instead of its grid bounding box',async()=>{
  const {lotPerimeter}=await import('../dist/lot-foundation.js'),p={oriented:true,lotWidth:12,lotDepth:8,parcelWidth:20,parcelDepth:20,angle:.6};for(const point of lotPerimeter(p)){const x=point.x*Math.cos(p.angle)-point.z*Math.sin(p.angle),z=point.x*Math.sin(p.angle)+point.z*Math.cos(p.angle);assert.ok(Math.abs(x)<=5.940001&&Math.abs(z)<=3.940001);assert.ok(Math.abs(Math.abs(x)-5.94)<1e-6||Math.abs(Math.abs(z)-3.94)<1e-6);}
 });
+
+test('facility parcels render one correctly oriented building over the full reserved site',async()=>{
+ const {createRequire}=await import('node:module'),E=createRequire(import.meta.url)('../dist/engine.js'),{lotPlan}=await import('../dist/building-plan.js');
+ for(const [id,[width,depth]] of Object.entries(E.FACILITY_SITES))for(let rotation=0;rotation<4;rotation++){
+  const w=E.createWorld('Campus','plains',41),r=E.place(w,20,15,E.BUILDINGS[id].type,{building:id,rotation});assert.ok(r.ok);
+  const before=JSON.stringify(w),parcels=visualParcels(w),parcel=parcels.get(r.owner),p=lotPlan(w,r.owner,parcel);
+  assert.equal(parcel.facility,true);assert.deepEqual(parcel.members,r.cells);for(const i of r.cells)assert.equal(parcels.get(i),parcel);
+  assert.equal(p.facility,true);assert.equal(p.angle,rotation*Math.PI/2);assert.ok(Math.abs(p.lotWidth-width*4)<1e-8);assert.ok(Math.abs(p.lotDepth-depth*4)<1e-8);
+  assert.equal(p.cx,(r.owner%48+r.site.width/2)*4-96);assert.equal(p.cz,(Math.floor(r.owner/48)+r.site.depth/2)*4-96);
+  assert.equal(JSON.stringify(w),before);assert.equal(visualParcels(w),parcels);
+  E.place(w,20,15,'bulldoze');assert.equal(visualParcels(w).has(r.owner),false);
+ }
+});

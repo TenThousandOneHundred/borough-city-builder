@@ -1,11 +1,11 @@
-import {loadBinary} from './asset-transfer.js?v=40.1';
-import {SiteDetails} from './site-details.js?v=40.1';
-import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=40.1';
+import {loadBinary} from './asset-transfer.js?v=41';
+import {SiteDetails} from './site-details.js?v=41';
+import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=41';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {lotPlan} from './building-plan.js?v=40.1';
-import {floorHeight} from './landscape.js?v=40.1';
+import {lotPlan} from './building-plan.js?v=41';
+import {floorHeight} from './landscape.js?v=41';
 const IDENTITY=new THREE.Matrix4();
 const civicDefaults={hospital:'clinic',school:'elementary',police:'police',fire:'fire'};
 // Complete textured assets are loaded once, batched per material, and instanced.
@@ -15,9 +15,9 @@ export class ModelLibrary {
   const loader=new GLTFLoader();
   // Fetch the distant indices alongside the models instead of adding another
   // large download after all three catalogues have finished.
-  const distant=Promise.all([fetch(new URL('./assets/buildings/lod.json?v=40.1',import.meta.url)).then(r=>{if(!r.ok)throw Error(r.status);return r.json()}),loadBinary(new URL('./assets/buildings/lod.bin?v=40.1',import.meta.url))]).then(value=>({value}),error=>({error}));
+  const distant=Promise.all([fetch(new URL('./assets/buildings/lod.json?v=41',import.meta.url)).then(r=>{if(!r.ok)throw Error(r.status);return r.json()}),loadBinary(new URL('./assets/buildings/lod.bin?v=41',import.meta.url))]).then(value=>({value}),error=>({error}));
   await Promise.all(['urban','industry','modern'].map(async file=>{
-   try{const url=new URL(`./assets/buildings/${file}.glb?v=${file==='modern'?'37.2':21}`,import.meta.url),{scene}=file==='modern'?await loader.parseAsync(await loadBinary(url),new URL('.',url).href):await loader.loadAsync(url.href);
+   try{const url=new URL(`./assets/buildings/${file}.glb?v=${file==='modern'?'41':21}`,import.meta.url),{scene}=file==='modern'?await loader.parseAsync(await loadBinary(url),new URL('.',url).href):await loader.loadAsync(url.href);
     this.ingest(scene);
    }catch(error){console.warn('Building model fallback:',file,error.message);}
   }));
@@ -49,17 +49,17 @@ export class ModelLibrary {
      for(const [material,parts]of batches){const geometry=mergeGeometries(parts,false);parts.forEach(g=>g.dispose());if(!geometry)continue;geometry.computeBoundingSphere();const mesh=new THREE.Mesh(geometry,material);mesh.userData.sharedAsset=true;mesh.castShadow=mesh.receiveShadow=true;root.add(mesh);}
      const bounds=new THREE.Box3().setFromObject(root),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());
      for(const child of root.children){child.geometry.translate(-center.x,-bounds.min.y,-center.z);child.geometry.computeBoundingSphere();}
-     this.models.push({name:source.name,category:source.userData.category,family:source.userData.family||'masonry',floors:source.userData.floors,building:source.userData.building,gardens:source.userData.gardens||[],streetFronts:source.userData.streetFronts||[],origin:{x:-center.x,y:-bounds.min.y,z:-center.z},size,root});
+     this.models.push({name:source.name,category:source.userData.category,family:source.userData.family||'masonry',floors:source.userData.floors,building:source.userData.building,site:!!source.userData.site,gardens:source.userData.gardens||[],streetFronts:source.userData.streetFronts||[],origin:{x:-center.x,y:-bounds.min.y,z:-center.z},size,root});
     }
     // The merged model library owns its buffers, the import hierarchy can go.
     scene.traverse(o=>o.geometry?.dispose());
  }
  ingestLod(manifest,data){for(const model of this.models)model.root.children.forEach((mesh,i)=>{const entry=manifest[model.name]?.[i];if(!entry)return;const geometry=new THREE.BufferGeometry();if(entry.sharedAttributes)for(const [name,a]of Object.entries(mesh.geometry.attributes))geometry.setAttribute(name,a);for(const [name,a]of Object.entries(entry.attributes||{}))geometry.setAttribute(name,new THREE.BufferAttribute(new Float32Array(data,a.offset,a.count),a.itemSize));geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(data,entry.index.offset,entry.index.count),1));geometry.computeBoundingSphere();mesh.geometry.userData.lod=geometry;});}
  setNight(on){for(const material of this.materials)if(material.userData.glass){const lit=on&&material.name!=='modern-glass';material.emissive.set(lit?'#bc9d6e':'#000000');material.emissiveIntensity=lit?.23:0;material.emissiveMap=lit?material.map:null;material.needsUpdate=true;}}
- acceptsCivic(tile){const id=tile.building||civicDefaults[tile.type];return !!id&&this.models.some(a=>a.category===tile.type&&a.building===id);}
+ acceptsCivic(tile){const id=tile.building||civicDefaults[tile.type];return !!id&&this.models.some(a=>a.category===tile.type&&a.building===id&&a.site===!!tile.facilitySite);}
  create(world,index,parcel){
   if(!this.models.length)return null;const p=lotPlan(world,index,parcel),category=p.low?'residential-low':p.type;
-  const civic=civicDefaults[p.type],id=world.tiles[index].building||civic;let candidates=this.models.filter(a=>a.category===category&&(!civic||a.building===id));if(!candidates.length)return null;
+  const civic=civicDefaults[p.type],id=world.tiles[index].building||civic;let candidates=this.models.filter(a=>a.category===category&&(!civic||a.building===id&&a.site===p.facility));if(!candidates.length)return null;
   const densityFit=candidates.filter(a=>!a.floors||(p.type==='residential'&&!p.low?(p.density==='medium'?a.floors<=9:a.floors>=9):p.type==='commercial'&&p.density==='low'?a.floors<=3:true));if(densityFit.length)candidates=densityFit;
   const W=p.lotWidth,D=p.lotDepth,fit=a=>Math.min(.2,(W-.3)/a.size.x,(D-.3)/a.size.z);
   // First fit metre-sized architecture to the parcel. A large block must not
@@ -78,7 +78,7 @@ export class ModelLibrary {
   const c=Math.abs(Math.cos(p.angle)),s=Math.abs(Math.sin(p.angle));
   const occupiedX=(asset.size.x*c+asset.size.z*s)*scale,occupiedZ=(asset.size.x*s+asset.size.z*c)*scale;
   const clearanceX=Math.max(0,(p.parcelWidth-occupiedX)/2-.18),clearanceZ=Math.max(0,(p.parcelDepth-occupiedZ)/2-.18);
-  const frontageSpace=Math.max(0,(D-asset.size.z*scale)/2-.25);const setback=p.frontage?Math.min(!p.oriented&&s>1e-6?clearanceX/s:Infinity,!p.oriented&&c>1e-6?clearanceZ/c:Infinity,frontageSpace)*(p.type==='industrial'||p.type==='commercial'&&p.density==='low'?-1:1):0;
+  const frontageSpace=Math.max(0,(D-asset.size.z*scale)/2-.25);const setback=p.frontage&&!p.facility?Math.min(!p.oriented&&s>1e-6?clearanceX/s:Infinity,!p.oriented&&c>1e-6?clearanceZ/c:Infinity,frontageSpace)*(p.type==='industrial'||p.type==='commercial'&&p.density==='low'?-1:1):0;
   model.position.z=setback;
   model.scale.setScalar(scale);root.add(model);root.rotation.y=p.angle;
   const lawn=category==='residential-low',surface=lawn?'grass':category==='industrial'?'asphalt':'paving';this.lotMaterials ||= {};

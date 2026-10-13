@@ -1,12 +1,19 @@
-import {roadParcels} from './road-parcels.js?v=40.1';
+import {roadParcels} from './road-parcels.js?v=41';
 const cache=new WeakMap();
 // Visual consolidation only: every zoning cell, resident and save remains intact.
 // Never combine across a road, service, construction site or density boundary.
 export function visualParcels(world){
- const signature=world.seed+'|'+JSON.stringify(world.roadPaths||[])+'|'+world.tiles.map(t=>[t.type,t.density,t.level,t.variant,t.building,t.construction,t.ground].join('/')).join(';'),cached=cache.get(world);if(cached?.signature===signature)return cached.result;
+ const signature=world.seed+'|'+JSON.stringify(world.roadPaths||[])+'|'+world.tiles.map(t=>[t.type,t.density,t.level,t.variant,t.building,t.construction,t.ground,t.facilityOwner,t.facilitySite?.width,t.facilitySite?.depth,t.facilitySite?.rotation].join('/')).join(';'),cached=cache.get(world);if(cached?.signature===signature)return cached.result;
  const N=48;
  const eligible=t=>t&&t.level>0&&!t.construction&&(t.type==='office'||t.type==='commercial'&&t.density==='high'||t.type==='residential'&&t.density!=='low');
  const result=roadParcels(world,eligible);
+ // Civic sites own their entire footprint; only the anchor renders a building.
+ for(let i=0;i<world.tiles.length;i++){
+  const t=world.tiles[i],site=t.facilitySite;if(!site||t.facilityOwner!==i)continue;
+  const members=[];for(let y=0;y<site.depth;y++)for(let x=0;x<site.width;x++)members.push(i+y*N+x);
+  const parcel={owner:i,width:site.width,depth:site.depth,rotation:site.rotation,facility:true,members,key:`facility/${i}/${t.building}/${site.width}/${site.depth}/${site.rotation}`};
+  for(const j of members)result.set(j,parcel);
+ }
  for(let i=0;i<world.tiles.length;i++){
   const t=world.tiles[i];if(result.has(i)||!eligible(t))continue;
   const x=i%N,y=Math.floor(i/N);
