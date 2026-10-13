@@ -217,3 +217,9 @@ All site props share geometry/materials and use the building instancer. Yard tre
 Building batches retain their GPU buffers when capacity permits, cache immutable model transforms, and reuse unchanged foundation geometry. Terrain rebuilding reuses exact height samples and caches full-resolution natural meshes; closing an overlay restores cached natural colors. Geometry, textures, simulation timing, offscreen traffic and saves are unchanged.
 
 The reproducible 201-lot CPU benchmark (`node scripts/benchmark-rebuild.mjs`) compared this revision with Edition 30: median repeated rebuild 10.80 to 2.02 ms, adding one building 11.39 to 2.44 ms, and replaced instance buffers 45 to 0. Geometry and visible transforms matched exactly. These are local CPU measurements, not browser FPS or end-to-end loading claims. All 139 automated tests and asset validation passed.
+
+### Edition 32: lossless asset downloads
+
+Modern buildings and distant indices now download as gzip copies (17,253,780 bytes to 3,959,500 bytes, 77% less transfer). Browser decompression restores the original bytes, including every vertex, texture and index. Distant indices begin downloading alongside the building catalogues. Unsupported browsers, missing archives and corrupt archives fall back to the original assets. Requests for these two assets have bounded timeouts. Other asset loaders retain their existing behavior.
+
+The loading indicator identifies pending asset groups. After changing modern buildings or LOD data, run `node scripts/compress-assets.mjs`; CI verifies the archives decode exactly to the current originals with `node scripts/compress-assets.mjs --check`.
