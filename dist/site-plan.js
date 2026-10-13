@@ -8,12 +8,17 @@ export function sitePlan(plan,footprint){
  const rear=rearEnd-back,fore=front-frontStart,sideLeft=b.minX-left-.1,sideRight=right-b.maxX-.1;
  const urban=!plan.low&&plan.type!=='industrial',business=plan.type==='industrial'||plan.type==='commercial'&&plan.density==='low';
  // Every lot has a door-to-boundary connection. Front gardens leave it clear.
- rect('walk',-.18,frontStart,.18,front);
+ const entrances=plan.low&&plan.entranceXs?.length?plan.entranceXs:[0];
+ for(const entry of entrances){const x=Math.max(left+.18,Math.min(right-.18,entry));rect('walk',x-.18,frontStart,x+.18,front);}
  if(plan.low){
   if(sideRight>.55)rect('drive',b.maxX+.1,Math.max(back,b.minZ),right,front);
   else if(sideLeft>.55)rect('drive',left,Math.max(back,b.minZ),b.minX-.1,front);
   if(rear>.5){rect('patio',Math.max(left,b.minX),Math.max(back,rearEnd-.48),Math.min(right,b.maxX),rearEnd);if(rear>1)rect('garden',left,back,right,rearEnd-.55);}
-  if(fore>.24){rect('garden',left,frontStart,-.28,front);rect('garden',.28,frontStart,right,front);}
+  if(fore>.24){
+   // Subtract all entrance walks and the driveway before planting front beds.
+   const reserved=items.filter(a=>['walk','drive'].includes(a.kind)).map(a=>[Math.max(left,a.x-a.w/2-.1),Math.min(right,a.x+a.w/2+.1)]).sort((a,b)=>a[0]-b[0]);
+   let edge=left;for(const [a,b]of reserved){rect('garden',edge,frontStart,a,front);edge=Math.max(edge,b);}rect('garden',edge,frontStart,right,front);
+  }
   // Rear and side fences stop before the front entrance and driveway.
   if(rear>.28){rect('fence',left,back,right,back+.03,{axis:'x'});rect('fence',left,back,left+.03,rearEnd,{axis:'z'});rect('fence',right-.03,back,right,rearEnd,{axis:'z'});}
  }else if(business){

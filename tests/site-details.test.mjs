@@ -43,3 +43,12 @@ test('raised gardens apply model normalization and scale without crossing plante
  assert.ok(Math.abs(bounds.min.y-(bed.y+origin.y)*scale)<1e-6,'trunks start at planter soil rather than ground level');
  assert.ok(bounds.max.y-bounds.min.y<=.92+1e-6);root.traverse(o=>{if(o.isMesh)assert.equal(o.geometry,mesh.geometry,'tree buffers remain shared');});
 });
+
+test('paired entrances and driveways have separate clear routes through front planting',()=>{
+ const plan={...house,entranceXs:[-.65,.65]},items=sitePlan(plan,{minX:-.9,maxX:.9,minZ:-1,maxZ:.8}),walks=items.filter(a=>a.kind==='walk'),drive=items.find(a=>a.kind==='drive');
+ assert.deepEqual(walks.map(a=>a.x),[-.65,.65]);assert.ok(drive);
+ for(const garden of items.filter(a=>a.kind==='garden'))for(const paving of [...walks,drive]){
+  const overlapX=Math.min(garden.x+garden.w/2,paving.x+paving.w/2)-Math.max(garden.x-garden.w/2,paving.x-paving.w/2),overlapZ=Math.min(garden.z+garden.d/2,paving.z+paving.d/2)-Math.max(garden.z-garden.d/2,paving.z-paving.d/2);
+  assert.ok(overlapX<=1e-8||overlapZ<=1e-8,'planting cannot cover an entrance or driveway');
+ }
+});

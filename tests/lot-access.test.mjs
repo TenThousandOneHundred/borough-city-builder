@@ -49,3 +49,10 @@ test('access surfaces batch by material and are removed when a building is demol
  r.buildAccess(w,new Map([[p.index,root]]));assert.ok(r.accessGroup.children.length);let disposed=0;r.accessGroup.children[0].geometry.addEventListener('dispose',()=>disposed++);
  r.buildAccess(w,new Map());assert.equal(r.accessGroup.children.length,0);assert.equal(disposed,1);
 });
+
+test('offset household entrances and driveway aprons independently reach the sidewalk',()=>{
+ const {w,p}=fixture('residential');p.accessPoints=[{x:-.7,width:.36},{x:.5,width:.36},{x:1.4,width:.55}];const before=JSON.stringify(w),g=lotAccess(w,p,.04,E,ground,road);assert.ok(g);assert.equal(g.userData.connections,3);
+ const pos=g.attributes.position;for(const a of p.accessPoints){const endX=p.cx+a.x;assert.ok(Array.from({length:pos.count},(_,i)=>({x:pos.getX(i),y:pos.getY(i)})).some(v=>Math.abs(v.x-endX)<a.width/2+.001&&Math.abs(v.y-.24)<1e-5));}
+ assert.equal(JSON.stringify(w),before);for(let i=0;i<g.attributes.normal.count;i++)assert.ok(g.attributes.normal.getY(i)>0);
+ assert.equal(lotAccess(w,{...p,accessPoints:[]},.04,E,ground,road),null,'no disconnected apron when the lot has no front route');
+});

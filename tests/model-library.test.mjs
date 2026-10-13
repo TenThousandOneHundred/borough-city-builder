@@ -198,3 +198,13 @@ test('low zoning uses detached houses and row housing keeps paired or terrace fo
  }
  assert.ok(detached.size>=4);assert.equal(rows.size,2);
 });
+
+test('authored household doors position their own clear garden walks and road access points',async()=>{
+ const lib=await library(),w=E.createWorld('House entrances','plains',431),index=20*48+20;w.tiles.forEach(t=>Object.assign(t,{type:null,level:0}));w.tiles[index+48].type='road';
+ for(const asset of lib.models.filter(a=>a.houseForm)){
+  const all=lib.models;lib.models=[asset];w.tiles[index]={type:'residential',density:'low',building:asset.houseForm==='detached'?'cottage':'townhouse',level:1};const before=JSON.stringify(w),root=lib.create(w,index),p=root.userData.plan,scale=root.children[0].scale.x;
+  const front=asset.streetFronts.filter(f=>f.kind==='entrance'&&f.normal[1]>.9),frontZ=Math.max(...front.map(f=>f.position[2])),expected=front.filter(f=>f.position[2]>=frontZ-.5).map(f=>(f.position[0]+asset.origin.x)*scale);
+  assert.deepEqual(p.entranceXs,expected,asset.name);for(const x of expected)assert.ok(p.accessPoints.some(a=>a.kind==='walk'&&Math.abs(a.x-x)<1e-8),asset.name+' door has matching path');
+  assert.equal(JSON.stringify(w),before);lib.models=all;
+ }
+});

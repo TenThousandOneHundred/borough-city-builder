@@ -3,6 +3,13 @@ import * as THREE from './vendor/three.module.js';
 // Connect an owned parcel edge to its actual street sidewalk. This only builds
 // render geometry; occupancy, pedestrian routing and save data remain untouched.
 export function lotAccess(world,plan,base,engine,height,roadHeight){
+ const points=plan.low&&Array.isArray(plan.accessPoints)?plan.accessPoints:[{x:0}];
+ const parts=points.map(p=>accessStrip(world,plan,base,engine,height,roadHeight,p.x,p.width)).filter(Boolean);
+ if(!parts.length)return null;if(parts.length===1)return parts[0];
+ const positions=[],uv=[],indices=[];for(const part of parts){const offset=positions.length/3;positions.push(...part.attributes.position.array);uv.push(...part.attributes.uv.array);indices.push(...Array.from(part.index.array,i=>i+offset));part.dispose();}
+ const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));geometry.setIndex(indices);geometry.computeVertexNormals();geometry.computeBoundingSphere();geometry.userData={connections:parts.length};return geometry;
+}
+function accessStrip(world,plan,base,engine,height,roadHeight,centre=0,requestedWidth){
  const f=plan.frontage;if(!f)return null;
  let width,sidewalk,raise;
  if(f.pathId){const path=world.roadPaths?.find(p=>p.id===f.pathId),spec=path&&engine.ROADS[path.type];if(!spec?.sidewalk)return null;width=spec.width;sidewalk=.38;raise=.14;}
@@ -14,9 +21,9 @@ export function lotAccess(world,plan,base,engine,height,roadHeight){
  const reach=(f.x-plan.cx)*dx+(f.z-plan.cz)*dz-width/2-sidewalk+.025;
  if(reach<=0)return null;
  const startAt=offset=>plan.oriented?plan.lotDepth/2-.07:Math.min(Math.abs(dx)>1e-8?(Math.sign(dx)*halfWidth-tx*offset)/dx:Infinity,Math.abs(dz)>1e-8?(Math.sign(dz)*halfDepth-tz*offset)/dz:Infinity)-.035;
- const centreStart=startAt(0),gap=reach-centreStart;
+ const centreStart=startAt(centre),gap=reach-centreStart;
  if(gap<.04||gap>6)return null;
- const desired=plan.low?.48:plan.type==='industrial'?.9:Math.min(2.8,plan.lotWidth*.7);
+ const desired=plan.low?(requestedWidth||.48):plan.type==='industrial'?.9:Math.min(2.8,plan.lotWidth*.7);
  const owned=(x,z)=>Math.abs(x-plan.cx)<=plan.parcelWidth/2+.01&&Math.abs(z-plan.cz)<=plan.parcelDepth/2+.01;
  const allowed=(x,z)=>{
   const gx=Math.floor((x+96)/4),gy=Math.floor((z+96)/4);if(gx<0||gy<0||gx>=48||gy>=48)return false;
@@ -25,12 +32,12 @@ export function lotAccess(world,plan,base,engine,height,roadHeight){
   return !t.type&&!t.construction;
  };
  // A broad urban apron can narrow to an entrance walk around adjacent parcels.
- for(const span of [desired,.48]){
+ for(const span of [...new Set([desired,Math.min(desired,.48)])]){
   const across=Math.max(2,Math.ceil(span/.2)),along=Math.max(2,Math.ceil(gap/.2)),rows=[],positions=[],uv=[],indices=[];let valid=true;
   for(let j=0;j<=along&&valid;j++){
    const t=j/along,row=[];
    for(let i=0;i<=across;i++){
-    const offset=(i/across-.5)*span,start=startAt(offset);if(start>=reach-.01){valid=false;break;}
+    const offset=centre+(i/across-.5)*span,start=startAt(offset);if(start>=reach-.01){valid=false;break;}
     const d=start+(reach-start)*t,x=plan.cx+dx*d+tx*offset,z=plan.cz+dz*d+tz*offset;
     if(!allowed(x,z)){valid=false;break;}
     const endX=plan.cx+dx*reach+tx*offset,endZ=plan.cz+dz*reach+tz*offset,endY=roadHeight(world,endX,endZ)+raise;
