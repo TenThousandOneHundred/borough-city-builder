@@ -185,3 +185,9 @@ Open **City overview → Residents & households** to see individual activities, 
 ### Edition 26.1 — transit simulation optimization
 
 Stop catchments reuse network geometry and compute distances once per stop. Dwelling buses share a passenger index instead of scanning the whole city for each line. Route choices, capacity, save format, and offscreen simulation remain unchanged. Regression checks cover catchment selection, road-change invalidation, and simultaneous boarding.
+
+### Edition 27 — facade and rooftop architecture
+
+The twenty original modern models now include recessed horizontal window reveals, balcony divisions, hollow parapets, detailed rooftop fans, and furnished pergola terraces on perimeter blocks. Four perimeter residential/retail models use shared brick color, normal and roughness maps with metre-scale UVs. Near geometry has 113,212 triangles across the full library; authored distant topology retains all window panes and wall openings, sharing the near vertex buffers and omitting only small detail (76,232 triangles). Buildings keep full details to 320 m in the normal graphics mode. Traffic and resident simulation are unchanged.
+
+The modern GLB is 8,184,308 bytes. Packed, aligned signed-byte normals retain full-precision positions; 512-pixel embedded brick textures avoid duplicating the full scan download. Run `scripts/build-modern-library.py` with Python and Pillow to rebuild it and append its authored indices to the existing LOD cache. If rebuilding all libraries, run `build-lod.mjs` for the masonry/industrial libraries first, then the modern generator. Do not use generic geometric simplification on the modern facades: it can close window openings.

@@ -32,11 +32,12 @@ for(const file of ['buildings/urban.glb','buildings/industry.glb','buildings/mod
  for(const mesh of gltf.meshes)for(const primitive of mesh.primitives){assert.ok(gltf.accessors[primitive.attributes.POSITION]);assert.ok(gltf.materials[primitive.material]);}
  if(file==='buildings/modern.glb'){
   for(const mesh of gltf.meshes)for(const primitive of mesh.primitives){
+   const normal=gltf.accessors[primitive.attributes.NORMAL];assert.equal(normal.componentType,5120);assert.equal(normal.normalized,true);assert.equal(gltf.bufferViews[normal.bufferView].byteStride,4,'packed normals use aligned strides');
    const colors=gltf.accessors[primitive.attributes.COLOR_0],indices=gltf.accessors[primitive.indices];
    assert.equal(colors.componentType,5121);assert.equal(colors.normalized,true);assert.equal(colors.type,'VEC4','byte vertex colors stay four-byte aligned');
    assert.equal(indices.componentType,5123,'modern parts fit compact lossless indices');
   }
-  assert.ok(data.length<7*1024*1024,'full modern geometry uses compact vertex encoding');
+  assert.ok(data.length<8*1024*1024,'full modern geometry uses compact vertex encoding');
  }
  if(file.startsWith('buildings/')){
   const roots=gltf.scenes[gltf.scene||0].nodes;buildingCount+=roots.length;

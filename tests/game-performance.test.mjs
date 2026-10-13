@@ -52,3 +52,11 @@ test('building transform packing updates on partial visibility and LOD changes',
  camera.position.set(3,1,4);camera.lookAt(3,0,0);factory.updateVisibility();assert.equal(b.near.count,1);assert.equal(b.far.count,0);const m=new THREE.Matrix4();b.near.getMatrixAt(0,m);assert.equal(m.elements[12],3,'packing replaces first slot after left buildings leave view');
  camera.position.set(0,5,12);camera.lookAt(0,0,0);factory.updateVisibility();assert.equal(b.near.count,3);for(let i=0;i<3;i++){b.near.getMatrixAt(i,m);assert.equal(m.elements[12],(i-1)*3);}
 });
+
+test('authored roof details remain visible at district distance and obey the low-detail setting',async()=>{
+ const {BuildingFactory}=await import('../dist/building-factory.js'),camera=new THREE.PerspectiveCamera(45,1,.1,500);camera.position.set(0,10,40);camera.lookAt(0,0,0);
+ const view={scene:new THREE.Scene(),camera,detailEnabled:true},factory=new BuildingFactory(view),root=new THREE.Group(),geometry=new THREE.BoxGeometry(1,1,1);geometry.userData.lod=new THREE.BoxGeometry(.9,.9,.9);root.userData={factory:true,asset:true,lodDistance:64};const mesh=new THREE.Mesh(geometry,new THREE.MeshStandardMaterial());mesh.userData.sharedAsset=true;root.add(mesh);factory.rebuild(new Map([[1,root]]));const batch=factory.instanceBatches[0];assert.equal(batch.near.count,1);assert.equal(batch.far.count,0);
+ camera.position.z=90;factory.updateVisibility();assert.equal(batch.near.count,0);assert.equal(batch.far.count,1);
+ camera.position.z=40;view.detailEnabled=false;factory.updateVisibility();assert.equal(batch.near.count,0);assert.equal(batch.far.count,1);
+ view.detailEnabled=true;factory.updateVisibility();assert.equal(batch.near.count,1);assert.equal(batch.far.count,0);
+});

@@ -1,12 +1,12 @@
-import {ModelLibrary} from './model-library.js?v=26.1';
-import {buildHouse} from './house-architecture.js?v=26.1';
-import {buildUrban} from './city-architecture.js?v=26.1';
+import {ModelLibrary} from './model-library.js?v=27.0';
+import {buildHouse} from './house-architecture.js?v=27.0';
+import {buildUrban} from './city-architecture.js?v=27.0';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import * as THREE from './vendor/three.module.js';
-import {MeshBuilder} from './mesh-builder.js?v=26.1';
-import {BuildingMaterials} from './building-materials.js?v=26.1';
-import {lotPlan} from './building-plan.js?v=26.1';
-import {floorHeight} from './landscape.js?v=26.1';
+import {MeshBuilder} from './mesh-builder.js?v=27.0';
+import {BuildingMaterials} from './building-materials.js?v=27.0';
+import {lotPlan} from './building-plan.js?v=27.0';
+import {floorHeight} from './landscape.js?v=27.0';
 
 export class BuildingFactory{
  constructor(view){this.view=view;this.library=view.renderer?new ModelLibrary(view):null;this.ready=this.library?.ready||Promise.resolve();this.materials=new BuildingMaterials(view);this.batchRoot=new THREE.Group();view.scene.add(this.batchRoot);}
@@ -14,7 +14,7 @@ export class BuildingFactory{
   this.batchRoot.traverse(o=>{if(o.isInstancedMesh)o.dispose();if(!o.userData.sharedAsset)o.geometry?.dispose();});this.batchRoot.clear();const batches=new Map(),instances=new Map();
   for(const root of buildings.values()){
    if(!root.userData.factory)continue;root.updateMatrixWorld(true);
-   if(root.userData.asset){const sphere=new THREE.Box3().setFromObject(root).getBoundingSphere(new THREE.Sphere());root.traverse(o=>{if(!o.isMesh)return;const key=o.geometry.uuid+':'+o.material.uuid;if(!instances.has(key))instances.set(key,{geometry:o.geometry,material:o.material,transforms:[]});instances.get(key).transforms.push({matrix:o.matrixWorld.clone(),sphere});});continue;}
+   if(root.userData.asset){const sphere=new THREE.Box3().setFromObject(root).getBoundingSphere(new THREE.Sphere());sphere.lodDistance=root.userData.lodDistance;root.traverse(o=>{if(!o.isMesh)return;const key=o.geometry.uuid+':'+o.material.uuid;if(!instances.has(key))instances.set(key,{geometry:o.geometry,material:o.material,transforms:[]});instances.get(key).transforms.push({matrix:o.matrixWorld.clone(),sphere});});continue;}
    root.traverse(o=>{if(!o.isMesh)return;const geometry=o.geometry.clone().applyMatrix4(o.matrixWorld);if(!batches.has(o.material))batches.set(o.material,[]);batches.get(o.material).push(geometry);});
   }
   this.instanceBatches=[];
@@ -29,7 +29,7 @@ export class BuildingFactory{
   const visibility=new Map();this.visibilityChecks=0;
   for(const batch of this.instanceBatches||[]){const {near,far,transforms}=batch;let nearCount=0,farCount=0,nearChanged=false,farChanged=false;batch.nearSlots ||= [];batch.farSlots ||= [];
    for(const transform of transforms){const {sphere,matrix}=transform;let state=visibility.get(sphere);
-    if(state===undefined){this.visibilityChecks++;state=!frustum.intersectsSphere(sphere)?0:camera.position.distanceToSquared(sphere.center)>threshold*threshold?2:1;visibility.set(sphere,state);}
+    if(state===undefined){this.visibilityChecks++;state=!frustum.intersectsSphere(sphere)?0:camera.position.distanceToSquared(sphere.center)>(this.view.detailEnabled===false?0:(sphere.lodDistance||threshold))**2?2:1;visibility.set(sphere,state);}
     if(!state)continue;const distant=far&&state===2,mesh=distant?far:near,slots=distant?batch.farSlots:batch.nearSlots,index=distant?farCount++:nearCount++;
     if(slots[index]!==transform){mesh.setMatrixAt(index,matrix);slots[index]=transform;if(distant)farChanged=true;else nearChanged=true;}
    }

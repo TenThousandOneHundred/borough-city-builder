@@ -1,25 +1,26 @@
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {lotPlan} from './building-plan.js?v=26.1';
-import {floorHeight} from './landscape.js?v=26.1';
+import {lotPlan} from './building-plan.js?v=27.0';
+import {floorHeight} from './landscape.js?v=27.0';
+const IDENTITY=new THREE.Matrix4();
 // Complete textured assets are loaded once, batched per material, and instanced.
 export class ModelLibrary {
  constructor(view){this.view=view;this.models=[];this.materials=new Set();this.lotGeometry=new THREE.PlaneGeometry(1,1);this.lotGeometry.rotateX(-Math.PI/2);this.ready=this.load();}
  async load(){
   const loader=new GLTFLoader();
   await Promise.all(['urban','industry','modern'].map(async file=>{
-   try{const {scene}=await loader.loadAsync(new URL(`./assets/buildings/${file}.glb?v=${file==='modern'?25:21}`,import.meta.url).href);
+   try{const {scene}=await loader.loadAsync(new URL(`./assets/buildings/${file}.glb?v=${file==='modern'?'27.1':21}`,import.meta.url).href);
     this.ingest(scene);
    }catch(error){console.warn('Building model fallback:',file,error.message);}
   }));
-  try{const [manifest,data]=await Promise.all([fetch(new URL('./assets/buildings/lod.json?v=21',import.meta.url)).then(r=>{if(!r.ok)throw Error(r.status);return r.json()}),fetch(new URL('./assets/buildings/lod.bin?v=21',import.meta.url)).then(r=>{if(!r.ok)throw Error(r.status);return r.arrayBuffer()})]);this.ingestLod(manifest,data);}catch(error){console.warn('Distant model fallback:',error.message);}
+  try{const [manifest,data]=await Promise.all([fetch(new URL('./assets/buildings/lod.json?v=27.1',import.meta.url)).then(r=>{if(!r.ok)throw Error(r.status);return r.json()}),fetch(new URL('./assets/buildings/lod.bin?v=27.1',import.meta.url)).then(r=>{if(!r.ok)throw Error(r.status);return r.arrayBuffer()})]);this.ingestLod(manifest,data);}catch(error){console.warn('Distant model fallback:',error.message);}
   this.setNight(this.view.night);
  }
  ingest(scene){
     for(const source of scene.children){
      const batches=new Map(),styled=new Map();source.updateMatrixWorld(true);
-     source.traverse(o=>{if(!o.isMesh)return;let geometry=o.geometry.clone().applyMatrix4(o.matrixWorld);if(!geometry.index)geometry.setIndex(Array.from({length:geometry.attributes.position.count},(_,i)=>i));for(const attr of Object.keys(geometry.attributes))if(!['position','normal','uv','color'].includes(attr))geometry.deleteAttribute(attr);
+     source.traverse(o=>{if(!o.isMesh)return;let geometry=o.geometry.clone();if(!o.matrixWorld.equals(IDENTITY))geometry.applyMatrix4(o.matrixWorld);if(!geometry.index)geometry.setIndex(Array.from({length:geometry.attributes.position.count},(_,i)=>i));for(const attr of Object.keys(geometry.attributes))if(!['position','normal','uv','color'].includes(attr))geometry.deleteAttribute(attr);
       const modern=source.userData.family==='modern';this.modernMaterials ||= new Map();const materialCache=modern?this.modernMaterials:styled;let material=materialCache.get(o.material);if(!material){material=o.material.clone();materialCache.set(o.material,material);
        if(!modern&&/plaster|brick|trim/.test(material.name)&&!source.name.includes('brick')&&!source.name.includes('loft')){
         const palette=['#beb8a4','#c9c7ba','#9babad','#c0b39b','#c6bfb0'];let hash=0;for(const char of source.name)hash=(hash+char.charCodeAt(0))%5;material.color.set(palette[hash]);
@@ -46,7 +47,7 @@ export class ModelLibrary {
     // The merged model library owns its buffers, the import hierarchy can go.
     scene.traverse(o=>o.geometry?.dispose());
  }
- ingestLod(manifest,data){for(const model of this.models)model.root.children.forEach((mesh,i)=>{const entry=manifest[model.name]?.[i];if(!entry)return;const geometry=new THREE.BufferGeometry();for(const [name,a]of Object.entries(entry.attributes))geometry.setAttribute(name,new THREE.BufferAttribute(new Float32Array(data,a.offset,a.count),a.itemSize));geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(data,entry.index.offset,entry.index.count),1));geometry.computeBoundingSphere();mesh.geometry.userData.lod=geometry;});}
+ ingestLod(manifest,data){for(const model of this.models)model.root.children.forEach((mesh,i)=>{const entry=manifest[model.name]?.[i];if(!entry)return;const geometry=new THREE.BufferGeometry();if(entry.sharedAttributes)for(const [name,a]of Object.entries(mesh.geometry.attributes))geometry.setAttribute(name,a);for(const [name,a]of Object.entries(entry.attributes||{}))geometry.setAttribute(name,new THREE.BufferAttribute(new Float32Array(data,a.offset,a.count),a.itemSize));geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(data,entry.index.offset,entry.index.count),1));geometry.computeBoundingSphere();mesh.geometry.userData.lod=geometry;});}
  setNight(on){for(const material of this.materials)if(material.userData.glass){const lit=on&&material.name!=='modern-glass';material.emissive.set(lit?'#bc9d6e':'#000000');material.emissiveIntensity=lit?.23:0;material.emissiveMap=lit?material.map:null;material.needsUpdate=true;}}
  create(world,index,parcel){
   if(!this.models.length)return null;const p=lotPlan(world,index,parcel),category=p.low?'residential-low':p.type;
@@ -109,6 +110,6 @@ export class ModelLibrary {
 
   const footprintX=asset.size.x*scale/2,footprintZ=asset.size.z*scale/2;let base=floorHeight(world,p.cx,p.cz);
   for(const x of [-footprintX,footprintX])for(const z of [-footprintZ,footprintZ])base=Math.max(base,floorHeight(world,p.cx+x*Math.cos(p.angle)+(z+setback)*Math.sin(p.angle),p.cz-x*Math.sin(p.angle)+(z+setback)*Math.cos(p.angle)));
-  root.position.set(p.cx,base+.04,p.cz);root.userData={factory:true,asset:true,model:asset.name,plan:p};return root;
+  root.position.set(p.cx,base+.04,p.cz);root.userData={factory:true,asset:true,model:asset.name,plan:p,lodDistance:asset.family==='modern'?64:undefined};return root;
  }
 }
