@@ -1,6 +1,16 @@
-import {streetStations,atDistance,distanceSection} from './street-geometry.js?v=45';
+import {streetStations,atDistance,distanceSection} from './street-geometry.js?v=46';
 const cross=(a,b)=>a.x*b.z-a.z*b.x;
 const point=(j,a,d,offset=0)=>({x:j.x+a.tx*d-a.tz*offset,z:j.z+a.tz*d+a.tx*offset});
+
+// Rendering and traffic share one road-edit plan. Population, cameras, and
+// terrain heights do not alter centerline intersections. Inspect road values so
+// in-place edits and imported worlds cannot reuse stale controls.
+const geometryCache=new WeakMap();
+export function roadGeometry(world,engine){
+ const signature=JSON.stringify([world.roadPaths||[],world.tiles.map((t,i)=>t.type==='road'?[i,t.roadType,t.roadWidth,t.legacyRoad,t.pathIds]:null).filter(Boolean)]),cached=geometryCache.get(world);
+ if(cached?.engine===engine&&cached.signature===signature)return cached.value;
+ const roads=roadDescriptors(world,engine),value={roads,...planJunctions(roads)};geometryCache.set(world,{engine,signature,value});return value;
+}
 
 // Use the same sampled centerlines as pavement rendering. Grid roads participate
 // too, so a new curved street can join an existing saved starter road.

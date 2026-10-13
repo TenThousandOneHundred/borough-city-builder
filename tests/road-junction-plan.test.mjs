@@ -4,7 +4,7 @@ import E from '../dist/engine.js';
 import * as THREE from '../dist/vendor/three.module.js';
 import {Roadworks} from '../dist/roadworks.js';
 import {streetStations} from '../dist/street-geometry.js';
-import {roadDescriptors,planJunctions,junctionCorners,junctionCuts,clearRanges,clearSections,signalPlacements,extendJunctionEndpoints} from '../dist/road-junction-plan.js';
+import {roadGeometry,roadDescriptors,planJunctions,junctionCorners,junctionCuts,clearRanges,clearSections,signalPlacements,extendJunctionEndpoints} from '../dist/road-junction-plan.js';
 globalThis.CityEngine=E;
 const road=(id,points,type='street')=>({id,spec:E.ROADS[type],stations:streetStations(points)});
 const cross=()=>[road('a',[{x:-20,z:0},{x:20,z:0}]),road('b',[{x:0,z:-20},{x:0,z:20}])];
@@ -76,4 +76,12 @@ test('junction rendering and rebuilds cannot pause or alter the independent vehi
  const {simulation}=await import('./traffic-scale-fixture.mjs'),a=simulation(128),b=simulation(128),v=view();v.landscape={assets:{},material:()=>v.mat('#555555')};v.box=function(group,x,y,z,sx,sy,sz,color){const m=new THREE.Mesh(this.unitBox,this.mat(color));m.position.set(x,y,z);m.scale.set(sx,sy,sz);group.add(m);return m;};const r=new Roadworks(v);r.outside=()=>{};
  const world=JSON.stringify(a.world);for(let n=0;n<600;n++){if(n%200===0)r.build(a.world);a.step(.05);b.step(.05);}
  const state=t=>t.agents.map(p=>[p.active,p.x,p.z,p.segment,p.distance,p.speed,p.waitReason]);assert.deepEqual(state(a),state(b));assert.equal(a.time,b.time);assert.ok(a.time>29);assert.equal(JSON.stringify(a.world),world);
+});
+
+test('rendering and traffic reuse road geometry until road values change',()=>{
+ const w=E.createWorld('Geometry cache','plains',42);w.tiles.forEach(t=>Object.assign(t,{type:null,level:0}));w.money=1000000;E.buildRoadPath(w,[{x:5,y:20},{x:35,y:20}],'street');
+ const before=JSON.stringify(w),first=roadGeometry(w,E);assert.equal(roadGeometry(w,E),first);assert.equal(JSON.stringify(w),before);
+ w.day++;w.money++;w.tiles[0].people=20;w.elevationRevision=3;assert.equal(roadGeometry(w,E),first);
+ w.roadPaths[0].controls[1].y=22;const changed=roadGeometry(w,E);assert.notEqual(changed,first);assert.notDeepEqual(changed.roads[0].stations,first.roads[0].stations);
+ const i=w.roadPaths[0].tiles[0];w.tiles[i].legacyRoad=true;w.tiles[i].roadWidth=2;assert.notEqual(roadGeometry(w,E),changed);
 });

@@ -13,7 +13,9 @@ export function smoothRoute(points) {
 }
 export function signalPhase(time,axis){const phase=((time%20)+20)%20,local=(phase+(axis==='x'?0:10))%20;return local<7?'green':local<9?'amber':'red';}
 export class Junctions {
- constructor(graph,point){this.items=[];this.routes=new WeakMap();const candidates=new Set([...graph.keys()].filter(i=>{return [i%48?i-1:-1,i%48<47?i+1:-1,i-48,i+48].filter(n=>graph.has(n)).length>=3;}));
+ constructor(graph,point,geometry){this.items=[];
+  if(geometry){this.routes=new WeakMap();this.items=geometry.filter(j=>j.arms.length>=3).map(j=>({id:'junction/'+Math.round(j.x*10000)+'/'+Math.round(j.z*10000),cells:[],x:j.x,z:j.z,radius:j.radius+1.2,owner:null}));return;}
+ this.routes=new WeakMap();const candidates=new Set([...graph.keys()].filter(i=>{return [i%48?i-1:-1,i%48<47?i+1:-1,i-48,i+48].filter(n=>graph.has(n)).length>=3;}));
   while(candidates.size){const first=candidates.values().next().value,cells=[first];candidates.delete(first);for(let k=0;k<cells.length;k++)for(const n of [cells[k]-1,cells[k]+1,cells[k]-48,cells[k]+48])if(candidates.delete(n))cells.push(n);const points=cells.map(point),x=points.reduce((s,p)=>s+p.x,0)/points.length,z=points.reduce((s,p)=>s+p.z,0)/points.length,radius=Math.max(...points.map(p=>Math.hypot(p.x-x,p.z-z)))+1.8;this.items.push({id:first,cells,x,z,radius,owner:null});}
  }
  route(points){if(this.routes.has(points))return this.routes.get(points);const distances=[0];for(let i=1;i<points.length;i++)distances.push(distances[i-1]+Math.hypot(points[i].x-points[i-1].x,points[i].z-points[i-1].z));const gates=[];

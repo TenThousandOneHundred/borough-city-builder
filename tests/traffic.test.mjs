@@ -24,4 +24,26 @@ test('all-way stop queues make progress; paused traffic remains stationary',()=>
 test('intersection policy survives verified world save and rejects invalid policies',()=>{const w=E.createWorld('Policy','plains',22);w.trafficPolicy='stop';const storage={v:null,getItem(){return this.v},setItem(k,v){this.v=v}},store=new E.WorldStore(storage);store.save(w);assert.equal(new E.WorldStore(storage).get(w.id).trafficPolicy,'stop');w.trafficPolicy='invalid';assert.equal(E.valid(w),false);});
 test('cached search trees invalidate after road edits and reverse exit routes respect directed links',()=>{const w=city(),t=new Traffic(w,E),start=24*48;assert.equal(t.search(start),t.search(start));const previous=t.search(start);w.tiles[start+4].type=null;t.rebuild(w);assert.notEqual(t.search(start),previous);assert.equal(t.search(start).has(start+10),false);w.tiles[start+4].type='road';t.rebuild(w);for(const trip of t.trips)for(const cells of trip.cells)for(let i=0;i<cells.length-1;i++)assert.ok(t.graph.get(cells[i]).includes(cells[i+1]));});
 test('a reservation held by a queued approach releases so the leading vehicle can clear',()=>{const w=city();for(let y=20;y<29;y++)w.tiles[y*48+6]={type:'road',ground:'land'};const t=new Traffic(w,E);t.trips=[];const j=t.junctions.items[0],points=[{x:j.x-12,z:j.z+.48},{x:j.x+12,z:j.z+.48}];const make=x=>Object.assign(t.addAgent(),{active:true,phase:'resident',points,segment:0,distance:x-points[0].x,x,z:j.z+.48,heading:Math.PI/2});const rear=make(j.x-3.1),front=make(j.x-2.1);j.owner=rear;rear.gatePoints=points;t.update(.05);assert.notEqual(j.owner,rear);for(let i=0;i<800&&t.completed<2;i++)t.update(.05);assert.equal(t.completed,2);});
-test('a car beyond the exit keeps clearing even when another car owns the intersection',()=>{const w=city();for(let y=20;y<29;y++)w.tiles[y*48+6]={type:'road',ground:'land'};const t=new Traffic(w,E);t.trips=[];const j=t.junctions.items[0],points=[{x:j.x-12,z:j.z+.48},{x:j.x+12,z:j.z+.48}],a=Object.assign(t.addAgent(),{active:true,phase:'resident',points,segment:0,distance:14.1,x:j.x+2.1,z:j.z+.48,heading:Math.PI/2});j.owner={active:true,points,gatePoints:points};const x=a.x;t.update(.1);assert.ok(a.x>x);});
+test('a car beyond the exit keeps clearing even when another car owns the intersection',()=>{const w=city();for(let y=20;y<29;y++)w.tiles[y*48+6]={type:'road',ground:'land'};const t=new Traffic(w,E);t.trips=[];const j=t.junctions.items[0],points=[{x:j.x-12,z:j.z+.48},{x:j.x+12,z:j.z+.48}],a=Object.assign(t.addAgent(),{active:true,phase:'resident',points,segment:0,distance:12+j.radius+1,x:j.x+j.radius+1,z:j.z+.48,heading:Math.PI/2});j.owner={active:true,points,gatePoints:points};const x=a.x;t.update(.1);assert.ok(a.x>x);});
+
+test('uninterrupted curved roads never create phantom traffic-light or stop-sign junctions',()=>{
+ for(const type of ['street','avenue','highway']){
+  const w=city();w.tiles.forEach(t=>Object.assign(t,{type:null,level:0}));w.money=1000000;assert.ok(E.buildRoadPath(w,[{x:5,y:15},{x:24,y:35},{x:42,y:15}],type).ok);const before=JSON.stringify(w),t=new Traffic(w,E);assert.equal(t.junctions.items.length,0,type);
+  const samples=E.sampleRoad(w.roadPaths[0].controls).map(p=>({x:(p.x+.5)*4-96,z:(p.y+.5)*4-96})),a=Object.assign(t.addAgent(),{active:true,phase:'resident',points:samples,segment:0,distance:0,x:samples[0].x,z:samples[0].z,heading:0});t.trips=[];
+  for(let k=0;k<10000&&a.active;k++){t.update(.05);assert.notEqual(a.waitReason,'Red signal');assert.notEqual(a.waitReason,'Stop sign');}
+  assert.equal(a.active,false);assert.equal(t.completed,1);assert.equal(JSON.stringify(w),before);
+ }
+});
+test('authored crossing controllers match pavement junction centers and survive harmless road edits',()=>{
+ const w=city();w.tiles.forEach(t=>Object.assign(t,{type:null,level:0}));w.money=1000000;
+ assert.ok(E.buildRoadPath(w,[{x:8,y:20},{x:38,y:20}],'avenue').ok);assert.ok(E.buildRoadPath(w,[{x:23,y:8},{x:23,y:35}],'street').ok);
+ const t=new Traffic(w,E);assert.equal(t.junctions.items.length,1);const j=t.junctions.items[0];assert.equal(j.x,-2);assert.equal(j.z,-14);assert.ok(j.radius>2.5);
+ const points=[{x:j.x-15,z:j.z+.48},{x:j.x+15,z:j.z+.48}],owner=Object.assign(t.addAgent(),{active:true,phase:'resident',points,gatePoints:points,trip:{destination:1,cells:[[],[]]}});w.tiles[1].level=1;j.owner=owner;
+ E.buildRoadPath(w,[{x:5,y:40},{x:12,y:40}],'street');t.rebuild(w);assert.equal(t.junctions.items.length,1);assert.equal(t.junctions.items[0].id,j.id);assert.equal(t.junctions.items[0].owner,owner);
+});
+
+test('red-light approaches stop the vehicle front before the rendered stop bar',()=>{
+ const w=city();w.tiles.forEach(t=>Object.assign(t,{type:null,level:0}));w.money=1000000;E.buildRoadPath(w,[{x:8,y:20},{x:38,y:20}],'avenue');E.buildRoadPath(w,[{x:23,y:8},{x:23,y:35}],'street');const t=new Traffic(w,E);t.trips=[];const j=t.junctions.items[0],points=[{x:j.x-.48,z:j.z-15},{x:j.x-.48,z:j.z+15}];const a=Object.assign(t.addAgent(),{active:true,phase:'resident',points,segment:0,distance:0,x:points[0].x,z:points[0].z,heading:0});
+ t.update(4);assert.equal(a.waitReason,'Red signal');assert.ok(a.speed<.1);const pavementRadius=j.radius-1.2,stopBar=j.z-pavementRadius-1.02;assert.ok(a.z+.45<=stopBar+.05,'front bumper remains behind stop paint');
+ t.update(15);assert.ok(a.z>stopBar,'green phase releases the car');
+});
