@@ -1,26 +1,69 @@
-import {ModelLibrary} from './model-library.js?v=30.0';
-import {buildHouse} from './house-architecture.js?v=30.0';
-import {buildUrban} from './city-architecture.js?v=30.0';
+import {ModelLibrary} from './model-library.js?v=31.0';
+import {buildHouse} from './house-architecture.js?v=31.0';
+import {buildUrban} from './city-architecture.js?v=31.0';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import * as THREE from './vendor/three.module.js';
-import {MeshBuilder} from './mesh-builder.js?v=30.0';
-import {BuildingMaterials} from './building-materials.js?v=30.0';
-import {lotPlan} from './building-plan.js?v=30.0';
-import {floorHeight} from './landscape.js?v=30.0';
+import {MeshBuilder} from './mesh-builder.js?v=31.0';
+import {BuildingMaterials} from './building-materials.js?v=31.0';
+import {lotPlan} from './building-plan.js?v=31.0';
+import {floorHeight} from './landscape.js?v=31.0';
 
 export class BuildingFactory{
  constructor(view){this.view=view;this.library=view.renderer?new ModelLibrary(view):null;this.ready=this.library?.ready||Promise.resolve();this.materials=new BuildingMaterials(view);this.batchRoot=new THREE.Group();view.scene.add(this.batchRoot);}
+ collectBuilding(root){
+  const immutable=root.userData.renderImmutable,pose=immutable?[...root.position.toArray(),...root.quaternion.toArray(),...root.scale.toArray(),root.userData.renderVersion||0].join(','):null;
+  const cached=immutable&&this.renderCache.get(root);
+  if(cached&&cached.pose===pose){this.cacheHits++;return cached;}
+  this.cacheMisses++;root.updateMatrixWorld(true);
+  const entry={pose,instances:[],statics:[],temporary:!immutable};
+  const sphere=root.userData.asset?new THREE.Box3().setFromObject(root).getBoundingSphere(new THREE.Sphere()):null;
+  if(sphere)sphere.lodDistance=root.userData.lodDistance;
+  root.traverse(o=>{
+   if(!o.isMesh)return;
+   if(root.userData.asset&&o.userData.sharedAsset){
+    entry.instances.push({key:o.geometry.uuid+':'+o.material.uuid,geometry:o.geometry,material:o.material,transform:{matrix:o.matrixWorld.clone(),sphere,renderRange:o.userData.siteRange,rangeOrigin:o.userData.siteRange?new THREE.Vector3().setFromMatrixPosition(o.matrixWorld):null}});
+   }else entry.statics.push({material:o.material,geometry:o.geometry.clone().applyMatrix4(o.matrixWorld)});
+  });
+  if(immutable)this.renderCache.set(root,entry);
+  return entry;
+ }
+ instanceMesh(previous,geometry,material,count){
+  if(previous&&previous.geometry===geometry&&previous.material===material&&previous.instanceMatrix.count>=count)return previous;
+  if(previous){this.batchRoot.remove(previous);previous.dispose();}
+  const capacity=Math.max(4,2**Math.ceil(Math.log2(count))),mesh=new THREE.InstancedMesh(geometry,material,capacity);
+  mesh.count=0;mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);mesh.userData.sharedAsset=true;mesh.castShadow=mesh.receiveShadow=true;mesh.frustumCulled=false;this.batchRoot.add(mesh);return mesh;
+ }
  rebuild(buildings){
-  this.batchRoot.traverse(o=>{if(o.isInstancedMesh)o.dispose();if(!o.userData.sharedAsset)o.geometry?.dispose();});this.batchRoot.clear();const batches=new Map(),instances=new Map();
+  this.renderCache ||= new WeakMap();this.batchByKey ||= new Map();this.staticByMaterial ||= new Map();this.cacheHits=0;this.cacheMisses=0;
+  const instances=new Map(),statics=new Map(),temporary=[];
   for(const root of buildings.values()){
-   if(!root.userData.factory)continue;root.updateMatrixWorld(true);
-   if(root.userData.asset){const sphere=new THREE.Box3().setFromObject(root).getBoundingSphere(new THREE.Sphere());sphere.lodDistance=root.userData.lodDistance;root.traverse(o=>{if(!o.isMesh)return;if(!o.userData.sharedAsset){const geometry=o.geometry.clone().applyMatrix4(o.matrixWorld);if(!batches.has(o.material))batches.set(o.material,[]);batches.get(o.material).push(geometry);return;}const key=o.geometry.uuid+':'+o.material.uuid;if(!instances.has(key))instances.set(key,{geometry:o.geometry,material:o.material,transforms:[]});instances.get(key).transforms.push({matrix:o.matrixWorld.clone(),sphere,renderRange:o.userData.siteRange,rangeOrigin:o.userData.siteRange?new THREE.Vector3().setFromMatrixPosition(o.matrixWorld):null});});continue;}
-   root.traverse(o=>{if(!o.isMesh)return;const geometry=o.geometry.clone().applyMatrix4(o.matrixWorld);if(!batches.has(o.material))batches.set(o.material,[]);batches.get(o.material).push(geometry);});
+   if(!root.userData.factory)continue;
+   const entry=this.collectBuilding(root);
+   for(const part of entry.instances){if(!instances.has(part.key))instances.set(part.key,{geometry:part.geometry,material:part.material,transforms:[]});instances.get(part.key).transforms.push(part.transform);}
+   for(const part of entry.statics){if(!statics.has(part.material))statics.set(part.material,[]);statics.get(part.material).push(part.geometry);if(entry.temporary)temporary.push(part.geometry);}
   }
+  // Keep GPU instance storage and slot identities for unaffected material batches.
+  // Grow only the batches whose capacity is exceeded; removed batches release it.
+  for(const [key,batch]of this.batchByKey)if(!instances.has(key)){for(const mesh of [batch.near,batch.far])if(mesh){this.batchRoot.remove(mesh);mesh.dispose();}this.batchByKey.delete(key);}
   this.instanceBatches=[];
-  for(const {geometry,material,transforms}of instances.values()){const make=g=>{const mesh=new THREE.InstancedMesh(g,material,transforms.length);transforms.forEach(({matrix},i)=>mesh.setMatrixAt(i,matrix));mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);mesh.userData.sharedAsset=true;mesh.castShadow=mesh.receiveShadow=true;mesh.frustumCulled=false;this.batchRoot.add(mesh);return mesh;};const near=make(geometry),far=geometry.userData.lod?make(geometry.userData.lod):null;if(far)far.count=0;this.instanceBatches.push({near,far,transforms});}
+  for(const [key,{geometry,material,transforms}]of instances){
+   const previous=this.batchByKey.get(key),near=this.instanceMesh(previous?.near,geometry,material,transforms.length),lod=geometry.userData.lod;
+   let far=null;if(lod)far=this.instanceMesh(previous?.far,lod,material,transforms.length);else if(previous?.far){this.batchRoot.remove(previous.far);previous.far.dispose();}
+   const batch={near,far,transforms,nearSlots:near===previous?.near?previous.nearSlots:[],farSlots:far&&far===previous?.far?previous.farSlots:[]};
+   this.batchByKey.set(key,batch);this.instanceBatches.push(batch);
+   // Tests and static exporters without a camera receive the complete near set.
+   if(!this.view.camera){transforms.forEach(({matrix},i)=>near.setMatrixAt(i,matrix));near.count=transforms.length;near.instanceMatrix.needsUpdate=true;if(far)far.count=0;}
+  }
+  for(const [material,batch]of this.staticByMaterial)if(!statics.has(material)){this.batchRoot.remove(batch.mesh);batch.mesh.geometry.dispose();this.staticByMaterial.delete(material);}
+  for(const [material,parts]of statics){
+   const previous=this.staticByMaterial.get(material);
+   if(previous&&previous.parts.length===parts.length&&parts.every((p,i)=>p===previous.parts[i]))continue;
+   const geometry=mergeGeometries(parts,false);if(!geometry)continue;geometry.computeBoundingSphere();
+   let mesh=previous?.mesh;if(mesh){mesh.geometry.dispose();mesh.geometry=geometry;}else{mesh=new THREE.Mesh(geometry,material);mesh.castShadow=mesh.receiveShadow=true;this.batchRoot.add(mesh);}
+   this.staticByMaterial.set(material,{mesh,parts});
+  }
+  temporary.forEach(g=>g.dispose());
   this.visibilitySignature=null;this.updateVisibility();
-  for(const [material,parts]of batches){const geometry=mergeGeometries(parts,false);parts.forEach(g=>g.dispose());if(!geometry)continue;geometry.computeBoundingSphere();const mesh=new THREE.Mesh(geometry,material);mesh.castShadow=true;mesh.receiveShadow=true;this.batchRoot.add(mesh);}
  }
 
  updateVisibility(){if(!this.view.camera)return;const camera=this.view.camera;camera.updateMatrixWorld();const signature=camera.matrixWorld.elements.join(',')+camera.projectionMatrix.elements.join(',')+this.view.detailEnabled;if(signature===this.visibilitySignature)return;this.visibilitySignature=signature;const frustum=new THREE.Frustum().setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse));const threshold=this.view.detailEnabled===false?0:18;
