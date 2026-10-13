@@ -35,15 +35,15 @@ test('reserved bus slots do not suppress ordinary outside arrivals',()=>{
  const w=world(),traffic=new Traffic(w,E);traffic.residentsEnabled=true;for(let i=0;i<8;i++)Object.assign(traffic.addAgent(),{active:true,kind:'bus',hold:true,x:i,z:40});const visitor=traffic.addAgent();assert.ok(traffic.begin(visitor));assert.equal(visitor.kind,undefined);assert.equal(visitor.phase,'inbound');
 });
 
-test('cached stop catchments preserve line choice and ties across homes and destinations',()=>{
+test('cached walkable catchments preserve line choice and ties across homes and destinations',()=>{
  const s=sim(world());for(const stops of [[4,10,22],[4,22]])assert.ok(createBusLine(s.w,s.traffic,stops.map(x=>24*48+x)).ok);s.transit.rebuild();
  const point=i=>({x:(i%48-24)*4+2,z:(Math.floor(i/48)-24)*4+2});
  const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
  for(let x=0;x<28;x++)for(let y=0;y<28;y++){
   const from=23*48+x,to=23*48+y,r={id:1,location:from};let expected=null;
   if(distance(point(from),point(to))>=10)for(const entry of s.transit.entries.values())for(let a=0;a<entry.line.stops.length;a++)for(let b=0;b<entry.line.stops.length;b++){
-   if(a===b)continue;const first=stopPosition(s.traffic,entry.line.stops[a]),last=stopPosition(s.traffic,entry.line.stops[b]),walk=distance(point(from),first)+distance(point(to),last);
-   if(distance(point(from),first)>16||distance(point(to),last)>16||walk>distance(point(from),point(to))*.9)continue;
+   if(a===b)continue;const first=stopPosition(s.traffic,entry.line.stops[a]),last=stopPosition(s.traffic,entry.line.stops[b]),firstLength=s.transit.walking.route(from,first)?.length??Infinity,lastLength=s.transit.walking.route(last,to)?.length??Infinity,walk=firstLength+lastLength;
+   if(firstLength>16||lastLength>16||walk>distance(point(from),point(to))*.9)continue;
    if(!expected||walk<expected.walk)expected={line:entry.line.id,board:a,alight:b,walk};
   }
   assert.equal(s.transit.request(r,to,'work'),!!expected);

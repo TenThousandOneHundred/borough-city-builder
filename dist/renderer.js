@@ -1,19 +1,20 @@
-import {Transit,transitLeg,stopPosition} from './transit.js?v=28.0';
-import {SimulationClock} from './simulation-clock.js?v=28.0';
-import {Residents} from './residents.js?v=28.0';
-import {Traffic} from './traffic.js?v=28.0';
-import {Vehicles} from './vehicles.js?v=28.0';
-import {BuildingFactory} from './building-factory.js?v=28.0';
-import {StreetLife} from './street-life.js?v=28.0';
-import {visualParcels} from './parcels.js?v=28.0';
-import {Graphics} from './graphics.js?v=28.0';
-import {Vegetation} from './vegetation.js?v=28.0';
+import {buildFootpaths} from './footpaths.js?v=29.0';
+import {Transit,transitLeg,stopPosition} from './transit.js?v=29.0';
+import {SimulationClock} from './simulation-clock.js?v=29.0';
+import {Residents} from './residents.js?v=29.0';
+import {Traffic} from './traffic.js?v=29.0';
+import {Vehicles} from './vehicles.js?v=29.0';
+import {BuildingFactory} from './building-factory.js?v=29.0';
+import {StreetLife} from './street-life.js?v=29.0';
+import {visualParcels} from './parcels.js?v=29.0';
+import {Graphics} from './graphics.js?v=29.0';
+import {Vegetation} from './vegetation.js?v=29.0';
 import {RGBELoader} from './vendor/RGBELoader.js';
 import * as THREE from './vendor/three.module.js';
 import {OrbitControls} from './vendor/OrbitControls.js';
-import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=28.0';
-import {Architecture} from './architecture.js?v=28.0';
-import {Roadworks} from './roadworks.js?v=28.0';
+import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=29.0';
+import {Architecture} from './architecture.js?v=29.0';
+import {Roadworks} from './roadworks.js?v=29.0';
 const N=48,T=4,HALF=96,zoneColors={residential:'#54b663',commercial:'#5bb1d8',industrial:'#cdb268',office:'#aa87c9'};
 export class CityView{
 constructor(canvas){this.assetsReady=false;this.loadingElement=document.getElementById('sceneLoading');this.canvas=canvas;this.scene=new THREE.Scene();this.scene.background=new THREE.Color('#aebfca');this.scene.fog=new THREE.FogExp2('#b7c6cc',.00105);
@@ -33,7 +34,7 @@ environment(){const c=document.createElement('canvas');c.width=512;c.height=256;
 mat(color){if(!this.materials.has(color))this.materials.set(color,new THREE.MeshStandardMaterial({color,roughness:.78}));return this.materials.get(color)}
 box(group,x,y,z,sx,sy,sz,color,shadow=true){const m=new THREE.Mesh(this.unitBox,this.mat(color));m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=shadow;m.receiveShadow=true;group.add(m);return m}
 disposeGroup(g){g.traverse(o=>{if(o.geometry&&o.geometry!==this.unitBox&&!o.userData.sharedAsset)o.geometry.dispose()});g.clear()}
-setWorld(w,{menu=false,reset=true}={}){this.running=false;this.simulationClock?.reset();this.world=w;this.menu=menu;this.signatures=[];this.renderStates=[];this.disposeGroup(this.tileGroup);for(const g of this.buildings.values())if(g.userData.factory)this.disposeGroup(g);this.buildings.clear();for(const car of this.cars)this.disposeGroup(car.mesh);for(const mesh of this.vehicles.fleet||[])mesh.dispose();this.vehicles.fleet=[];this.disposeGroup(this.carGroup);this.cars=[];this.residents=null;this.transit=null;this.traffic=null;this.transitKey=null;if(this.transitGroup)this.disposeGroup(this.transitGroup);this.landscape.build(w);this.makeGrid();if(reset){this.focusWorld(menu)}this.refresh(true)}
+setWorld(w,{menu=false,reset=true}={}){this.running=false;this.simulationClock?.reset();this.world=w;this.menu=menu;this.signatures=[];this.renderStates=[];this.disposeGroup(this.tileGroup);for(const g of this.buildings.values())if(g.userData.factory)this.disposeGroup(g);this.buildings.clear();for(const car of this.cars)this.disposeGroup(car.mesh);for(const mesh of this.vehicles.fleet||[])mesh.dispose();this.vehicles.fleet=[];this.disposeGroup(this.carGroup);this.cars=[];this.residents=null;this.transit=null;this.traffic=null;this.transitKey=null;this.walkRevision=null;if(this.transitGroup)this.disposeGroup(this.transitGroup);this.landscape.build(w);this.makeGrid();if(reset){this.focusWorld(menu)}this.refresh(true)}
 refreshAssets(){
  // Loading visual assets must not reset a running world's clock or its agents.
  this.assetsReady=true;if(this.loadingElement)this.loadingElement.hidden=true;
@@ -47,18 +48,20 @@ makeGrid(){this.disposeGroup(this.grid);const points=[];for(let s=0;s<=48;s++)fo
 refresh(force=false){if(!this.world)return;const demographics=this.world.tiles.map(t=>[t.type,t.level,t.people,t.construction].join('/')).join(';');if(this.residents&&demographics!==this.residentDemographics){this.residents.reconcile();this.residentDemographics=demographics;}const roadLayout=this.world.tiles.map(t=>t.type==='road'?[t.roadType,t.pathIds?.join()].join(':'):'').join(';'),frontageChanged=this.frontageLayout!==roadLayout;this.frontageLayout=roadLayout;const parcels=visualParcels(this.world);let models=false,roads=false,trees=false,zones=false,occupancy=false,destinations=false;this.renderStates ||= [];
 this.world.tiles.forEach((t,i)=>{const parcel=parcels.get(i),oldState=this.renderStates[i],isService=t.type&&t.type!=='road'&&!this.models.accepts(t)&&t.level>0;
 const near=isService&&this.camera.position.distanceToSquared(new THREE.Vector3((i%48+.5)*4-96,0,(Math.floor(i/48)+.5)*4-96))<38*38;
-const state={destination:!!(t.level>0&&!t.construction&&this.models.accepts(t)),road:t.type==='road'?[t.roadWidth,t.roadType,t.pathIds?.join(),t.ground].join(':'):'',trees:[t.type,t.zone,t.tree].join(':'),zone:[t.zone,t.type,t.construction].join(':'),occupied:!!t.type&&t.type!=='road',visual:[parcel?.key,t.type,t.construction,t.level,t.density,t.building,t.variant,this.night,this.overlay,this.detailEnabled,near].join(':')};
+const state={destination:!!(t.level>0&&!t.construction&&this.models.accepts(t)),road:t.type==='road'?[t.roadWidth,t.roadType,t.pathIds?.join(),t.ground].join(':'):'',trees:[t.type,t.zone,t.tree].join(':'),zone:[t.zone,t.type,t.construction].join(':'),occupied:!!t.construction||!!t.type&&t.type!=='road',visual:[parcel?.key,t.type,t.construction,t.level,t.density,t.building,t.variant,this.night,this.overlay,this.detailEnabled,near].join(':')};
 destinations ||= oldState?.destination!==state.destination;roads ||= oldState?.road!==state.road;trees ||= oldState?.trees!==state.trees;zones ||= oldState?.zone!==state.zone;occupancy ||= oldState?.occupied!==state.occupied;
 if(force||frontageChanged||oldState?.visual!==state.visual){const old=this.buildings.get(i);if(old){models=true;this.tileGroup.remove(old);this.disposeGroup(old);this.buildings.delete(i)}if(this.assetsReady!==false&&(!parcel||parcel.owner===i)&&(t.construction||t.type&&t.type!=='road'&&t.level>0)){models=true;const x=(i%48+.5)*4-96,z=(Math.floor(i/48)+.5)*4-96,g=t.construction?this.architecture.construction(t,x,z,this.world):(this.models.accepts(t)?this.models.create(this.world,i,parcel):this.architecture.model(t,x,z,this.world));if(this.overlay==='zones'&&zoneColors[t.type])g.traverse(o=>{if(o.isMesh)o.material=this.mat(zoneColors[t.type])});if(!g.userData.factory)this.tileGroup.add(g);this.buildings.set(i,g)}}this.renderStates[i]=state;});
 if(models||force)this.models.rebuild(this.buildings);
-if(roads)this.roadworks.build(this.world);if(roads||occupancy||destinations)this.setupCars();
+const paths=this.walkRevision!==(this.world.walkRevision||0);this.walkRevision=this.world.walkRevision||0;if(paths||force)this.drawFootpaths();
+if(roads)this.roadworks.build(this.world);if(roads||occupancy||destinations)this.setupCars();else if(paths)this.transit?.rebuild();
 if(trees&&!force)this.landscape.refreshTrees(this.world);
 if(occupancy||roads||force)this.streetLife.build(this.world);
 if(models||roads||trees||force)this.renderer.shadowMap.needsUpdate=true;
 if(this.overlay!=='none'&&(models||roads||zones||force))this.updateOverlay();
 if(zones||roads||force)this.updateZones();}
 
-terrainChanged(bounds,finish=false){this.landscape.refreshTerrain(this.world,bounds,finish);this.renderer.shadowMap.needsUpdate=true;if(finish){this.makeGrid();this.updateZones();}for(const car of this.cars)car.heightWorld=null;}
+drawFootpaths(){if(!this.pathGroup){if(!(this.world.walkPaths?.length))return;this.pathGroup=new THREE.Group();this.scene.add(this.pathGroup);}this.disposeGroup(this.pathGroup);buildFootpaths(this.world,this.pathGroup);}
+terrainChanged(bounds,finish=false){this.landscape.refreshTerrain(this.world,bounds,finish);this.renderer.shadowMap.needsUpdate=true;if(finish){this.makeGrid();this.updateZones();this.drawFootpaths();}for(const car of this.cars)car.heightWorld=null;}
 showTerrainBrush(x,z,radius){this.clearLine();const points=[];for(let i=0;i<=64;i++){const a=i/64*Math.PI*2,px=x+Math.cos(a)*radius,pz=z+Math.sin(a)*radius;points.push(new THREE.Vector3(px,Math.max(.05,groundHeight(this.world,px,pz))+.2,pz));}const geometry=new THREE.BufferGeometry().setFromPoints(points);this.previewGroup.add(new THREE.Line(geometry,new THREE.LineBasicMaterial({color:'#7edcea',depthTest:false,transparent:true,opacity:.9})));}
 setZoning(on){this.zoning=on;this.updateZones()}
 zonePlane(x,y,color,opacity=.3){const geo=new THREE.PlaneGeometry(3.82,3.82,2,2);geo.rotateX(-Math.PI/2);const a=geo.attributes.position;for(let j=0;j<a.count;j++){const xx=(x+.5)*4-96+a.getX(j),zz=(y+.5)*4-96+a.getZ(j);a.setXYZ(j,xx,floorHeight(this.world,xx,zz)+.12,zz)}geo.computeVertexNormals();return new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color,transparent:true,opacity,depthWrite:false,side:THREE.DoubleSide}))}
@@ -77,8 +80,8 @@ focusOutside(){const p=this.traffic?.portals[0];if(!p)return;this.controls.targe
 
 setOverlay(v){if(this.overlay===v)return;this.overlay=v;this.refresh(true);if(v==='none')this.updateOverlay()}
 setNight(v){if(this.night===v)return;this.night=v;this.models.library?.setNight(v);this.scene.background=v?new THREE.Color('#162739'):(this.skyTexture||new THREE.Color('#aebfca'));this.scene.environmentIntensity=v?.12:.38;this.scene.fog.color.set(v?'#283d50':'#b7c6cc');this.sun.intensity=v?.18:3.0;this.ambient.intensity=v?.4:.55;this.renderer.toneMappingExposure=v?.75:.87;this.refresh(true);this.roadworks.night(v)}
-getRoadPoint(x,y){if(!this.getTile(x,y))return null;let p={x:Math.max(0,Math.min(47,(this.point.x+96)/4-.5)),y:Math.max(0,Math.min(47,(this.point.z+96)/4-.5))};const tile={x:Math.round(p.x),y:Math.round(p.y)};if(this.world.tiles[tile.y*48+tile.x].type==='road'&&Math.hypot(p.x-tile.x,p.y-tile.y)<.65)p=tile;for(const path of this.world.roadPaths||[])for(const end of [path.controls[0],path.controls.at(-1)])if(Math.hypot(p.x-end.x,p.y-end.y)<.7)p={...end};return p}
-showRoadPreview(controls,type,valid){this.clearLine();const points=CityEngine.sampleRoad(controls).map(p=>({x:(p.x+.5)*4-96,z:(p.y+.5)*4-96}));const mat=new THREE.MeshBasicMaterial({color:valid?'#71d2ec':'#f08065',transparent:true,opacity:.62,side:THREE.DoubleSide});const mesh=this.roadworks.ribbon(this.world,points,CityEngine.ROADS[type].width,0,mat,.28);this.roadworks.group.remove(mesh);this.previewGroup.add(mesh);}
+getRoadPoint(x,y){if(!this.getTile(x,y))return null;let p={x:Math.max(0,Math.min(47,(this.point.x+96)/4-.5)),y:Math.max(0,Math.min(47,(this.point.z+96)/4-.5))};const tile={x:Math.round(p.x),y:Math.round(p.y)};if(this.world.tiles[tile.y*48+tile.x].type==='road'&&Math.hypot(p.x-tile.x,p.y-tile.y)<.65)p=tile;for(const path of [...(this.world.roadPaths||[]),...(this.world.walkPaths||[])])for(const end of [path.controls[0],path.controls.at(-1)])if(Math.hypot(p.x-end.x,p.y-end.y)<.7)p={...end};return p}
+showRoadPreview(controls,type,valid){this.clearLine();const points=CityEngine.sampleRoad(controls).map(p=>({x:(p.x+.5)*4-96,z:(p.y+.5)*4-96}));const mat=new THREE.MeshBasicMaterial({color:valid?'#71d2ec':'#f08065',transparent:true,opacity:.62,side:THREE.DoubleSide});const mesh=this.roadworks.ribbon(this.world,points,type==='path'?.65:CityEngine.ROADS[type].width,0,mat,.28);this.roadworks.group.remove(mesh);this.previewGroup.add(mesh);}
 getTile(clientX,clientY){const r=this.canvas.getBoundingClientRect();this.ndc.set((clientX-r.left)/r.width*2-1,-(clientY-r.top)/r.height*2+1);this.ray.setFromCamera(this.ndc,this.camera);const targets=[this.landscape.ground,this.landscape.water].filter(Boolean),hit=this.ray.intersectObjects(targets,false)[0];if(hit)this.point.copy(hit.point);else if(!this.ray.ray.intersectPlane(this.plane,this.point))return null;const x=Math.floor((this.point.x+96)/4),y=Math.floor((this.point.z+96)/4);return x>=0&&y>=0&&x<48&&y<48?{x,y}:null}
 hover(tile,remove=false){this.cursor.visible=!!tile;if(tile){let x=(tile.x+.5)*4-96,z=(tile.y+.5)*4-96;this.cursor.material.color.set(remove?'#ff7959':'#62cbff');this.cursor.position.set(x,floorHeight(this.world,x,z)+.3,z)}}
 showLine(a,b){this.clearLine();if(!a||!b)return;for(let t of CityEngine.lineTiles(a,b)){let p=new THREE.Mesh(new THREE.PlaneGeometry(3.65,3.65),new THREE.MeshBasicMaterial({color:'#65cfff',transparent:true,opacity:.5,side:THREE.DoubleSide}));p.rotation.x=-Math.PI/2;let x=(t.x+.5)*4-96,z=(t.y+.5)*4-96;p.position.set(x,this.roadworks.height(this.world,x,z)+.25,z);this.previewGroup.add(p)}}

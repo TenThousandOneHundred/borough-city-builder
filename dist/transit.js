@@ -1,7 +1,8 @@
-import {roadPoint} from './traffic.js?v=28.0';
+import {Walking,sidewalkPosition} from './walking.js?v=29.0';
+import {roadPoint} from './traffic.js?v=29.0';
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const nearby=(engine,i)=>engine.neighbors(i);
-export function stopPosition(traffic,stop){const p=traffic.positions.get(stop)||roadPoint(stop),neighbors=traffic.graph.get(stop)||[],q=neighbors.map(i=>traffic.positions.get(i)||roadPoint(i)).find(q=>dist(p,q)>.01);if(!q)return p;let dx=q.x-p.x,dz=q.z-p.z;if(dx<0||Math.abs(dx)<.001&&dz<0){dx=-dx;dz=-dz;}const length=Math.hypot(dx,dz)||1,width=traffic.engine.ROADS[traffic.world.tiles[stop].roadType]?.width||2.45,offset=width/2-.28;return {x:p.x-dz/length*offset,z:p.z+dx/length*offset};}
+export const stopPosition=sidewalkPosition;
 export function transitLeg(traffic,from,to,fromDepot=false){
  const starts=fromDepot?nearby(traffic.engine,from).filter(i=>traffic.graph.has(i)):[from];
  for(const start of starts){const cells=traffic.trace(traffic.search(start),to);if(cells){let points=traffic.route(cells,null,false);points=[fromDepot?roadPoint(from):stopPosition(traffic,from),...points,stopPosition(traffic,to)];if(points.length<2)continue;return {cells,points};}}return null;
@@ -17,9 +18,9 @@ export function createBusLine(world,traffic,stops){
  world.transit ||= {version:1,nextId:1,lines:[]};const id=world.transit.nextId++;const line={id,name:'Line '+id,stops:[...stops],depot:plan.depot,boardings:0,completed:0,vehicle:{leg:-1,phase:'moving',dwell:0,segment:0,distance:0,...roadPoint(plan.depot),heading:0}};world.transit.lines.push(line);world.money-=plan.cost;return {ok:true,line,cost:plan.cost};
 }
 export class Transit{
- constructor(world,traffic){this.world=world;this.traffic=traffic;this.entries=new Map();this.passengers=new Map();this.journeyCache=new Map();this.rebuild();}
- syncPassengers(){const people=this.world.citizens?.residents;if(people===this.peopleSource)return;this.peopleSource=people;this.passengers=new Map((people||[]).filter(r=>r.transit).map(r=>[r.id,r]));}
- rebuild(){this.journeyCache.clear();const lines=this.world.transit?.lines||[],ids=new Set(lines.map(l=>l.id));for(const [id,e]of this.entries)if(!ids.has(id)){e.agent.active=false;this.entries.delete(id);}
+ constructor(world,traffic){this.world=world;this.traffic=traffic;this.entries=new Map();this.passengers=new Map();this.journeyCache=new Map();this.walking=new Walking(world,traffic);this.passengerRoutes=new Map();this.rebuild();}
+ syncPassengers(){const people=this.world.citizens?.residents;if(people===this.peopleSource)return;this.peopleSource=people;this.passengers=new Map((people||[]).filter(r=>r.transit).map(r=>[r.id,r]));for(const id of this.passengerRoutes.keys())if(!this.passengers.has(id))this.passengerRoutes.delete(id);}
+ rebuild(){if(this.walkingReady)this.walking.rebuild();this.walkingReady=true;this.walkRevision=this.world.walkRevision||0;this.passengerRoutes.clear();this.journeyCache.clear();const lines=this.world.transit?.lines||[],ids=new Set(lines.map(l=>l.id));for(const [id,e]of this.entries)if(!ids.has(id)){e.agent.active=false;this.entries.delete(id);}
  for(const line of lines){const plan=planBusLine(this.world,this.traffic,line.stops);let entry=this.entries.get(line.id);if(!entry){const agent=this.traffic.agents.find(a=>a.kind==='bus'&&!a.active&&![...this.entries.values()].some(e=>e.agent===a))||this.traffic.addAgent();agent.kind='bus';agent.length=2.1;entry={line,agent};this.entries.set(line.id,entry);}entry.plan=plan;entry.line=line;entry.stopPositions=line.stops.map(stop=>stopPosition(this.traffic,stop));
  if(!plan.ok){entry.agent.active=false;entry.reason=plan.reason;continue;}entry.reason='';if(this.world.tiles[line.depot]?.type!=='bus'){entry.reason='Original depot removed';entry.agent.active=false;continue;}
  if(!entry.agent.active){const dwell=line.vehicle.phase==='dwell',remaining=line.vehicle.dwell;this.launch(entry,true);if(dwell){line.vehicle.phase='dwell';line.vehicle.dwell=remaining;entry.agent.hold=true;}}
@@ -30,16 +31,19 @@ export class Transit{
  request(r,to,purpose){const origin=roadPoint(r.location),destination=roadPoint(to),direct=dist(origin,destination);if(r.id%3===0||direct<10)return false;const key=r.location+':'+to;let choice=this.journeyCache.get(key)||null;
  if(!this.journeyCache.has(key)){
   // Stop geometry changes only when the network or line is rebuilt. Compute
-  // catchment distances once per stop, retaining the original tie order.
-  for(const entry of this.entries.values()){if(entry.reason)continue;const first=entry.stopPositions.map(p=>dist(origin,p)),last=entry.stopPositions.map(p=>dist(destination,p));
+  // walkable catchments once per stop; cache the selected journey per address pair.
+  for(const entry of this.entries.values()){if(entry.reason)continue;const first=entry.stopPositions.map(p=>dist(origin,p)>16?Infinity:this.walking.route(r.location,p)?.length??Infinity),last=entry.stopPositions.map(p=>dist(destination,p)>16?Infinity:this.walking.route(p,to)?.length??Infinity);
    for(let a=0;a<first.length;a++){if(first[a]>16)continue;for(let b=0;b<last.length;b++){if(a===b||last[b]>16)continue;const walk=first[a]+last[b];if(walk>direct*.9)continue;if(!choice||walk<choice.walk)choice={line:entry.line.id,board:a,alight:b,walk};}}
   }
   if(this.journeyCache.size>=4096)this.journeyCache.delete(this.journeyCache.keys().next().value);this.journeyCache.set(key,choice);
  }
  if(!choice)return false;r.transit={line:choice.line,board:choice.board,alight:choice.alight,from:r.location,to,purpose,phase:'walk',...origin};r.activity='Walking to bus stop';this.passengers.set(r.id,r);return true;}
- movePassenger(r,target,dt){const t=r.transit,d=dist(t,target),step=dt*1.2;if(d<=step){t.x=target.x;t.z=target.z;return true;}t.x+=(target.x-t.x)*step/d;t.z+=(target.z-t.z)*step/d;return false;}
- finish(r,time){const t=r.transit;r.location=t.to;r.activity=t.purpose==='work'?'Working':t.purpose==='shop'?'Shopping':'Home';if(t.purpose==='work')r.workdays++;if(t.purpose==='shop')r.shopping++;r.nextAt=time+(t.purpose==='work'?24:t.purpose==='shop'?8:20)+r.id%7;delete r.transit;this.passengers.delete(r.id);}
- update(dt){if(dt<=0)return;if(this.graph!==this.traffic.graph||this.lineKey!==(this.world.transit?.lines||[]).map(l=>l.id+':'+l.stops.join(',')).join(';'))this.rebuild();this.syncPassengers();const people=this.passengers.values(),time=this.world.citizens?.time||0;let byLine=null;
+ movePassenger(r,target,dt){const t=r.transit,key=t.phase+':'+target.x+':'+target.z;let entry=this.passengerRoutes.get(r.id);
+ if(!entry||entry.key!==key){entry={key,route:this.walking.route(t,target,[t.from,t.to]),segment:0};this.passengerRoutes.set(r.id,entry);}
+ if(!entry.route){r.activity='Waiting for walking access';return false;}return this.walking.advance(t,entry.route,entry,dt);}
+
+ finish(r,time){const t=r.transit;r.location=t.to;r.activity=t.purpose==='work'?'Working':t.purpose==='shop'?'Shopping':'Home';if(t.purpose==='work')r.workdays++;if(t.purpose==='shop')r.shopping++;r.nextAt=time+(t.purpose==='work'?24:t.purpose==='shop'?8:20)+r.id%7;delete r.transit;this.passengers.delete(r.id);this.passengerRoutes.delete(r.id);}
+ update(dt){if(dt<=0)return;if(this.walkRevision!==(this.world.walkRevision||0)||this.graph!==this.traffic.graph||this.lineKey!==(this.world.transit?.lines||[]).map(l=>l.id+':'+l.stops.join(',')).join(';'))this.rebuild();this.walking.update(dt);this.syncPassengers();const people=this.passengers.values(),time=this.world.citizens?.time||0;let byLine=null;
  for(const entry of this.entries.values()){const {line,agent}=entry,v=line.vehicle;if(entry.reason)continue;if(v.phase==='moving'){if(agent.active){Object.assign(v,{segment:agent.segment,distance:agent.distance,x:agent.x,z:agent.z,heading:agent.heading});}else if(agent.arrived){agent.arrived=false;agent.active=true;agent.hold=true;Object.assign(v,{x:agent.x,z:agent.z,heading:agent.heading});v.leg=v.leg<0?0:(v.leg+1)%line.stops.length;v.phase='dwell';v.dwell=4;v.segment=0;v.distance=0;}else{entry.reason='Route interrupted';}}
  if(v.phase==='dwell'){
  // Build the boarding index only while buses dwell, once per simulation step.
@@ -50,7 +54,7 @@ export class Transit{
  if(t.phase==='ride'){t.x=entry.agent.active?entry.agent.x:entry.line.vehicle.x;t.z=entry.agent.active?entry.agent.z:entry.line.vehicle.z;}
  else if(t.phase==='walk'&&this.movePassenger(r,entry.stopPositions[t.board],dt)){t.phase='wait';r.activity='Waiting for '+entry.line.name;}
  else if(t.phase==='lastWalk'&&this.movePassenger(r,roadPoint(t.to),dt))this.finish(r,time);
- else if(t.phase==='return'&&this.movePassenger(r,roadPoint(t.from),dt)){r.location=t.from;r.activity='Home · bus service unavailable';r.nextAt=time+10;delete r.transit;this.passengers.delete(r.id);}
+ else if(t.phase==='return'&&this.movePassenger(r,roadPoint(t.from),dt)){r.location=t.from;r.activity='Home · bus service unavailable';r.nextAt=time+10;delete r.transit;this.passengers.delete(r.id);this.passengerRoutes.delete(r.id);}
  }
  }
  get summary(){this.syncPassengers();const people=[...this.passengers.values()];return {lines:this.entries.size,buses:[...this.entries.values()].filter(e=>!e.reason).length,waiting:people.filter(r=>r.transit?.phase==='wait').length,riding:people.filter(r=>r.transit?.phase==='ride').length,completed:(this.world.transit?.lines||[]).reduce((n,l)=>n+l.completed,0)};}

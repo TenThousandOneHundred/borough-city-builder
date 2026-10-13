@@ -1,9 +1,9 @@
-import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=28.0';
+import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=29.0';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {lotPlan} from './building-plan.js?v=28.0';
-import {floorHeight} from './landscape.js?v=28.0';
+import {lotPlan} from './building-plan.js?v=29.0';
+import {floorHeight} from './landscape.js?v=29.0';
 const IDENTITY=new THREE.Matrix4();
 // Complete textured assets are loaded once, batched per material, and instanced.
 export class ModelLibrary {
