@@ -235,3 +235,9 @@ Trees share geometry and materials with existing landscaping. Roof planting uses
 Ten original detailed models now match the health, education, police and fire catalogue: clinic, hospital, wellness centre, elementary school, high school, college, police station, headquarters, fire station and rescue station. Recessed windows, brick and painted cladding, entrance canopies, distinct wings and garage bays replace their simpler fallback forms. The complete building library now contains 51 models. Existing saves select the correct facility, including default choices in older saves.
 
 Models remain inside their existing lots and share the instanced renderer and authored distant geometry. Compressed modern-model transfer increases by 113,852 bytes. Service costs, capacity, simulation and save format are unchanged; larger facility footprints and emergency dispatch are not introduced in this release. All 149 tests pass, including model selection, street orientation, lot bounds and unchanged service state.
+
+### Edition 35: remove unused startup downloads
+
+The fallback architecture renderer now creates its existing detailed window bays directly. It no longer downloads or parses two unused legacy GLTF kits, eliminating 16 requests totaling 8,443,356 asset bytes from an uncached startup. Those bytes are original file sizes, not a measured transfer-time or FPS improvement. The active modern building library, terrain textures, trees and lighting remain unchanged.
+
+`node scripts/verify-architecture-startup.mjs` compares with the fully loaded Edition 34 renderer (commit `319480d`). All 608 catalogue/variant/day/night/distance cases retain identical geometry, instance transforms, material properties and canvas texture drawing commands. Close-up detail is now available without waiting for those kits. The 150-test suite also covers startup with unavailable networking and continued offscreen vehicle, transit and pedestrian simulation.
