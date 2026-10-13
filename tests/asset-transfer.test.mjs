@@ -24,11 +24,17 @@ test('stalled downloads abort and reject after bounded fallback attempts',async(
  await assert.rejects(loadBinary('https://example.test/lod.bin',{timeoutMs:5,fetcher:(_,options)=>new Promise((resolve,reject)=>{requests++;options.signal.addEventListener('abort',()=>reject(new Error('aborted')));})}),/aborted/);
  assert.equal(requests,2);
 });
-test('slow downloads continue while bytes arrive even past the inactivity timeout',async()=>{
+test('slow downloads continue while bytes arrive even past the inactivity timeout',async t=>{
+ t.mock.timers.enable({apis:['setTimeout']});
  let signal,index=0;
- const result=await loadBinary('https://example.test/lod.bin',{Decompressor:null,timeoutMs:50,fetcher:async(_,options)=>{
+ const loading=loadBinary('https://example.test/lod.bin',{Decompressor:null,timeoutMs:50,fetcher:async(_,options)=>{
   signal=options.signal;return new Response(new ReadableStream({async pull(controller){await new Promise(resolve=>setTimeout(resolve,20));if(index<6)controller.enqueue(raw.slice(index*8,++index*8));else controller.close();}}));
  }});
+ // Advance transport time independently of runner load. Let stream microtasks
+ // deliver each chunk and reset the inactivity deadline before the next tick.
+ await new Promise(setImmediate);
+ for(let i=0;i<7;i++){t.mock.timers.tick(20);await new Promise(setImmediate);}
+ const result=await loading;t.mock.timers.tick(1000);
  assert.equal(signal.aborted,false);assert.deepEqual(new Uint8Array(result),raw.slice(0,48));
 });
 test('loading progress identifies pending groups regardless of completion order',async()=>{
