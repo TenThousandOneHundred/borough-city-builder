@@ -1,12 +1,12 @@
-import {ModelLibrary} from './model-library.js?v=44';
-import {buildHouse} from './house-architecture.js?v=44';
-import {buildUrban} from './city-architecture.js?v=44';
+import {ModelLibrary} from './model-library.js?v=45';
+import {buildHouse} from './house-architecture.js?v=45';
+import {buildUrban} from './city-architecture.js?v=45';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import * as THREE from './vendor/three.module.js';
-import {MeshBuilder} from './mesh-builder.js?v=44';
-import {BuildingMaterials} from './building-materials.js?v=44';
-import {lotPlan} from './building-plan.js?v=44';
-import {floorHeight} from './landscape.js?v=44';
+import {MeshBuilder} from './mesh-builder.js?v=45';
+import {BuildingMaterials} from './building-materials.js?v=45';
+import {lotPlan} from './building-plan.js?v=45';
+import {floorHeight} from './landscape.js?v=45';
 
 export class BuildingFactory{
  constructor(view){this.view=view;this.library=view.renderer?new ModelLibrary(view):null;this.ready=this.library?.ready||Promise.resolve();this.materials=new BuildingMaterials(view);this.batchRoot=new THREE.Group();view.scene.add(this.batchRoot);}

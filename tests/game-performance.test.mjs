@@ -60,3 +60,22 @@ test('authored roof details remain visible at district distance and obey the low
  camera.position.z=40;view.detailEnabled=false;factory.updateVisibility();assert.equal(batch.near.count,0);assert.equal(batch.far.count,1);
  view.detailEnabled=true;factory.updateVisibility();assert.equal(batch.near.count,1);assert.equal(batch.far.count,0);
 });
+
+test('vehicle uploads cover only changed packed slots and retain pending writes until rendered',async()=>{
+ const {Vehicles}=await import('../dist/vehicles.js'),v=new Vehicles(),group=new THREE.Group(),cars=Array.from({length:128},(_,i)=>({mesh:v.create(i),agent:{active:true,x:i}}));
+ cars.forEach((c,i)=>c.mesh.position.set(i===8?2:i*10,0,0));v.rebuildFleet(cars,group);const camera=new THREE.PerspectiveCamera(45,1,.1,200);camera.position.set(0,8,20);camera.lookAt(0,0,0);v.updateFleet(cars,camera);
+ for(const mesh of v.fleet)mesh.instanceMatrix.clearUpdateRanges();
+ const before=JSON.stringify(cars.map(c=>c.agent));cars[0].mesh.position.z+=.1;v.updateFleet(cars,camera);
+ let changed=0;for(const mesh of v.fleet){const ranges=mesh.instanceMatrix.updateRanges;if(!ranges.length)continue;changed++;assert.equal(ranges.length,1);assert.equal(ranges[0].count,16,'one moving car changes one matrix in each material batch');assert.ok(ranges[0].count<mesh.instanceMatrix.array.length);}
+ assert.ok(changed>0);assert.equal(JSON.stringify(cars.map(c=>c.agent)),before);
+ const shared=v.fleet.find(m=>m.userData.parts.some(p=>p.car===cars[0])&&m.userData.parts.some(p=>p.car===cars[8]));const prior={...shared.instanceMatrix.updateRanges[0]};cars[8].mesh.position.z+=.1;v.updateFleet(cars,camera);
+ const range=shared.instanceMatrix.updateRanges[0];assert.ok(range.start<=prior.start&&range.start+range.count>=prior.start+prior.count,'unconsumed prior writes survive');
+});
+test('vehicle visibility changes preserve exact retained matrices without rewriting unaffected batches',async()=>{
+ const {Vehicles}=await import('../dist/vehicles.js'),v=new Vehicles(),group=new THREE.Group(),camera=new THREE.PerspectiveCamera(45,1,.1,200),cars=Array.from({length:32},(_,i)=>({mesh:v.create(i),agent:{active:true}}));
+ cars.forEach((c,i)=>c.mesh.position.set(i===0?0:1000+i,0,0));camera.position.set(0,8,20);camera.lookAt(0,0,0);v.rebuildFleet(cars,group);v.updateFleet(cars,camera);for(const mesh of v.fleet)mesh.instanceMatrix.clearUpdateRanges();
+ const vanOnly=v.fleet.filter(m=>m.userData.parts.some(p=>p.car===cars[0]));const versions=vanOnly.map(m=>m.instanceMatrix.version);
+ cars[1].mesh.position.x=2;v.updateFleet(cars,camera);assert.deepEqual(vanOnly.map(m=>m.instanceMatrix.version),versions,'entering sedan cannot rewrite existing van geometry');
+ const expected=new THREE.Matrix4(),actual=new THREE.Matrix4();for(const mesh of v.fleet){let i=0;for(const part of mesh.userData.parts){if(!v.visibleCars.has(part.car))continue;expected.multiplyMatrices(part.car.mesh.matrix,part.local);mesh.getMatrixAt(i++,actual);assert.deepEqual(actual.elements.map(Math.fround),expected.elements.map(Math.fround));}assert.equal(mesh.count,i);}
+ camera.lookAt(0,0,1000);v.updateFleet(cars,camera);assert.ok(v.fleet.every(m=>m.count===0));cars[0].mesh.position.z+=2;v.updateFleet(cars,camera);camera.lookAt(0,0,0);v.updateFleet(cars,camera);assert.ok(v.fleet.some(m=>m.count>0));for(const mesh of v.fleet){let i=0;for(const part of mesh.userData.parts){if(!v.visibleCars.has(part.car))continue;expected.multiplyMatrices(part.car.mesh.matrix,part.local);mesh.getMatrixAt(i++,actual);assert.deepEqual(actual.elements.map(Math.fround),expected.elements.map(Math.fround),'offscreen movement restores at the current position');}}
+});
