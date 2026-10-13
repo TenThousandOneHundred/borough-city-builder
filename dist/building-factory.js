@@ -1,12 +1,12 @@
-import {ModelLibrary} from './model-library.js?v=25.0';
-import {buildHouse} from './house-architecture.js?v=25.0';
-import {buildUrban} from './city-architecture.js?v=25.0';
+import {ModelLibrary} from './model-library.js?v=26.0';
+import {buildHouse} from './house-architecture.js?v=26.0';
+import {buildUrban} from './city-architecture.js?v=26.0';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import * as THREE from './vendor/three.module.js';
-import {MeshBuilder} from './mesh-builder.js?v=25.0';
-import {BuildingMaterials} from './building-materials.js?v=25.0';
-import {lotPlan} from './building-plan.js?v=25.0';
-import {floorHeight} from './landscape.js?v=25.0';
+import {MeshBuilder} from './mesh-builder.js?v=26.0';
+import {BuildingMaterials} from './building-materials.js?v=26.0';
+import {lotPlan} from './building-plan.js?v=26.0';
+import {floorHeight} from './landscape.js?v=26.0';
 
 export class BuildingFactory{
  constructor(view){this.view=view;this.library=view.renderer?new ModelLibrary(view):null;this.ready=this.library?.ready||Promise.resolve();this.materials=new BuildingMaterials(view);this.batchRoot=new THREE.Group();view.scene.add(this.batchRoot);}
@@ -24,7 +24,18 @@ export class BuildingFactory{
  }
 
  updateVisibility(){if(!this.view.camera)return;const camera=this.view.camera;camera.updateMatrixWorld();const signature=camera.matrixWorld.elements.join(',')+camera.projectionMatrix.elements.join(',')+this.view.detailEnabled;if(signature===this.visibilitySignature)return;this.visibilitySignature=signature;const frustum=new THREE.Frustum().setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse));const threshold=this.view.detailEnabled===false?0:18;
-  for(const {near,far,transforms}of this.instanceBatches||[]){near.count=0;if(far)far.count=0;for(const {matrix,sphere}of transforms){if(!frustum.intersectsSphere(sphere))continue;const mesh=far&&camera.position.distanceTo(sphere.center)>threshold?far:near;mesh.setMatrixAt(mesh.count++,matrix);}near.instanceMatrix.needsUpdate=true;if(far)far.instanceMatrix.needsUpdate=true;}
+  // All material parts of a building share one sphere. Classify it once, then
+  // reuse that result for windows, roofs, walls and grounds.
+  const visibility=new Map();this.visibilityChecks=0;
+  for(const batch of this.instanceBatches||[]){const {near,far,transforms}=batch;let nearCount=0,farCount=0,nearChanged=false,farChanged=false;batch.nearSlots ||= [];batch.farSlots ||= [];
+   for(const transform of transforms){const {sphere,matrix}=transform;let state=visibility.get(sphere);
+    if(state===undefined){this.visibilityChecks++;state=!frustum.intersectsSphere(sphere)?0:camera.position.distanceToSquared(sphere.center)>threshold*threshold?2:1;visibility.set(sphere,state);}
+    if(!state)continue;const distant=far&&state===2,mesh=distant?far:near,slots=distant?batch.farSlots:batch.nearSlots,index=distant?farCount++:nearCount++;
+    if(slots[index]!==transform){mesh.setMatrixAt(index,matrix);slots[index]=transform;if(distant)farChanged=true;else nearChanged=true;}
+   }
+   near.count=nearCount;if(nearChanged)near.instanceMatrix.needsUpdate=true;
+   if(far){far.count=farCount;if(farChanged)far.instanceMatrix.needsUpdate=true;}
+  }
  }
  accepts(tile){return ['residential','commercial','office','industrial'].includes(tile.type);}
  create(world,index,parcel){

@@ -14,3 +14,5 @@
 .transit-controls{padding:8px 14px;border-top:1px solid #ffffff18;font-size:12px}.transit-controls .road-modes{padding:8px 0}.transit-lines{max-height:90px;overflow:auto}.transit-lines>div{display:flex;justify-content:space-between;gap:12px;align-items:center;margin:4px 0}.transit-lines button{font-size:11px;padding:4px 8px}
 
 .planning-transit .build-options{display:none}
+
+.scene-loading{position:fixed;left:50%;top:80px;transform:translateX(-50%);z-index:20;padding:12px 20px;border:1px solid #608392;border-radius:5px;background:#20394cee;color:#ecf4f5;font-size:14px;pointer-events:none}.scene-loading[hidden]{display:none}
