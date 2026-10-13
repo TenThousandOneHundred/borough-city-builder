@@ -22,10 +22,10 @@ export function lotPlan(world,index,parcel){
  const gx=index%48,gy=Math.floor(index/48);
  for(let y=Math.max(0,gy-4);y<=Math.min(47,gy+depth+3);y++)for(let x=Math.max(0,gx-4);x<=Math.min(47,gx+width+3);x++){
   const road=world.tiles[y*48+x];if(road.type!=='road')continue;for(const id of road.pathIds||[])nearbyPaths.add(id);if(road.pathIds?.length&&!road.legacyRoad)continue;const dx=(x+.5)*4-96-cx,dz=(y+.5)*4-96-cz,d=dx*dx+dz*dz;
-  if(d<distance){distance=d;nearest={dx,dz};}
+  if(d<distance){distance=d;nearest={dx,dz,roadIndex:y*48+x};}
  }
  let angle=!nearest?0:Math.abs(nearest.dx)>Math.abs(nearest.dz)?(nearest.dx<0?-Math.PI/2:Math.PI/2):nearest.dz<0?Math.PI:0;
- const paths=roadsById(world);let frontage=null;
+ const paths=roadsById(world);let frontage=nearest?{roadIndex:nearest.roadIndex,x:cx+nearest.dx,z:cz+nearest.dz}:null;
  for(const id of nearbyPaths){const path=paths.get(id);if(!path)continue;const points=segments(path);
   for(let i=1;i<points.length;i++){const a=points[i-1],b=points[i],vx=b.x-a.x,vz=b.z-a.z,length2=vx*vx+vz*vz;if(length2<1e-10)continue;
    const t=Math.max(0,Math.min(1,((cx-a.x)*vx+(cz-a.z)*vz)/length2)),x=a.x+t*vx,z=a.z+t*vz,d=(x-cx)**2+(z-cz)**2;

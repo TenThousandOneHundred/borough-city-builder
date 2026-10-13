@@ -1,9 +1,10 @@
-import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=29.0';
+import {SiteDetails} from './site-details.js?v=30.0';
+import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=30.0';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {lotPlan} from './building-plan.js?v=29.0';
-import {floorHeight} from './landscape.js?v=29.0';
+import {lotPlan} from './building-plan.js?v=30.0';
+import {floorHeight} from './landscape.js?v=30.0';
 const IDENTITY=new THREE.Matrix4();
 // Complete textured assets are loaded once, batched per material, and instanced.
 export class ModelLibrary {
@@ -60,10 +61,10 @@ export class ModelLibrary {
   const fullScale=candidates.filter(a=>fit(a)>=.17);if(fullScale.length)candidates=fullScale;
   const targetHeight=p.floors*.64,score=a=>{
    const scale=fit(a),coverage=a.size.x*a.size.z*scale*scale/(W*D);
-   return Math.abs(Math.log(Math.max(.1,a.size.y*scale)/targetHeight))*.45+Math.abs(.72-coverage)*3;
+   return Math.abs(Math.log(Math.max(.1,a.size.y*scale)/targetHeight))*.45+Math.abs((p.low?.34:p.type==='commercial'&&p.density==='low'?.48:.72)-coverage)*3;
   };
   candidates.sort((a,b)=>score(a)-score(b)||a.name.localeCompare(b.name));
-  const best=score(candidates[0]);candidates=candidates.filter(a=>score(a)<=best+.16);
+  const best=score(candidates[0]);candidates=candidates.filter(a=>score(a)<=best+(p.low?.32:.16));
   const modernShare=p.type==='office'?.82:p.low?.28:p.type==='commercial'?.60:.58;const family=p.variation<modernShare?'modern':'masonry',preferred=candidates.filter(a=>a.family===family);if(preferred.length)candidates=preferred;
   const asset=candidates[(p.style+p.tone)%candidates.length],root=new THREE.Group(),model=asset.root.clone(true),scale=fit(asset);
   // Move frontage toward its road, within the original owned rectangle.
@@ -71,7 +72,7 @@ export class ModelLibrary {
   const c=Math.abs(Math.cos(p.angle)),s=Math.abs(Math.sin(p.angle));
   const occupiedX=(asset.size.x*c+asset.size.z*s)*scale,occupiedZ=(asset.size.x*s+asset.size.z*c)*scale;
   const clearanceX=Math.max(0,(p.parcelWidth-occupiedX)/2-.18),clearanceZ=Math.max(0,(p.parcelDepth-occupiedZ)/2-.18);
-  const setback=p.frontage?Math.min(s>1e-6?clearanceX/s:Infinity,c>1e-6?clearanceZ/c:Infinity,Math.max(0,(D-asset.size.z*scale)/2-.25)):0;
+  const frontageSpace=Math.max(0,(D-asset.size.z*scale)/2-.25);const setback=p.frontage?Math.min(s>1e-6?clearanceX/s:Infinity,c>1e-6?clearanceZ/c:Infinity,frontageSpace)*(p.type==='industrial'||p.type==='commercial'&&p.density==='low'?-1:1):0;
   model.position.z=setback;
   model.scale.setScalar(scale);root.add(model);root.rotation.y=p.angle;
   const lawn=category==='residential-low',surface=lawn?'grass':category==='industrial'?'asphalt':'paving';this.lotMaterials ||= {};
@@ -109,6 +110,7 @@ export class ModelLibrary {
    root.add(gardens);
   }
 
+  this.siteDetails ||= new SiteDetails(this.view,this.lotMaterials);root.add(this.siteDetails.build(p,{minX:-asset.size.x*scale/2,maxX:asset.size.x*scale/2,minZ:setback-asset.size.z*scale/2,maxZ:setback+asset.size.z*scale/2}));
   const footprintX=asset.size.x*scale/2,footprintZ=asset.size.z*scale/2;let base=floorHeight(world,p.cx,p.cz);
   for(const x of [-footprintX,footprintX])for(const z of [-footprintZ,footprintZ])base=Math.max(base,floorHeight(world,p.cx+x*Math.cos(p.angle)+(z+setback)*Math.sin(p.angle),p.cz-x*Math.sin(p.angle)+(z+setback)*Math.cos(p.angle)));
   if(world.landformVersion===1)for(const point of lotPerimeter(p))base=Math.max(base,floorHeight(world,p.cx+point.x,p.cz+point.z));

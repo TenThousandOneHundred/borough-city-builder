@@ -63,8 +63,8 @@ test('large zoned parcels select full-scale perimeter blocks and retain open cou
   assert.ok(asset.size.x*asset.size.z*.04/(12*8)>.55,type+' '+asset.name+' coverage '+asset.size.x*asset.size.z*.04/(12*8));assert.equal(JSON.stringify(world),before);
   // Ray through the centre of the court must reach its planted ground, not a roof.
   if(!asset.name.startsWith('perimeter-'))continue;
-  model.updateMatrixWorld(true);const ray=new THREE.Raycaster(new THREE.Vector3(0,30,0),new THREE.Vector3(0,-1,0));
-  const hits=ray.intersectObject(model,true);assert.ok(hits.length);assert.ok(hits[0].point.y<.4,'courtyard is open to the sky');
+  root.updateMatrixWorld(true);const origin=model.localToWorld(new THREE.Vector3(0,150,0)),ray=new THREE.Raycaster(origin,new THREE.Vector3(0,-1,0));
+  const hits=ray.intersectObject(model,true);assert.ok(hits.length);assert.ok(hits[0].point.y<root.position.y+.4,'courtyard is open to the sky');
  }
 });
 test('street setbacks remain inside owned parcels at every road angle',async()=>{
@@ -89,4 +89,7 @@ test('a hillside district batches all terrain foundations without losing wall ge
  const lib=await library(),world=E.createWorld('Hillside foundation QA','river',427),buildings=new Map();let vertices=0,walls=0;
  for(let x=5;x<23;x+=3){const index=8*48+x;world.tiles[index]={type:'residential',density:'medium',level:2};const root=lib.create(world,index,{width:3,depth:2});root.traverse(o=>{if(o.isMesh&&!o.userData.sharedAsset){walls++;vertices+=o.geometry.attributes.position.count;}});buildings.set(index,root);}
  assert.ok(walls>=5);const factory=new BuildingFactory({scene:new THREE.Scene(),landscape:{assets:{}}});factory.rebuild(buildings);const combined=factory.batchRoot.children.filter(o=>!o.isInstancedMesh);assert.equal(combined.length,1);assert.equal(combined[0].geometry.attributes.position.count,vertices);assert.ok(combined[0].receiveShadow);assert.ok(combined[0].castShadow);
+});
+test('low density neighborhoods retain several complete house models rather than one maximum-coverage model',async()=>{
+ const lib=await library(),world=E.createWorld('House variety','plains',431),models=new Set();for(let x=8;x<35;x++){const i=20*48+x;world.tiles[i]={type:'residential',density:'low',level:1};models.add(lib.create(world,i).userData.model);}assert.ok(models.size>=4,[...models].join(','));
 });
