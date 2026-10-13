@@ -23,7 +23,7 @@ CONCRETE,GLASS,FRAME,ROOF,WOOD,LEAVES,RECESS,BLIND,OCCUPIED,BRICK=range(len(mate
 models=[]
 class Model:
  def __init__(self,name,category,floors):
-  self.name,self.category,self.floors=name,category,floors;self.detail=False;self.parts=defaultdict(lambda:{'p':[],'n':[],'uv':[],'c':[],'i':[],'far':[]})
+  self.name,self.category,self.floors=name,category,floors;self.detail=False;self.gardens=[];self.parts=defaultdict(lambda:{'p':[],'n':[],'uv':[],'c':[],'i':[],'far':[]})
  def quad(self,a,b,c,d,mat,color=(1,1,1)):
   part=self.parts[mat];start=len(part['p'])//3;u=[b[i]-a[i] for i in range(3)];v=[c[i]-a[i] for i in range(3)];n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];length=math.sqrt(sum(x*x for x in n))
   if length<1e-8:return
@@ -98,7 +98,10 @@ class Model:
    self.quad((a[0],top+.65,a[1]),(c[0],top+.65,c[1]),(e[0],top+.65,e[1]),(b[0],top+.65,b[1]),CONCRETE,tint)
   return top
  def plant(self,x,y,z,w,d):
-  self.box(x,y,z,w,.45,d,CONCRETE);self.box(x,y+.45,z,w-.15,.45,d-.15,LEAVES)
+  self.box(x,y,z,w,.45,d,CONCRETE)
+  large=min(w,d)>=1.5
+  self.box(x,y+.45,z,w-.15,.08 if large else .45,d-.15,LEAVES)
+  if large:self.gardens.append({'x':x,'y':y+.53,'z':z,'w':w-.3,'d':d-.3})
  def cylinder(self,x,y,z,r,h,mat,sides=12):
   ring=[(x+r*math.cos(i*math.tau/sides),z+r*math.sin(i*math.tau/sides)) for i in range(sides)]
   self.band(ring,y,h,mat)
@@ -160,7 +163,9 @@ def courtyard(name,category,floors,w=46,d=32,tint=(.86,.83,.74)):
  m.roofwork(-w*.28,h,-(d-9)/2,5,2)
  m.terrace(-w*.23,(floors-1)*3.2,(d-9)/2,10,5)
  m.terrace(w*.23,(floors-1)*3.2,(d-9)/2,10,5)
- m.roofwork(w*.23,(floors-2)*3.2,0,4,2)
+ m.roofwork((w-9)/2,(floors-2)*3.2,0,4,2)
+ # The rear roof has clear space opposite its mechanical plant.
+ m.plant(w*.23,h+.06,-(d-9)/2,min(10,w*.25),4.5)
  for x in [-w*.22,w*.22]:
   m.plant(x,0,0,5,5)
   m.entrance(d/2+.35,x)
@@ -169,7 +174,7 @@ def courtyard(name,category,floors,w=46,d=32,tint=(.86,.83,.74)):
  for x in [-6,6]:m.box(x,.45,3,3,.18,.6,WOOD)
  return m
 m=courtyard('perimeter-garden-apartments','residential',6);m.finish()
-m=courtyard('perimeter-terrace-residences','residential',9,48,34,tint=(.95,.72,.55));m.plant(15,22.7,12,7,2);m.finish()
+m=courtyard('perimeter-terrace-residences','residential',9,48,34,tint=(.95,.72,.55));m.finish()
 m=courtyard('perimeter-tower-residences','residential',10,46,32,tint=(.72,.80,.82));h=m.shell(14,9,5,x=-12,z=-11.5,y=32,curtain=True);m.roofwork(-12,h,-11.5,4,2);m.floors=15;m.finish()
 m=courtyard('perimeter-mixed-use','commercial',6,44,30,tint=(.86,.67,.51))
 # Street-level canopies run along the retail frontage, leaving entrances between.
@@ -212,7 +217,7 @@ for model in models:
  primitives=[]
  for mat,part in sorted(model.parts.items()):
   primitives.append({'attributes':{'POSITION':pack(part['p'],'VEC3'),'NORMAL':pack_normal(part['n']),'TEXCOORD_0':pack(part['uv'],'VEC2'),'COLOR_0':pack([v for i in range(0,len(part['c']),3) for v in [*[round(max(0,min(1,c))*255) for c in part['c'][i:i+3]],255]],'VEC4',5121)},'indices':pack(part['i'],'SCALAR',5123 if max(part['i'])<65536 else 5125),'material':mat})
- doc['meshes'].append({'name':model.name,'primitives':primitives});doc['scenes'][0]['nodes'].append(len(doc['nodes']));doc['nodes'].append({'name':model.name,'mesh':len(doc['meshes'])-1,'extras':{'category':model.category,'floors':model.floors,'family':'modern','source':'Borough original geometry'}})
+ doc['meshes'].append({'name':model.name,'primitives':primitives});doc['scenes'][0]['nodes'].append(len(doc['nodes']));doc['nodes'].append({'name':model.name,'mesh':len(doc['meshes'])-1,'extras':{'category':model.category,'floors':model.floors,'family':'modern','gardens':model.gardens,'source':'Borough original geometry'}})
 while len(binary)%4:binary.append(0)
 doc['buffers'][0]['byteLength']=len(binary);data=json.dumps(doc,separators=(',',':')).encode();data+=b' '*((-len(data))%4)
 glb=struct.pack('<III',0x46546c67,2,12+8+len(data)+8+len(binary))+struct.pack('<II',len(data),0x4e4f534a)+data+struct.pack('<II',len(binary),0x004e4942)+binary

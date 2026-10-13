@@ -32,3 +32,14 @@ test('distant yard trees switch to shared views while close trees retain complet
  const triangles=()=>factory.instanceBatches.filter(b=>b.transforms[0].renderRange).reduce((n,b)=>n+b.near.count*(b.near.geometry.index?.count||b.near.geometry.attributes.position.count)/3,0),near=triangles();assert.ok(near>1000);
  camera.position.set(0,15,70);camera.lookAt(0,0,0);factory.updateVisibility();const far=triangles();assert.ok(far>0&&far<near*.02);camera.position.set(0,4,10);camera.lookAt(0,0,0);factory.updateVisibility();assert.equal(triangles(),near);
 });
+
+test('raised gardens apply model normalization and scale without crossing planted beds',()=>{
+ const tree=new THREE.Group(),mesh=new THREE.Mesh(new THREE.BoxGeometry(.5,1,.5),new THREE.MeshStandardMaterial());mesh.position.y=.5;tree.add(mesh);
+ const details=new SiteDetails({vegetation:{broadPrototype:tree}}),origin={x:-2,y:-.1,z:3},bed={x:8,y:13.33,z:4,w:2,d:7},scale=.2,setback=.3;
+ const root=details.buildGardens([bed],origin,scale,setback);assert.ok(root.children.length>=1);
+ const bounds=new THREE.Box3().setFromObject(root),x=(bed.x+origin.x)*scale,z=(bed.z+origin.z)*scale+setback;
+ assert.ok(bounds.min.x>=x-bed.w*scale/2-1e-6&&bounds.max.x<=x+bed.w*scale/2+1e-6);
+ assert.ok(bounds.min.z>=z-bed.d*scale/2-1e-6&&bounds.max.z<=z+bed.d*scale/2+1e-6);
+ assert.ok(Math.abs(bounds.min.y-(bed.y+origin.y)*scale)<1e-6,'trunks start at planter soil rather than ground level');
+ assert.ok(bounds.max.y-bounds.min.y<=.92+1e-6);root.traverse(o=>{if(o.isMesh)assert.equal(o.geometry,mesh.geometry,'tree buffers remain shared');});
+});

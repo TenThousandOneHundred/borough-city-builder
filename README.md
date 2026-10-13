@@ -223,3 +223,9 @@ The reproducible 201-lot CPU benchmark (`node scripts/benchmark-rebuild.mjs`) co
 Modern buildings and distant indices now download as gzip copies (17,253,780 bytes to 3,959,500 bytes, 77% less transfer). Browser decompression restores the original bytes, including every vertex, texture and index. Distant indices begin downloading alongside the building catalogues. Unsupported browsers, missing archives and corrupt archives fall back to the original assets. Requests for these two assets abort after 45 seconds without incoming data; slow transfers continue while bytes arrive. Other asset loaders retain their existing behavior.
 
 The loading indicator identifies pending asset groups. After changing modern buildings or LOD data, run `node scripts/compress-assets.mjs`; CI verifies the archives decode exactly to the current originals with `node scripts/compress-assets.mjs --check`.
+
+### Edition 33.2: planted architecture
+
+Modern buildings carry authored planter footprints and elevations. Their larger planters now contain shared broadleaf tree models instead of raised green blocks, including courtyard planting and gardens on the rear roofs of perimeter blocks. Canopies fit inside each bed after model normalization, scaling and road-facing placement. Corrected a sunken planter and moved mechanical equipment onto its supporting wing.
+
+Trees share geometry and materials with existing landscaping. Roof planting uses complete models nearby and crossed tree images beyond 18 world units; it is never removed merely because the building uses distant geometry. This is visual planting, with no new resident or traffic behavior. Regenerated original modern models retain facade detail and lossless compressed delivery.

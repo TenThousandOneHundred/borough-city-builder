@@ -93,3 +93,25 @@ test('a hillside district batches all terrain foundations without losing wall ge
 test('low density neighborhoods retain several complete house models rather than one maximum-coverage model',async()=>{
  const lib=await library(),world=E.createWorld('House variety','plains',431),models=new Set();for(let x=8;x<35;x++){const i=20*48+x;world.tiles[i]={type:'residential',density:'low',level:1};models.add(lib.create(world,i).userData.model);}assert.ok(models.size>=4,[...models].join(','));
 });
+
+test('authored modern garden sites survive model normalization and fit complete model footprints',async()=>{
+ const lib=await library(),planted=lib.models.filter(m=>m.gardens.length);assert.ok(planted.length>=10);
+ let elevated=0,courtyards=0;
+ for(const model of planted)for(const bed of model.gardens){
+  assert.ok(Object.values(bed).every(Number.isFinite));assert.ok(bed.w>0&&bed.d>0);
+  const x=bed.x+model.origin.x,z=bed.z+model.origin.z;
+  assert.ok(x-bed.w/2>=-model.size.x/2-.001&&x+bed.w/2<=model.size.x/2+.001,model.name+' garden X');
+  assert.ok(z-bed.d/2>=-model.size.z/2-.001&&z+bed.d/2<=model.size.z/2+.001,model.name+' garden Z');
+  if(bed.y>3)elevated++;else courtyards++;
+ }
+ assert.ok(elevated>=5&&courtyards>=5);
+});
+
+test('building creation attaches shared trees above authored roofs and inside courtyard beds',async()=>{
+ const lib=await library();lib.models=lib.models.filter(m=>m.name==='perimeter-campus-offices');
+ const tree=new THREE.Group(),mesh=new THREE.Mesh(new THREE.BoxGeometry(.5,1,.5),new THREE.MeshStandardMaterial());mesh.position.y=.5;tree.add(mesh);lib.view.vegetation={broadPrototype:tree};
+ const w=E.createWorld('Roof garden','plains',324),i=20*48+20;w.tiles[i]={type:'office',density:'high',level:3};
+ const root=lib.create(w,i,{width:3,depth:3}),gardens=root.children.find(o=>o.userData.buildingGardens);assert.ok(gardens.children.length>=4);
+ const b=new THREE.Box3().setFromObject(gardens);assert.ok(b.max.y>6.5,'planting stands above the ten-floor rear roof');assert.ok(b.min.y<.2,'ground courtyard planting is also retained');
+ gardens.traverse(o=>{if(o.isMesh)assert.equal(o.geometry,mesh.geometry)});
+});
