@@ -1,4 +1,4 @@
-import {roadParcels} from './road-parcels.js?v=47';
+import {roadParcels} from './road-parcels.js?v=48';
 const cache=new WeakMap();
 // Visual consolidation only: every zoning cell, resident and save remains intact.
 // Never combine across a road, service, construction site or density boundary.

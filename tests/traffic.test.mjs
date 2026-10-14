@@ -54,8 +54,8 @@ test('straight traffic keeps its lane through angled crossings regardless of con
   const w=city();w.tiles.forEach(t=>Object.assign(t,{type:null,level:0}));w.money=1000000;
   const diagonal=[{x:10,y:12},{x:38,y:32}],vertical=[{x:24,y:5},{x:24,y:40}];for(const controls of reverse?[vertical,diagonal]:[diagonal,vertical])assert.ok(E.buildRoadPath(w,controls,'avenue').ok);
   const before=JSON.stringify(w),t=new Traffic(w,E),cells=t.trace(t.search(7*48+24),38*48+24),route=t.route(cells,null,false);assert.ok(route.length>2);
-  for(const p of route)assert.ok(Math.abs(p.x-1.52)<1e-8,'northbound lane does not follow the crossing road');
-  const backward=t.route([...cells].reverse(),null,false);for(const p of backward)assert.ok(Math.abs(p.x-2.48)<1e-8,'opposite lane stays separate');
+  for(const p of route)assert.ok(Math.abs(p.x-1.6)<1e-8,'northbound lane does not follow the crossing road');
+  const backward=t.route([...cells].reverse(),null,false);for(const p of backward)assert.ok(Math.abs(p.x-2.4)<1e-8,'opposite lane stays separate');
   assert.equal(JSON.stringify(w),before);routes.push(route);
  }
  assert.deepEqual(routes[0],routes[1],'construction order cannot change a through route');
@@ -65,4 +65,21 @@ test('a route can turn from one authored road onto another while preserving fini
  assert.ok(route.some(p=>p.x< -40));assert.ok(route.some(p=>p.z>45));
  for(let i=1;i<route.length;i++){assert.ok(Number.isFinite(route[i].x)&&Number.isFinite(route[i].z));assert.ok(Math.hypot(route[i].x-route[i-1].x,route[i].z-route[i-1].z)<1,'turn follows sampled pavement without a tile-sized jump');}
  const a=Object.assign(t.addAgent(),{active:true,phase:'resident',points:route,segment:0,distance:0,x:route[0].x,z:route[0].z,heading:Math.PI/2});t.trips=[];for(let i=0;i<4000&&a.active;i++)t.update(.05);assert.equal(t.completed,1);
+});
+
+test('lane centers match road width, lane count, median and one-way paint',async()=>{
+ const {laneLayout,laneOffset}=await import('../dist/road-lanes.js');
+ for(const [type,spec]of Object.entries(E.ROADS)){
+  const layout=laneLayout(spec),count=spec.oneway?spec.lanes:spec.lanes/2;assert.equal(layout.forward.length,count);assert.equal(layout.reverse.length,spec.oneway?0:count);
+  for(const center of [...layout.forward,...layout.reverse]){assert.ok(Math.abs(center)+.25<spec.width/2,type+' vehicle stays inside pavement');if(spec.median)assert.ok(Math.abs(center)-.25>.16,type+' vehicle clears median');assert.ok(layout.dividers.every(d=>Math.abs(d.offset-center)>.25),type+' vehicle does not straddle paint');}
+  for(let i=0;i<count;i++)assert.equal(laneOffset(spec,i+count),layout.forward[i]);
+ }
+});
+test('multi-lane routes occupy distinct painted lanes without altering one-way reachability',async()=>{
+ const {laneLayout}=await import('../dist/road-lanes.js');
+ for(const type of ['avenue','boulevard','highway','oneway']){
+  const w=city();w.tiles.forEach(t=>Object.assign(t,{type:null,level:0}));w.money=1000000;E.buildRoadPath(w,[{x:5,y:24},{x:40,y:24}],type);const t=new Traffic(w,E),cells=t.trace(t.search(24*48+7),24*48+38),layout=laneLayout(E.ROADS[type]);assert.ok(cells);
+  for(let lane=0;lane<layout.forward.length;lane++){const points=t.route(cells,null,false,lane);for(const p of points)assert.ok(Math.abs(p.z-(2+layout.forward[lane]))<1e-8,type+' exact lane center');}
+  if(type==='oneway')assert.equal(t.trace(t.search(24*48+38),24*48+7),null);
+ }
 });

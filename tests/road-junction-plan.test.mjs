@@ -85,3 +85,22 @@ test('rendering and traffic reuse road geometry until road values change',()=>{
  w.roadPaths[0].controls[1].y=22;const changed=roadGeometry(w,E);assert.notEqual(changed,first);assert.notDeepEqual(changed.roads[0].stations,first.roads[0].stations);
  const i=w.roadPaths[0].tiles[0];w.tiles[i].legacyRoad=true;w.tiles[i].roadWidth=2;assert.notEqual(roadGeometry(w,E),changed);
 });
+
+
+test('outside connections preserve authored road width, dividers and median',async()=>{
+ const {canvasDocument}=await import('./architecture-fixture.mjs');
+ const {laneLayout}=await import('../dist/road-lanes.js');
+ const old=globalThis.document;globalThis.document=canvasDocument();
+ try{for(const type of ['street','avenue','boulevard','highway','oneway']){
+  const w=E.createWorld('Outside lanes','plains',42),v=view();v.box=()=>{};
+  const r=new Roadworks(v),widths=[],dividers=[],edges=[],medians=[];
+  r.height=()=>0;r.ribbon=(_w,_p,width)=>widths.push(width);
+  r.dash=(_w,_s,offset)=>dividers.push(offset);r.line=(_w,_p,_width,_color,offset)=>edges.push(offset);r.surface=(...args)=>medians.push(args);
+  Object.assign(w.tiles[24],{roadType:type,pathIds:['test']});
+  r.outside(w,{id:24,x:2,z:-94,dx:0,dz:-1},v.mat('#555555'));
+  const spec=E.ROADS[type];assert.deepEqual(widths,[spec.width]);
+  assert.deepEqual(dividers,laneLayout(spec).dividers.map(d=>d.offset));
+  assert.deepEqual(edges,[-(spec.width/2-.12),spec.width/2-.12]);
+  assert.equal(medians.length,spec.median?1:0);
+ }}finally{globalThis.document=old;}
+});

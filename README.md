@@ -319,3 +319,10 @@ Rendering and traffic share a cached road geometry plan. It invalidates on road 
 Route geometry now retains the road being travelled through cells shared by multiple authored roads. Previously, the first-built road supplied crossing-cell positions, causing straight traffic to wobble sideways through an angled intersection. The reproduced deviation was 0.137 world units (about 0.69 metres). Through routes now stay exactly on their expected offset in either direction and produce identical points regardless of construction order. Turns still switch onto the selected outgoing road and use continuous sampled geometry.
 
 All 201 tests pass, including construction-order invariance, opposite-lane separation, complete turning trips, saved state immutability, and offscreen simulation. Browser QA shows outside-origin vehicles traversing the angled crossing without errors. This corrects generated route geometry; existing in-progress saved trips retain their points, and the underlying connectivity graph remains road-cell based.
+
+
+## Edition 48: shared road lane layouts
+
+Vehicle routes and road paint now share lane centers derived from pavement width, lane count, one-way direction, and median clearance. New trips distribute deterministically across available lanes instead of sharing one fixed lateral offset. Outside connections continue the actual road width, dividers, and median so highway traffic remains on pavement beyond the map boundary. Existing saved trips retain their route points. This is lane-aware route placement, not dynamic overtaking or a complete lane-changing simulation.
+
+Regression coverage checks all eight road types, distinct lanes on wide roads, one-way reachability, and outside-connection pavement and paint. Rendering does not control traffic advancement, and building assets are unchanged.
