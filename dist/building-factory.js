@@ -1,12 +1,12 @@
-import {ModelLibrary} from './model-library.js?v=55';
-import {buildHouse} from './house-architecture.js?v=55';
-import {buildUrban} from './city-architecture.js?v=55';
+import {ModelLibrary} from './model-library.js?v=56';
+import {buildHouse} from './house-architecture.js?v=56';
+import {buildUrban} from './city-architecture.js?v=56';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import * as THREE from './vendor/three.module.js';
-import {MeshBuilder} from './mesh-builder.js?v=55';
-import {BuildingMaterials} from './building-materials.js?v=55';
-import {lotPlan} from './building-plan.js?v=55';
-import {floorHeight} from './landscape.js?v=55';
+import {MeshBuilder} from './mesh-builder.js?v=56';
+import {BuildingMaterials} from './building-materials.js?v=56';
+import {lotPlan} from './building-plan.js?v=56';
+import {floorHeight} from './landscape.js?v=56';
 
 export class BuildingFactory{
  constructor(view){this.view=view;this.library=view.renderer?new ModelLibrary(view):null;this.ready=this.library?.ready||Promise.resolve();this.materials=new BuildingMaterials(view);this.batchRoot=new THREE.Group();view.scene.add(this.batchRoot);}
@@ -52,12 +52,22 @@ export class BuildingFactory{
   }
   // Keep GPU instance storage and slot identities for unaffected material batches.
   // Grow only the batches whose capacity is exceeded; removed batches release it.
-  for(const [key,batch]of this.batchByKey)if(!instances.has(key)){for(const mesh of [batch.near,batch.far])if(mesh){this.batchRoot.remove(mesh);mesh.dispose();}this.batchByKey.delete(key);}
+  for(const [key,batch]of this.batchByKey)if(!instances.has(key)){for(const mesh of [batch.near,batch.far,batch.shadow])if(mesh){this.batchRoot.remove(mesh);mesh.dispose();}this.batchByKey.delete(key);}
   this.instanceBatches=[];
   for(const [key,{geometry,material,transforms}]of instances){
    const previous=this.batchByKey.get(key),near=this.instanceMesh(previous?.near,geometry,material,transforms.length),lod=geometry.userData.lod;
    let far=null;if(lod)far=this.instanceMesh(previous?.far,lod,material,transforms.length);else if(previous?.far){this.batchRoot.remove(previous.far);previous.far.dispose();}
-   const batch={near,far,transforms,nearSlots:near===previous?.near?previous.nearSlots:[],farSlots:far&&far===previous?.far?previous.farSlots:[]};
+   // Shadow geometry has stable world membership, independent of camera culling.
+   // Zero visible instances keeps this mesh out of colour/reflection draws.
+   // Three uploads its static instance buffer before calling onBeforeShadow.
+   near.castShadow=false;if(far)far.castShadow=false;
+   const casters=transforms.filter(t=>!t.renderRange||t.renderRange[0]===0),shadow=this.instanceMesh(previous?.shadow,geometry,material,casters.length);
+   shadow.userData.shadowCaster=true;shadow.receiveShadow=false;shadow.count=0;
+   let first=Infinity,last=0;const slots=previous?.shadow===shadow?previous.shadowSlots:[];
+   casters.forEach((transform,i)=>{if(slots[i]!==transform){shadow.setMatrixAt(i,transform.matrix);slots[i]=transform;first=Math.min(first,i*16);last=(i+1)*16;}});
+   this.uploadRange(shadow,first,last);shadow.userData.casterCount=casters.length;
+   shadow.onBeforeShadow=()=>{shadow.count=shadow.userData.casterCount;};shadow.onAfterShadow=()=>{shadow.count=0;};
+   const batch={near,far,shadow,shadowSlots:slots,transforms,nearSlots:near===previous?.near?previous.nearSlots:[],farSlots:far&&far===previous?.far?previous.farSlots:[]};
    this.batchByKey.set(key,batch);this.instanceBatches.push(batch);
    // Tests and static exporters without a camera receive the complete near set.
    if(!this.view.camera){transforms.forEach(({matrix},i)=>near.setMatrixAt(i,matrix));near.count=transforms.length;this.uploadRange(near,0,transforms.length*16);if(far)far.count=0;}

@@ -130,3 +130,22 @@ test('building uploads preserve pending edits while transferring only changed oc
  camera.position.z=60;camera.lookAt(0,0,0);factory.updateVisibility();const far=factory.instanceBatches[0].far;assert.equal(far.count,8);assert.deepEqual(far.instanceMatrix.updateRanges,[{start:0,count:128}]);assert.equal(near.count,0);
  const farVersion=far.instanceMatrix.version;factory.updateVisibility();assert.equal(far.instanceMatrix.version,farVersion,'unchanged camera skips uploads');
 });
+
+test('offscreen buildings remain sun-shadow casters without entering colour draws',async()=>{
+ const {BuildingFactory}=await import('../dist/building-factory.js'),camera=new THREE.PerspectiveCamera(45,1,.1,500);camera.position.set(0,4,12);camera.lookAt(0,0,0);
+ const scene=new THREE.Scene(),factory=new BuildingFactory({scene,camera}),geometry=new THREE.BoxGeometry(2,12,2),material=new THREE.MeshStandardMaterial(),buildings=new Map();geometry.userData.lod=new THREE.BoxGeometry(2,12,2);
+ for(let i=0;i<2;i++){const root=new THREE.Group();root.position.set(i*100,6,0);root.userData={factory:true,asset:true,renderImmutable:true};const mesh=new THREE.Mesh(geometry,material);mesh.userData.sharedAsset=true;root.add(mesh);buildings.set(i,root);}
+ factory.rebuild(buildings);const batch=factory.instanceBatches[0],shadow=batch.shadow;assert.equal(batch.near.count,1);assert.equal(batch.far.count,0);assert.equal(batch.near.castShadow,false);assert.equal(batch.far.castShadow,false);assert.equal(shadow.count,0,'no duplicate colour geometry');assert.equal(shadow.geometry,geometry,'full original silhouette');
+ const matrix=shadow.instanceMatrix.array.slice(),version=shadow.instanceMatrix.version;
+ shadow.onBeforeShadow();assert.equal(shadow.count,2,'offscreen building is included');shadow.onAfterShadow();assert.equal(shadow.count,0);
+ camera.lookAt(0,4,100);factory.updateVisibility();assert.equal(batch.near.count+batch.far.count,0);assert.equal(shadow.instanceMatrix.version,version);assert.deepEqual(shadow.instanceMatrix.array,matrix);shadow.onBeforeShadow();assert.equal(shadow.count,2);shadow.onAfterShadow();
+ buildings.delete(1);factory.rebuild(buildings);assert.equal(factory.instanceBatches[0].shadow,shadow,'GPU allocation retained');shadow.onBeforeShadow();assert.equal(shadow.count,1,'demolished buildings stop casting');shadow.onAfterShadow();
+ let disposed=false;shadow.addEventListener('dispose',()=>disposed=true);factory.rebuild(new Map());assert.ok(disposed);assert.ok(!factory.batchRoot.children.includes(shadow));
+});
+
+test('shadow batches include one representation of near/far site vegetation',async()=>{
+ const {BuildingFactory}=await import('../dist/building-factory.js'),factory=new BuildingFactory({scene:new THREE.Scene()}),root=new THREE.Group(),geometry=new THREE.BoxGeometry(1,1,1),material=new THREE.MeshStandardMaterial();root.userData={factory:true,asset:true,renderImmutable:true};
+ for(const range of [null,[0,18],[18,Infinity]]){const mesh=new THREE.Mesh(geometry,material);mesh.userData.sharedAsset=true;if(range)mesh.userData.siteRange=range;root.add(mesh);}
+ factory.rebuild(new Map([[1,root]]));const {shadow}=factory.instanceBatches[0];shadow.onBeforeShadow();assert.equal(shadow.count,2,'one full tree silhouette, without its distant billboard duplicate');shadow.onAfterShadow();assert.equal(shadow.count,0);
+ const version=shadow.instanceMatrix.version;factory.rebuild(new Map([[1,root]]));assert.equal(shadow.instanceMatrix.version,version,'unchanged shadow transforms are not uploaded again');
+});
