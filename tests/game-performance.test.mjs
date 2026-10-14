@@ -117,3 +117,16 @@ test('tree billboards track camera translation and retain pending partial matrix
  attribute.clearUpdateRanges();attribute.addUpdateRange(32,16);camera.position.x=4;v.update();assert.deepEqual(attribute.updateRanges,[{start:0,count:48}],'unconsumed writes are retained');
  const sphere=mesh.boundingSphere;for(const r of v.population.records)assert.ok(sphere.containsPoint(new THREE.Vector3(r.x+r.h*.64,r.y+r.h*1.14,r.z)),'bounds allow restored and rotated trees');
 });
+
+test('building uploads preserve pending edits while transferring only changed occupied slots',async()=>{
+ const {BuildingFactory}=await import('../dist/building-factory.js'),camera=new THREE.PerspectiveCamera(60,1,.1,500);camera.position.set(0,8,15);camera.lookAt(0,0,0);
+ const factory=new BuildingFactory({scene:new THREE.Scene(),camera}),geometry=new THREE.BoxGeometry(1,1,1),material=new THREE.MeshStandardMaterial(),buildings=new Map();geometry.userData.lod=new THREE.BoxGeometry(.9,.9,.9);
+ for(let i=0;i<128;i++){const root=new THREE.Group();root.userData={factory:true,asset:true,renderImmutable:true,lodDistance:30};root.position.set(i<8?(i-3.5)*2:1000+i,0,0);const mesh=new THREE.Mesh(geometry,material);mesh.userData.sharedAsset=true;root.add(mesh);buildings.set(i,root);}
+ factory.rebuild(buildings);const near=factory.instanceBatches[0].near,attribute=near.instanceMatrix;assert.equal(near.count,8);const gpu=attribute.array.slice();attribute.clearUpdateRanges();
+ buildings.get(3).position.y=.25;factory.rebuild(buildings);assert.equal(factory.instanceBatches[0].near,near);assert.deepEqual(attribute.updateRanges,[{start:48,count:16}]);assert.ok(attribute.updateRanges[0].count<attribute.array.length/100);
+ buildings.get(5).position.y=.5;factory.rebuild(buildings);assert.deepEqual(attribute.updateRanges,[{start:48,count:48}]);
+ const version=attribute.version;camera.lookAt(0,8,100);factory.updateVisibility();assert.equal(near.count,0);assert.equal(attribute.version,version);assert.deepEqual(attribute.updateRanges,[{start:48,count:48}]);
+ camera.lookAt(0,0,0);factory.updateVisibility();assert.equal(near.count,8);for(const r of attribute.updateRanges)gpu.set(attribute.array.subarray(r.start,r.start+r.count),r.start);assert.deepEqual(gpu.subarray(0,near.count*16),attribute.array.subarray(0,near.count*16));attribute.clearUpdateRanges();
+ camera.position.z=60;camera.lookAt(0,0,0);factory.updateVisibility();const far=factory.instanceBatches[0].far;assert.equal(far.count,8);assert.deepEqual(far.instanceMatrix.updateRanges,[{start:0,count:128}]);assert.equal(near.count,0);
+ const farVersion=far.instanceMatrix.version;factory.updateVisibility();assert.equal(far.instanceMatrix.version,farVersion,'unchanged camera skips uploads');
+});

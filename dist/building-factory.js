@@ -1,12 +1,12 @@
-import {ModelLibrary} from './model-library.js?v=54';
-import {buildHouse} from './house-architecture.js?v=54';
-import {buildUrban} from './city-architecture.js?v=54';
+import {ModelLibrary} from './model-library.js?v=55';
+import {buildHouse} from './house-architecture.js?v=55';
+import {buildUrban} from './city-architecture.js?v=55';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import * as THREE from './vendor/three.module.js';
-import {MeshBuilder} from './mesh-builder.js?v=54';
-import {BuildingMaterials} from './building-materials.js?v=54';
-import {lotPlan} from './building-plan.js?v=54';
-import {floorHeight} from './landscape.js?v=54';
+import {MeshBuilder} from './mesh-builder.js?v=55';
+import {BuildingMaterials} from './building-materials.js?v=55';
+import {lotPlan} from './building-plan.js?v=55';
+import {floorHeight} from './landscape.js?v=55';
 
 export class BuildingFactory{
  constructor(view){this.view=view;this.library=view.renderer?new ModelLibrary(view):null;this.ready=this.library?.ready||Promise.resolve();this.materials=new BuildingMaterials(view);this.batchRoot=new THREE.Group();view.scene.add(this.batchRoot);}
@@ -33,6 +33,14 @@ export class BuildingFactory{
   const capacity=Math.max(4,2**Math.ceil(Math.log2(count))),mesh=new THREE.InstancedMesh(geometry,material,capacity);
   mesh.count=0;mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);mesh.userData.sharedAsset=true;mesh.castShadow=mesh.receiveShadow=true;mesh.frustumCulled=false;this.batchRoot.add(mesh);return mesh;
  }
+ uploadRange(mesh,first,last){
+  if(last<=first)return;
+  const attribute=mesh.instanceMatrix;
+  // Reflection and main-view rendering may not consume every batch each frame.
+  // Preserve pending writes while bounding uploads to populated dirty slots.
+  for(const range of attribute.updateRanges){first=Math.min(first,range.start);last=Math.max(last,range.start+range.count);}
+  attribute.clearUpdateRanges();attribute.addUpdateRange(first,last-first);attribute.needsUpdate=true;
+ }
  rebuild(buildings){
   this.renderCache ||= new WeakMap();this.batchByKey ||= new Map();this.staticByMaterial ||= new Map();this.cacheHits=0;this.cacheMisses=0;
   const instances=new Map(),statics=new Map(),temporary=[];
@@ -52,7 +60,7 @@ export class BuildingFactory{
    const batch={near,far,transforms,nearSlots:near===previous?.near?previous.nearSlots:[],farSlots:far&&far===previous?.far?previous.farSlots:[]};
    this.batchByKey.set(key,batch);this.instanceBatches.push(batch);
    // Tests and static exporters without a camera receive the complete near set.
-   if(!this.view.camera){transforms.forEach(({matrix},i)=>near.setMatrixAt(i,matrix));near.count=transforms.length;near.instanceMatrix.needsUpdate=true;if(far)far.count=0;}
+   if(!this.view.camera){transforms.forEach(({matrix},i)=>near.setMatrixAt(i,matrix));near.count=transforms.length;this.uploadRange(near,0,transforms.length*16);if(far)far.count=0;}
   }
   for(const [material,batch]of this.staticByMaterial)if(!statics.has(material)){this.batchRoot.remove(batch.mesh);batch.mesh.geometry.dispose();this.staticByMaterial.delete(material);}
   for(const [material,parts]of statics){
@@ -70,14 +78,14 @@ export class BuildingFactory{
   // All material parts of a building share one sphere. Classify it once, then
   // reuse that result for windows, roofs, walls and grounds.
   const visibility=new Map();this.visibilityChecks=0;
-  for(const batch of this.instanceBatches||[]){const {near,far,transforms}=batch;let nearCount=0,farCount=0,nearChanged=false,farChanged=false;batch.nearSlots ||= [];batch.farSlots ||= [];
+  for(const batch of this.instanceBatches||[]){const {near,far,transforms}=batch;let nearCount=0,farCount=0,nearFirst=Infinity,nearLast=0,farFirst=Infinity,farLast=0;batch.nearSlots ||= [];batch.farSlots ||= [];
    for(const transform of transforms){const {sphere,matrix}=transform;let state=visibility.get(sphere);
     if(state===undefined){this.visibilityChecks++;state=!frustum.intersectsSphere(sphere)?0:camera.position.distanceToSquared(sphere.center)>(this.view.detailEnabled===false?0:(sphere.lodDistance||threshold))**2?2:1;visibility.set(sphere,state);}
     if(!state)continue;if(transform.renderRange){const d=camera.position.distanceToSquared(transform.rangeOrigin),[min,max]=transform.renderRange;if(d<min*min||d>=max*max)continue;}const distant=far&&state===2,mesh=distant?far:near,slots=distant?batch.farSlots:batch.nearSlots,index=distant?farCount++:nearCount++;
-    if(slots[index]!==transform){mesh.setMatrixAt(index,matrix);slots[index]=transform;if(distant)farChanged=true;else nearChanged=true;}
+    if(slots[index]!==transform){mesh.setMatrixAt(index,matrix);slots[index]=transform;if(distant){farFirst=Math.min(farFirst,index*16);farLast=(index+1)*16;}else{nearFirst=Math.min(nearFirst,index*16);nearLast=(index+1)*16;}}
    }
-   near.count=nearCount;if(nearChanged)near.instanceMatrix.needsUpdate=true;
-   if(far){far.count=farCount;if(farChanged)far.instanceMatrix.needsUpdate=true;}
+   near.count=nearCount;this.uploadRange(near,nearFirst,nearLast);
+   if(far){far.count=farCount;this.uploadRange(far,farFirst,farLast);}
   }
  }
  accepts(tile){return ['residential','commercial','office','industrial'].includes(tile.type)||!!this.library?.acceptsCivic(tile);}
