@@ -1,7 +1,7 @@
-import {laneOffset} from './road-lanes.js?v=48';
-import {roadGeometry} from './road-junction-plan.js?v=48';
-import {TrafficSpatial} from './traffic-spatial.js?v=48';
-import {Junctions,smoothRoute} from './junctions.js?v=48';
+import {laneOffset,transitionLaneOffsets} from './road-lanes.js?v=49';
+import {roadGeometry} from './road-junction-plan.js?v=49';
+import {TrafficSpatial} from './traffic-spatial.js?v=49';
+import {Junctions,smoothRoute} from './junctions.js?v=49';
 // Car slots grow with population; saved road trips always have room to resume.
 export function carCapacity(world){const population=world.tiles.reduce((n,t)=>n+(t.type==='residential'&&!t.construction?(t.people||0):0),0),saved=world.citizens?.residents.filter(r=>r.trip).length||0;return Math.max(32,Math.min(512,Math.ceil(population/4)),saved);}
 // Destination-based road trips. No random placement or per-frame route searches.
@@ -40,7 +40,8 @@ export class Traffic {
  }
 
  if(portal&&incoming){points.unshift(portal.outside,{x:portal.x+portal.dx*3,z:portal.z+portal.dz*3});offsets.unshift(offsets[0],offsets[0]);}else if(portal){points.push({x:portal.x+portal.dx*3,z:portal.z+portal.dz*3},portal.outside);offsets.push(offsets.at(-1),offsets.at(-1));}
- return smoothRoute(points.map((p,i)=>{const a=points[Math.max(0,i-1)],b=points[Math.min(points.length-1,i+1)],dx=b.x-a.x,dz=b.z-a.z,l=Math.hypot(dx,dz)||1;return{x:p.x-dz/l*offsets[i],z:p.z+dx/l*offsets[i]}}));
+ const lanePositions=transitionLaneOffsets(points,offsets);
+ return smoothRoute(points.map((p,i)=>{const a=points[Math.max(0,i-1)],b=points[Math.min(points.length-1,i+1)],dx=b.x-a.x,dz=b.z-a.z,l=Math.hypot(dx,dz)||1;return{x:p.x-dz/l*lanePositions[i],z:p.z+dx/l*lanePositions[i]}}));
  }
  between(from,to){const key=from+':'+to;if(this.routeCache.has(key))return this.routeCache.get(key);let result=null;const starts=neighbors(from).filter(i=>this.graph.has(i)),ends=neighbors(to).filter(i=>this.graph.has(i));for(const start of starts){const parents=this.search(start);for(const end of ends){const cells=this.trace(parents,end);if(cells){const center=this.route(cells,null,false,(Math.imul(from+1,31)^to)>>>0);result={cells,points:[roadPoint(from),...center,roadPoint(to)]};break;}}if(result)break;}this.routeCache.set(key,result);return result;}
  addAgent(){const a={active:false,x:0,z:0,heading:0};this.agents.push(a);return a;}

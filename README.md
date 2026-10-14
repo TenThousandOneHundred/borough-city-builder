@@ -326,3 +326,10 @@ All 201 tests pass, including construction-order invariance, opposite-lane separ
 Vehicle routes and road paint now share lane centers derived from pavement width, lane count, one-way direction, and median clearance. New trips distribute deterministically across available lanes instead of sharing one fixed lateral offset. Outside connections continue the actual road width, dividers, and median so highway traffic remains on pavement beyond the map boundary. Existing saved trips retain their route points. This is lane-aware route placement, not dynamic overtaking or a complete lane-changing simulation.
 
 Regression coverage checks all eight road types, distinct lanes on wide roads, one-way reachability, and outside-connection pavement and paint. Rendering does not control traffic advancement, and building assets are unchanged.
+
+
+## Edition 49: gradual lane merges at road-width changes
+
+New vehicle routes now merge upstream of lane drops and spread out downstream of lane gains over a distance measured along the road. A highway outer lane joining a street previously changed lateral position over one sample; it now uses a smooth transition that finishes before narrower pavement. The measured largest heading change in the reproduced route fell from 14.37 to 1.41 degrees. Unchanged lane offsets use a fast path and retain their original points, including on curves. Existing saved journeys retain their route geometry.
+
+Tests cover merges in both directions, pavement clearance, monotonic travel, sample-density independence, closely spaced transitions, and trips completing without a renderer. This remains predetermined route placement; dynamic overtaking and a full lane-choice planner are separate unfinished work.

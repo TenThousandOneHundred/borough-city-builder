@@ -83,3 +83,29 @@ test('multi-lane routes occupy distinct painted lanes without altering one-way r
   if(type==='oneway')assert.equal(t.trace(t.search(24*48+38),24*48+7),null);
  }
 });
+
+
+test('lane drops merge before narrower pavement and lane gains spread out afterwards',()=>{
+ for(const reverse of [false,true]){
+  const w=city();w.tiles.forEach(t=>Object.assign(t,{type:null,level:0}));w.money=1000000;
+  E.buildRoadPath(w,[{x:5,y:24},{x:24,y:24}],'highway');E.buildRoadPath(w,[{x:24,y:24},{x:42,y:24}],'street');
+  const before=JSON.stringify(w),t=new Traffic(w,E),start=24*48+(reverse?42:5),end=24*48+(reverse?5:42),cells=t.trace(t.search(start),end),route=t.route(cells,null,false,2);
+  for(let i=1;i<route.length-1;i++){
+   const a=route[i-1],b=route[i],c=route[i+1],ux=b.x-a.x,uz=b.z-a.z,vx=c.x-b.x,vz=c.z-b.z;
+   const angle=Math.acos(Math.max(-1,Math.min(1,(ux*vx+uz*vz)/(Math.hypot(ux,uz)*Math.hypot(vx,vz)))));
+   assert.ok(angle<2*Math.PI/180,'merge has no abrupt steering change');
+   if(b.x>=2.01)assert.ok(Math.abs(b.z-2)+.25<E.ROADS.street.width/2,'car clears narrower pavement edge');
+   assert.ok(reverse?b.x<a.x:b.x>a.x,'no backward travel during merge');
+  }
+  assert.equal(JSON.stringify(w),before);
+  t.trips=[];const a=Object.assign(t.addAgent(),{active:true,phase:'resident',points:route,segment:0,distance:0,x:route[0].x,z:route[0].z,heading:reverse?-Math.PI/2:Math.PI/2});
+  for(let i=0;i<4000&&a.active;i++)t.update(.05);assert.equal(t.completed,1,'merge completes without a renderer');
+ }
+});
+test('lane transition shape uses arc length and leaves unchanged curved lanes untouched',async()=>{
+ const {transitionLaneOffsets}=await import('../dist/road-lanes.js');
+ const sample=step=>{const points=Array.from({length:Math.round(40/step)+1},(_,i)=>({x:i*step,z:0})),offsets=points.map(p=>p.x<20?2:.6);return {points,values:transitionLaneOffsets(points,offsets)};};
+ const coarse=sample(.5),fine=sample(.1);for(let i=0;i<coarse.points.length;i++)assert.ok(Math.abs(coarse.values[i]-fine.values[i*5])<1e-10);
+ const points=Array.from({length:100},(_,i)=>({x:i,z:Math.sin(i/10)})),offsets=points.map(()=>1.2);assert.equal(transitionLaneOffsets(points,offsets),offsets,'constant lane takes allocation-free fast path');
+ const nearby=[2,2,.6,.6,1.8,1.8,.5,.5];const result=transitionLaneOffsets(nearby.map((_,i)=>({x:i,z:0})),nearby);assert.ok(result.every(Number.isFinite));assert.ok(result.every(v=>v>=.5&&v<=2));
+});
