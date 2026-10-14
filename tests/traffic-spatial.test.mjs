@@ -39,3 +39,21 @@ test('growing the fleet preserves running cars and never shrinks active journeys
 test('a thousand residents receive a fair departure check within twenty scheduling ticks',async()=>{
  const {Residents}=await import('../dist/residents.js'),r=Object.create(Residents.prototype),seen=new Set();Object.assign(r,{state:{time:0,residents:Array.from({length:1000},(_,id)=>({id,nextAt:0}))},agents:new Map(),cursor:0,destination:()=>[1,'work'],depart(person){seen.add(person.id);return false;}});for(let i=0;i<20;i++)r.update(.5);assert.equal(seen.size,1000);
 });
+
+test('dense diagonal queries stay conservative after sequential cell crossings and resets',()=>{
+ const rng=random(),agents=Array.from({length:512},()=>({active:true,x:rng()*240-120,z:rng()*240-120})),index=new TrafficSpatial();index.reset(agents);
+ for(let n=0;n<900;n++){
+  const a=agents[n%512],angle=Math.PI/4+(rng()-.5)*.1,f={x:Math.sin(angle),z:Math.cos(angle)},candidates=index.corridor(a,f);
+  assert.equal(index.diagonalReady,true);assert.equal(new Set(candidates).size,candidates.length);
+  for(const b of agents)if(matches(a,b,f))assert.ok(candidates.includes(b),'diagonal leader omitted');
+  a.x=rng()*240-120;a.z=rng()*240-120;index.move(a);
+ }
+ agents[3].active=false;index.reset(agents);assert.equal(index.diagonalReady,false);
+ const candidates=index.corridor(agents[0],{x:Math.SQRT1_2,z:Math.SQRT1_2});assert.equal(index.diagonalReady,true);assert.ok(!candidates.includes(agents[3]));
+});
+test('diagonal traffic preserves exact full-scan journeys through turns',()=>{
+ const pair=[simulation(512),simulation(512,true)],angle=Math.PI/4;
+ for(const t of pair)for(const a of t.agents){const rotate=p=>({x:(p.x+p.z)*Math.SQRT1_2,z:(p.z-p.x)*Math.SQRT1_2});Object.assign(a,rotate(a));a.points=a.points.map(rotate);a.heading+=angle;}
+ for(let i=0;i<2400;i++){for(const t of pair)t.update(.05);if(i%80===0){assert.deepEqual(pair[0].agents,pair[1].agents);assert.deepEqual(pair[0].summary,pair[1].summary);}}
+ assert.deepEqual(pair[0].agents,pair[1].agents);assert.equal(pair[0].completed,pair[1].completed);assert.ok(pair[0].completed>0);
+});
