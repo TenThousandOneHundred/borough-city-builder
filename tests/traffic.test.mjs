@@ -47,3 +47,22 @@ test('red-light approaches stop the vehicle front before the rendered stop bar',
  t.update(4);assert.equal(a.waitReason,'Red signal');assert.ok(a.speed<.1);const pavementRadius=j.radius-1.2,stopBar=j.z-pavementRadius-1.02;assert.ok(a.z+.45<=stopBar+.05,'front bumper remains behind stop paint');
  t.update(15);assert.ok(a.z>stopBar,'green phase releases the car');
 });
+
+test('straight traffic keeps its lane through angled crossings regardless of construction order',()=>{
+ const routes=[];
+ for(const reverse of [false,true]){
+  const w=city();w.tiles.forEach(t=>Object.assign(t,{type:null,level:0}));w.money=1000000;
+  const diagonal=[{x:10,y:12},{x:38,y:32}],vertical=[{x:24,y:5},{x:24,y:40}];for(const controls of reverse?[vertical,diagonal]:[diagonal,vertical])assert.ok(E.buildRoadPath(w,controls,'avenue').ok);
+  const before=JSON.stringify(w),t=new Traffic(w,E),cells=t.trace(t.search(7*48+24),38*48+24),route=t.route(cells,null,false);assert.ok(route.length>2);
+  for(const p of route)assert.ok(Math.abs(p.x-1.52)<1e-8,'northbound lane does not follow the crossing road');
+  const backward=t.route([...cells].reverse(),null,false);for(const p of backward)assert.ok(Math.abs(p.x-2.48)<1e-8,'opposite lane stays separate');
+  assert.equal(JSON.stringify(w),before);routes.push(route);
+ }
+ assert.deepEqual(routes[0],routes[1],'construction order cannot change a through route');
+});
+test('a route can turn from one authored road onto another while preserving finite continuous points',()=>{
+ const w=city();w.tiles.forEach(t=>Object.assign(t,{type:null,level:0}));w.money=1000000;E.buildRoadPath(w,[{x:5,y:22},{x:40,y:22}],'street');E.buildRoadPath(w,[{x:24,y:5},{x:24,y:40}],'street');const t=new Traffic(w,E),cells=t.trace(t.search(22*48+8),37*48+24),route=t.route(cells,null,false);
+ assert.ok(route.some(p=>p.x< -40));assert.ok(route.some(p=>p.z>45));
+ for(let i=1;i<route.length;i++){assert.ok(Number.isFinite(route[i].x)&&Number.isFinite(route[i].z));assert.ok(Math.hypot(route[i].x-route[i-1].x,route[i].z-route[i-1].z)<1,'turn follows sampled pavement without a tile-sized jump');}
+ const a=Object.assign(t.addAgent(),{active:true,phase:'resident',points:route,segment:0,distance:0,x:route[0].x,z:route[0].z,heading:Math.PI/2});t.trips=[];for(let i=0;i<4000&&a.active;i++)t.update(.05);assert.equal(t.completed,1);
+});

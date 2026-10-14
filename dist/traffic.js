@@ -1,6 +1,6 @@
-import {roadGeometry} from './road-junction-plan.js?v=46';
-import {TrafficSpatial} from './traffic-spatial.js?v=46';
-import {Junctions,smoothRoute} from './junctions.js?v=46';
+import {roadGeometry} from './road-junction-plan.js?v=47';
+import {TrafficSpatial} from './traffic-spatial.js?v=47';
+import {Junctions,smoothRoute} from './junctions.js?v=47';
 // Car slots grow with population; saved road trips always have room to resume.
 export function carCapacity(world){const population=world.tiles.reduce((n,t)=>n+(t.type==='residential'&&!t.construction?(t.people||0):0),0),saved=world.citizens?.residents.filter(r=>r.trip).length||0;return Math.max(32,Math.min(512,Math.ceil(population/4)),saved);}
 // Destination-based road trips. No random placement or per-frame route searches.
@@ -21,7 +21,21 @@ export class Traffic {
  }
  search(start,graph=this.graph){if(graph===this.graph&&this.searchCache.has(start))return this.searchCache.get(start);const parents=new Map([[start,null]]),queue=[start];for(let k=0;k<queue.length;k++)for(const n of graph.get(queue[k])||[])if(!parents.has(n)){parents.set(n,queue[k]);queue.push(n)}if(graph===this.graph){if(this.searchCache.size>=128)this.searchCache.delete(this.searchCache.keys().next().value);this.searchCache.set(start,parents);}return parents;}
  trace(parents,end){if(!parents.has(end))return null;const path=[];for(let i=end;i!==null;i=parents.get(i))path.push(i);return path.reverse();}
- route(cells,portal,incoming){const points=[];for(let k=0;k<cells.length;k++){const i=cells[k],j=cells[k+1];points.push(this.positions.get(i)||roadPoint(i));if(j===undefined)continue;for(const id of this.world.tiles[i].pathIds||[]){const path=this.samples.get(id);if(!path?.mapping.has(j))continue;const a=path.mapping.get(i),b=path.mapping.get(j),step=b>=a?1:-1;for(let n=a+step;step>0?n<b:n>b;n+=step)points.push(path.samples[n]);break;}}
+ route(cells,portal,incoming){const points=[];let previous=null;
+ // A crossing cell can belong to several roads. Keep the travelled centerline
+ // through shared cells instead of switching to whichever road was built first.
+ const choices=cells.map((i,k)=>k===cells.length-1?[]:(this.world.tiles[i].pathIds||[]).map(id=>this.samples.get(id)).filter(path=>path?.mapping.has(i)&&path.mapping.has(cells[k+1])));
+ for(let k=0;k<cells.length;k++){
+  const i=cells[k],j=cells[k+1],available=choices[k];let path=available.includes(previous)?previous:null;
+  if(!path&&available.length){
+   let longest=-1;for(const candidate of available){let length=0;while(k+length<choices.length&&choices[k+length].includes(candidate))length++;if(length>longest){longest=length;path=candidate;}}
+  }
+  const anchor=path||previous;
+  points.push(anchor?.mapping.has(i)?anchor.samples[anchor.mapping.get(i)]:cells.length===1?(this.positions.get(i)||roadPoint(i)):roadPoint(i));
+  if(path&&j!==undefined){const a=path.mapping.get(i),b=path.mapping.get(j),step=b>=a?1:-1;for(let n=a+step;step>0?n<b:n>b;n+=step)points.push(path.samples[n]);}
+  previous=path;
+ }
+
  if(portal&&incoming)points.unshift(portal.outside,{x:portal.x+portal.dx*3,z:portal.z+portal.dz*3});else if(portal)points.push({x:portal.x+portal.dx*3,z:portal.z+portal.dz*3},portal.outside);
  return smoothRoute(points.map((p,i)=>{const a=points[Math.max(0,i-1)],b=points[Math.min(points.length-1,i+1)],dx=b.x-a.x,dz=b.z-a.z,l=Math.hypot(dx,dz)||1;return{x:p.x-dz/l*.48,z:p.z+dx/l*.48}}));
  }
