@@ -55,12 +55,12 @@ test('night lighting illuminates selected modern windows while balconies and oth
  lib.setNight(false);assert.ok(glass.every(m=>m.emissiveIntensity===0));
 });
 
-test('large zoned parcels select full-scale perimeter blocks and retain open courtyards',async()=>{
+test('large zoned parcels retain full-scale blocks and towers with open courtyard geometry',async()=>{
  const lib=await library(),world=E.createWorld('Block coverage','plains',324),index=20*48+20;
  for(const [type,density]of [['residential','medium'],['residential','high'],['commercial','high'],['office','high']]){
   world.tiles[index]={type,density,level:2};const before=JSON.stringify(world),root=lib.create(world,index,{width:3,depth:2}),asset=lib.models.find(m=>m.name===root.userData.model),model=root.children[0];
-  assert.ok(type==='office'||asset.name.startsWith('perimeter-'),type+' '+asset.name);assert.equal(model.scale.x,.2);
-  assert.ok(asset.size.x*asset.size.z*.04/(12*8)>.55,type+' '+asset.name+' coverage '+asset.size.x*asset.size.z*.04/(12*8));assert.equal(JSON.stringify(world),before);
+  if(density==='medium')assert.ok(asset.name.startsWith('perimeter-'),type+' '+asset.name);assert.equal(model.scale.x,.2);
+  assert.ok(asset.size.x*asset.size.z*.04/(12*8)>(asset.name.startsWith('perimeter-')?.55:.12),type+' '+asset.name+' maintains a full-scale footprint');assert.equal(JSON.stringify(world),before);
   // Ray through the centre of the court must reach its planted ground, not a roof.
   if(!asset.name.startsWith('perimeter-'))continue;
   root.updateMatrixWorld(true);const origin=model.localToWorld(new THREE.Vector3(0,150,0)),ray=new THREE.Raycaster(origin,new THREE.Vector3(0,-1,0));
@@ -206,5 +206,21 @@ test('authored household doors position their own clear garden walks and road ac
   const front=asset.streetFronts.filter(f=>f.kind==='entrance'&&f.normal[1]>.9),frontZ=Math.max(...front.map(f=>f.position[2])),expected=front.filter(f=>f.position[2]>=frontZ-.5).map(f=>(f.position[0]+asset.origin.x)*scale);
   assert.deepEqual(p.entranceXs,expected,asset.name);for(const x of expected)assert.ok(p.accessPoints.some(a=>a.kind==='walk'&&Math.abs(a.x-x)<1e-8),asset.name+' door has matching path');
   assert.equal(JSON.stringify(w),before);lib.models=all;
+ }
+});
+
+
+test('high-density zoning uses varied full models with deterministic selection and bounded footprints',async()=>{
+ const lib=await library(),world=E.createWorld('Skyline diversity','plains',324),before=()=>JSON.stringify(world);
+ for(const [type,width,depth,min]of [['office',1,1,2],['office',2,2,5],['residential',2,2,5],['commercial',2,2,3]]){
+  const selected=new Map();world.tiles.forEach(t=>Object.assign(t,{type:null,level:0}));
+  for(let k=0;k<120;k++){
+   const i=(10+Math.floor(k/20))*48+8+k%20;world.tiles[i]={type,density:'high',level:2};const saved=before(),root=lib.create(world,i,{width,depth});
+   selected.set(root.userData.model,(selected.get(root.userData.model)||0)+1);assert.equal(before(),saved);
+   const model=root.children[0],asset=lib.models.find(m=>m.name===root.userData.model);if(type==='commercial')assert.ok(asset.floors>=4,'high-density commerce retains multi-storey buildings');assert.equal(model.scale.x,model.scale.y);assert.equal(model.scale.y,model.scale.z);assert.ok(asset.size.x*model.scale.x<width*4);assert.ok(asset.size.z*model.scale.z<depth*4);
+   if(k%30===0)assert.equal(lib.create(world,i,{width,depth}).userData.model,root.userData.model,'rebuild is deterministic');
+  }
+  assert.ok(selected.size>=min,type+' '+[...selected.keys()].join(','));assert.ok(Math.max(...selected.values())<110,'one model cannot dominate every sampled lot');
+  if(type==='office'&&width===2){assert.ok(selected.has('elliptic-glass-offices'));assert.ok(selected.has('glass-podium-offices'));}
  }
 });

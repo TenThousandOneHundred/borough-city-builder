@@ -1,5 +1,5 @@
-import {Walking,sidewalkPosition} from './walking.js?v=53';
-import {roadPoint} from './traffic.js?v=53';
+import {Walking,sidewalkPosition} from './walking.js?v=54';
+import {roadPoint} from './traffic.js?v=54';
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const nearby=(engine,i)=>engine.neighbors(i);
 export const stopPosition=sidewalkPosition;

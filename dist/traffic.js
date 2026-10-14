@@ -1,7 +1,7 @@
-import {laneOffset,transitionLaneOffsets} from './road-lanes.js?v=53';
-import {roadGeometry} from './road-junction-plan.js?v=53';
-import {TrafficSpatial} from './traffic-spatial.js?v=53';
-import {Junctions,smoothRoute} from './junctions.js?v=53';
+import {laneOffset,transitionLaneOffsets} from './road-lanes.js?v=54';
+import {roadGeometry} from './road-junction-plan.js?v=54';
+import {TrafficSpatial} from './traffic-spatial.js?v=54';
+import {Junctions,smoothRoute} from './junctions.js?v=54';
 // Car slots grow with population; saved road trips always have room to resume.
 export function carCapacity(world){const population=world.tiles.reduce((n,t)=>n+(t.type==='residential'&&!t.construction?(t.people||0):0),0),saved=world.citizens?.residents.filter(r=>r.trip).length||0;return Math.max(32,Math.min(512,Math.ceil(population/4)),saved);}
 // Destination-based road trips. No random placement or per-frame route searches.
