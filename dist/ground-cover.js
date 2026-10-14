@@ -1,5 +1,6 @@
+import {coverBatches} from './ground-cover-batches.js?v=52';
 import * as THREE from './vendor/three.module.js';
-import {terrainNoise} from './terrain-field.js?v=51';
+import {terrainNoise} from './terrain-field.js?v=52';
 // Small 3D grasses and reeds break up flat ground at street-level camera distances.
 export function groundCover(view,world,height,wetness){
  const positions=[],colors=[],normals=[];
@@ -13,6 +14,5 @@ export function groundCover(view,world,height,wetness){
   for(let j=0;j<(reed?6:4);j++){const angle=rand()*Math.PI*2,r=rand()*.18,px=x+Math.cos(angle)*r,pz=z+Math.sin(angle)*r,ww=reed?.018:.03,bend=rand()*.14,dir=rand()*6.28,dx=Math.cos(dir)*ww,dz=Math.sin(dir)*ww;
    triangle([px-dx,y,pz-dz],[px+dx,y,pz+dz],[px+bend,y+h,pz+bend*.5],reed?[.22,.26,.12]:[.2+rand()*.08,.27+rand()*.08,.12]);}
  }
- const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geometry.computeBoundingSphere();
- const material=new THREE.MeshStandardMaterial({vertexColors:true,side:THREE.DoubleSide,roughness:1});const mesh=new THREE.Mesh(geometry,material);mesh.receiveShadow=true;mesh.visible=view.detailEnabled!==false;mesh.userData.cover=true;return mesh;
+ const material=new THREE.MeshStandardMaterial({vertexColors:true,side:THREE.DoubleSide,roughness:1});const group=coverBatches(positions,normals,colors,material);group.visible=view.detailEnabled!==false;return group;
 }

@@ -347,3 +347,10 @@ Transition planning uses nearby endpoint buckets and the existing road-edit cach
 Water now changes from muted turquoise shallows to darker blue at depth, with a subtle animated wash at the waterline. The shader reads two compact height textures built directly from the existing near and far terrain meshes; it does not resample terrain heights or add a second water draw. Sculpting refreshes the near texture in place, and switching worlds disposes both textures with the reflection target. Reflection throttling, graphics controls, buildings, and simulation advancement are unchanged.
 
 The two RGBA8 height maps use 792,200 bytes and preserve heights to within 0.002 world units. Regression checks verify encoding against rendered terrain, in-place sculpt refresh of the actual shader texture, resource disposal, and simulation independence. This adds water appearance, not physical flow or flooding simulation.
+
+
+## Edition 52: bounded ground-cover draws
+
+Grass and reeds retain every triangle, normal, color, and material. Their shared vertex buffers are spatially ordered so nearby views can omit invisible ranges in at most four draws. Broad views use one draw. Selection is cached for stationary cameras and recomputed for each actual render camera, including water reflections. Camera movement only changes draw ranges; it does not upload or regenerate blade geometry. World changes dispose all shared resources once.
+
+`node scripts/benchmark-ground-cover.mjs <previous-ground-cover-module>` verifies an order-independent exact triangle digest against Edition 51. In the seeded plains fixture, submitted grass triangles fall from 28,956 to 10,941 in the street view and 9,974 in the neighborhood view (62–66% fewer). The overview remains one draw with all 28,956 triangles. These are geometry-submission measurements, not an FPS claim. Offscreen traffic and pedestrians are unaffected.
