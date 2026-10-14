@@ -51,7 +51,7 @@ test('medium residential and low commercial zoning do not select high-rise model
 
 test('night lighting illuminates selected modern windows while balconies and other panes remain dark',async()=>{
  const lib=await library(),glass=[...lib.materials].filter(m=>m.name.startsWith('modern-glass'));assert.equal(glass.length,2);lib.setNight(true);
- assert.equal(glass.find(m=>m.name==='modern-glass').emissiveIntensity,0);assert.ok(glass.find(m=>m.name==='modern-glass-occupied').emissiveIntensity>0);
+ assert.ok(glass.every(m=>m.userData.roomLighting&&m.emissiveIntensity>0),'room shaders control individual panes rather than lighting a fixed material pattern');
  lib.setNight(false);assert.ok(glass.every(m=>m.emissiveIntensity===0));
 });
 
@@ -223,4 +223,16 @@ test('high-density zoning uses varied full models with deterministic selection a
   assert.ok(selected.size>=min,type+' '+[...selected.keys()].join(','));assert.ok(Math.max(...selected.values())<110,'one model cannot dominate every sampled lot');
   if(type==='office'&&width===2){assert.ok(selected.has('elliptic-glass-offices'));assert.ok(selected.has('glass-podium-offices'));}
  }
+});
+
+test('individual window rooms retain geometry and shared LOD attributes while excluding railings',async()=>{
+ const {addWindowRooms}=await import('../dist/window-lighting.js'),lib=await library(),bytes=fs.readFileSync(new URL('../dist/assets/buildings/lod.bin',import.meta.url));lib.ingestLod(JSON.parse(fs.readFileSync(new URL('../dist/assets/buildings/lod.json',import.meta.url))),bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.length));
+ let litPanes=0,darkSurfaces=0,roomBytes=0;
+ for(const model of lib.models)for(const mesh of model.root.children){if(!mesh.material.userData.roomLighting)continue;const g=mesh.geometry,room=g.attributes.windowRoom;assert.equal(room.count,g.attributes.position.count);assert.equal(g.userData.lod.attributes.windowRoom,room,'near and far use identical room data');roomBytes+=room.array.byteLength;
+  const before=room.array.slice(),positions=g.attributes.position.array.slice(),indices=g.index.array.slice();const stats=addWindowRooms(g);assert.deepEqual(g.attributes.windowRoom.array,before,'room seeds remain stable');assert.deepEqual(g.attributes.position.array,positions);assert.deepEqual(g.index.array,indices);litPanes+=stats.eligible;darkSurfaces+=stats.panes-stats.eligible;
+  for(let j=0;j<g.index.count;j+=3){const a=g.index.getX(j);for(let k=1;k<3;k++){const b=g.index.getX(j+k);assert.equal(room.getX(a),room.getX(b),'no light discontinuity across a pane');assert.equal(room.getY(a),room.getY(b));}}
+ }
+ assert.ok(litPanes>1000);assert.ok(darkSurfaces>0);assert.ok(roomBytes<2e6,'room data stays below two megabytes across the entire library');
+ const railing=new THREE.PlaneGeometry(3,1),pane=new THREE.PlaneGeometry(2,2),skylight=new THREE.PlaneGeometry(2,2);skylight.rotateX(-Math.PI/2);assert.equal(addWindowRooms(railing).eligible,0);assert.equal(addWindowRooms(skylight).eligible,0);assert.equal(addWindowRooms(pane).eligible,1);
+ const material=lib.models.flatMap(m=>m.root.children).find(m=>m.material.userData.roomLighting).material,shader={uniforms:{},vertexShader:'#include <begin_vertex>',fragmentShader:'#include <emissivemap_fragment>'};material.onBeforeCompile(shader);assert.equal(shader.uniforms.roomNight,material.userData.roomLightingState);lib.setNight(true);assert.equal(shader.uniforms.roomNight.value,1);lib.setNight(false);assert.equal(shader.uniforms.roomNight.value,0);
 });
