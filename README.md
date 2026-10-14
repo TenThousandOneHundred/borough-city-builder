@@ -354,3 +354,10 @@ The two RGBA8 height maps use 792,200 bytes and preserve heights to within 0.002
 Grass and reeds retain every triangle, normal, color, and material. Their shared vertex buffers are spatially ordered so nearby views can omit invisible ranges in at most four draws. Broad views use one draw. Selection is cached for stationary cameras and recomputed for each actual render camera, including water reflections. Camera movement only changes draw ranges; it does not upload or regenerate blade geometry. World changes dispose all shared resources once.
 
 `node scripts/benchmark-ground-cover.mjs <previous-ground-cover-module>` verifies an order-independent exact triangle digest against Edition 51. In the seeded plains fixture, submitted grass triangles fall from 28,956 to 10,941 in the street view and 9,974 in the neighborhood view (62–66% fewer). The overview remains one draw with all 28,956 triangles. These are geometry-submission measurements, not an FPS claim. Offscreen traffic and pedestrians are unaffected.
+
+
+## Edition 53: camera-following detailed trees
+
+The ten detailed tree slots now follow the nearest eligible trees as the camera moves, with a retention band to reduce boundary churn. Previously the full models were chosen once during terrain creation, leaving newly approached trees as flat cards. Promoting a tree hides exactly its billboard slot; moving away restores that slot. Original tree positions, shared models, and materials are retained, and a representation change requests a shadow refresh.
+
+Billboards also respond to camera translation, which the previous orbit-angle-only check missed. Unchanged orientations keep their matrices; changed slots upload bounded intervals while preserving pending writes. Stationary cameras and unchanged night colors take fast paths. Tests verify nearest-tree replacement, representation exclusivity, detail toggling, translated-camera orientation, stable buffers, conservative bounds, and pending-write retention. The detailed-tree cap remains ten; no FPS improvement is claimed.

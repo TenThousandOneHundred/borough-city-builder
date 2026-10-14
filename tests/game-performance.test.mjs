@@ -97,3 +97,23 @@ test('ground-cover culling preserves visible blades and shares buffers across bo
  assert.deepEqual(attributes.map(a=>a.version),versions,'camera changes upload no vertex data');attributes.forEach((a,i)=>assert.deepEqual(a.array,arrays[i]));assert.equal(JSON.stringify(world),before);
  let geometryDisposals=0,materialDisposals=0;cover.children.forEach(m=>m.geometry.addEventListener('dispose',()=>geometryDisposals++));cover.children[0].material.addEventListener('dispose',()=>materialDisposals++);cover.userData.dispose();cover.userData.dispose();assert.equal(geometryDisposals,4);assert.equal(materialDisposals,1);
 });
+
+test('detailed trees follow the camera while preserving every tree location and shared asset',async()=>{
+ const {Vegetation}=await import('../dist/vegetation.js'),camera=new THREE.PerspectiveCamera(),prototype=new THREE.Group();prototype.add(new THREE.Mesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshStandardMaterial()));
+ const material=new THREE.MeshBasicMaterial(),view={camera,night:false,detailEnabled:true,renderer:{shadowMap:{needsUpdate:false}}};camera.position.set(0,4,0);
+ const vegetation=Object.create(Vegetation.prototype);Object.assign(vegetation,{v:view,broadleaf:[],impostors:[{material}],prototypes:[prototype]});
+ const positions=Array.from({length:30},(_,i)=>[i*3,0,3]),before=JSON.stringify(positions),group=new THREE.Group(),objects=vegetation.populate(group,positions,()=>0);
+ const first=[...vegetation.population.near.keys()];assert.ok(first.includes(0));assert.ok(first.length<=10);assert.equal(objects.filter(o=>!o.isInstancedMesh).length,first.length);
+ camera.position.x=75;view.renderer.shadowMap.needsUpdate=false;vegetation.update();const last=[...vegetation.population.near.keys()];assert.ok(last.includes(25));assert.ok(!last.includes(0));assert.ok(view.renderer.shadowMap.needsUpdate);
+ const matrix=new THREE.Matrix4();for(const r of vegetation.population.records){r.mesh.getMatrixAt(r.slot,matrix);assert.equal(matrix.elements[12],r.x);assert.equal(matrix.elements[14],r.z);const hidden=new THREE.Vector3().setFromMatrixScale(matrix).length()<1e-8;assert.equal(hidden,vegetation.population.near.has(r.i));}
+ const versions=vegetation.instances.map(m=>m.instanceMatrix.version);vegetation.update();assert.deepEqual(vegetation.instances.map(m=>m.instanceMatrix.version),versions);assert.equal(vegetation.lastMatrixWrites,0);
+ view.detailEnabled=false;vegetation.update();assert.equal(vegetation.population.near.size,0);assert.equal(objects.filter(o=>!o.isInstancedMesh).length,0);view.detailEnabled=true;vegetation.update();assert.ok(vegetation.population.near.has(25));
+ camera.position.x=0;vegetation.update();assert.ok(vegetation.population.near.has(0));assert.equal(JSON.stringify(positions),before);assert.equal(prototype.children[0].geometry.attributes.position.count,24);
+});
+test('tree billboards track camera translation and retain pending partial matrix uploads',async()=>{
+ const {Vegetation}=await import('../dist/vegetation.js'),camera=new THREE.PerspectiveCamera();camera.position.set(0,10,0);const material=new THREE.MeshBasicMaterial(),v=Object.create(Vegetation.prototype);
+ Object.assign(v,{v:{camera,detailEnabled:false,night:false},broadleaf:[],impostors:[{material}],prototypes:[]});v.populate(new THREE.Group(),[[0,40,4],[200,40,4],[400,40,4]],()=>0);const mesh=v.instances[0],attribute=mesh.instanceMatrix;attribute.clearUpdateRanges();const before=attribute.array.slice();
+ camera.position.x=2;v.update();assert.notDeepEqual(attribute.array.slice(0,16),before.slice(0,16),'panning without orbit updates the nearby billboard');assert.deepEqual(attribute.array.slice(16),before.slice(16),'distant unchanged orientations keep their GPU slots');assert.deepEqual(attribute.updateRanges,[{start:0,count:16}]);
+ attribute.clearUpdateRanges();attribute.addUpdateRange(32,16);camera.position.x=4;v.update();assert.deepEqual(attribute.updateRanges,[{start:0,count:48}],'unconsumed writes are retained');
+ const sphere=mesh.boundingSphere;for(const r of v.population.records)assert.ok(sphere.containsPoint(new THREE.Vector3(r.x+r.h*.64,r.y+r.h*1.14,r.z)),'bounds allow restored and rotated trees');
+});
