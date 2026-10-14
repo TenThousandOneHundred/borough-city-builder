@@ -55,3 +55,24 @@ test('trees occupy supported ground and reject steep slopes in every direction',
  for(let a=0;a<Math.PI*2;a+=.2){const slope=m=>(world,x,z)=>x*Math.cos(a)*m+z*Math.sin(a)*m;assert.ok(supportsTree(w,17,-22,slope(.69)));assert.equal(supportsTree(w,17,-22,slope(.71)),false);}
  assert.ok(supportsTree(w,0,0,()=>2));assert.equal(supportsTree(w,0,0,()=>NaN),false);assert.deepEqual(w,{seed:40});
 });
+
+
+test('water-bed textures encode the rendered terrain without resampling or mutating its geometry',async()=>{
+ const {waterHeightTexture,writeWaterHeights}=await import('../dist/water-depth.js');
+ const g=new THREE.PlaneGeometry(8,8,8,8);g.rotateX(-Math.PI/2);const p=g.attributes.position;
+ for(let i=0;i<p.count;i++)p.setY(i,p.getX(i)*.23+p.getZ(i)*.51-.2);
+ const before=p.array.slice(),texture=waterHeightTexture(g),data=texture.image.data;
+ assert.equal(texture.image.width,9);assert.equal(texture.image.height,9);assert.equal(data.length,81*4);
+ for(let i=0;i<p.count;i++)assert.ok(Math.abs(data[i*4]+data[i*4+1]/256-64-p.getY(i))<=1/512);
+ assert.deepEqual(p.array,before);assert.equal(writeWaterHeights(g,data),data,'brush updates reuse the same byte buffer');
+ assert.equal(texture.generateMipmaps,false);texture.dispose();g.dispose();
+});
+test('sculpted shoreline refreshes the actual shader texture and water resources dispose together',async()=>{
+ const {reflectedWater}=await import('../dist/water.js');
+ const ground=new THREE.PlaneGeometry(192,192,2,2),far=new THREE.PlaneGeometry(1100,1100,2,2);ground.rotateX(-Math.PI/2);far.rotateX(-Math.PI/2);
+ const water=reflectedWater({reflectionsEnabled:false},ground,far),near=water.material.uniforms.nearHeight.value,distant=water.material.uniforms.farHeight.value;
+ const previous=near.image.data.slice(),version=near.version;ground.attributes.position.setY(4,-3);water.userData.refreshDepth(ground);
+ assert.notDeepEqual(near.image.data,previous);assert.ok(near.version>version);assert.equal(near.image.data[16]+near.image.data[17]/256-64,-3);
+ let disposed=0;near.addEventListener('dispose',()=>disposed++);distant.addEventListener('dispose',()=>disposed++);water.getRenderTarget().addEventListener('dispose',()=>disposed++);water.userData.dispose();assert.equal(disposed,3);
+ ground.dispose();far.dispose();water.geometry.dispose();water.material.dispose();
+});

@@ -340,3 +340,10 @@ Tests cover merges in both directions, pavement clearance, monotonic travel, sam
 Aligned authored roads now narrow smoothly over the wider approach instead of ending in a square pavement step. Pavement, shoulder, curb, edge paint, and lamp placement share the width profile. Extra lane dashes end before the merge; a median that meets an undivided road ends in a tapered tip. Equal-width roads and shared multi-arm junction surfaces keep their existing shape. Short approaches limit taper length to half the road so opposing transitions do not overlap.
 
 Transition planning uses nearby endpoint buckets and the existing road-edit cache. It neither changes saved road controls nor advances agents. Tests check width continuity, exclusions at junctions, geometry normals and UVs, and vehicle-body clearance through the rendered taper in both directions. Legacy grid-road joins are not tapered yet.
+
+
+## Edition 51: depth-aware water and shoreline wash
+
+Water now changes from muted turquoise shallows to darker blue at depth, with a subtle animated wash at the waterline. The shader reads two compact height textures built directly from the existing near and far terrain meshes; it does not resample terrain heights or add a second water draw. Sculpting refreshes the near texture in place, and switching worlds disposes both textures with the reflection target. Reflection throttling, graphics controls, buildings, and simulation advancement are unchanged.
+
+The two RGBA8 height maps use 792,200 bytes and preserve heights to within 0.002 world units. Regression checks verify encoding against rendered terrain, in-place sculpt refresh of the actual shader texture, resource disposal, and simulation independence. This adds water appearance, not physical flow or flooding simulation.
