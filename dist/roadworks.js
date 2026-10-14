@@ -1,21 +1,21 @@
-import {laneLayout} from './road-lanes.js?v=49';
-import {roadGeometry,junctionCorners,junctionCuts,clearRanges,clearSections,signalPlacements} from './road-junction-plan.js?v=49';
-import {lotAccess} from './lot-access.js?v=49';
-import {streetStations,atDistance,distanceSection,streetSurface,pavementMaterial} from './street-geometry.js?v=49';
-import {signalPhase} from './junctions.js?v=49';
-import {outsidePortals} from './traffic.js?v=49';
-import {batchStatic} from './static-batch.js?v=49';
+import {laneLayout} from './road-lanes.js?v=50';
+import {roadGeometry,transitionWidth,junctionCorners,junctionCuts,clearRanges,clearSections,signalPlacements} from './road-junction-plan.js?v=50';
+import {lotAccess} from './lot-access.js?v=50';
+import {streetStations,atDistance,distanceSection,streetSurface,pavementMaterial} from './street-geometry.js?v=50';
+import {signalPhase} from './junctions.js?v=50';
+import {outsidePortals} from './traffic.js?v=50';
+import {batchStatic} from './static-batch.js?v=50';
 import * as THREE from './vendor/three.module.js';
-import {floorHeight,groundHeight,wetness} from './landscape.js?v=49';
+import {floorHeight,groundHeight,wetness} from './landscape.js?v=50';
 export class Roadworks{
 constructor(v){this.v=v;this.group=new THREE.Group();v.scene.add(this.group);this.lamps=[];this.lampMaterial=new THREE.MeshStandardMaterial({color:'#e5e2ca',emissive:'#ffe2a0',emissiveIntensity:v.night?3:0,roughness:.3});this.walkMaterial=pavementMaterial();this.lightPoolMaterial=new THREE.MeshBasicMaterial({color:'#ffe0a0',transparent:true,opacity:.22,depthWrite:false,blending:THREE.AdditiveBlending});this.lightPoolMaterial.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 poolUV;').replace('#include <uv_vertex>','#include <uv_vertex>\npoolUV=uv;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 poolUV;').replace('#include <color_fragment>','#include <color_fragment>\ndiffuseColor.a*=pow(max(0.,1.-length(poolUV*2.-1.)),1.8);');};this.lightPoolMaterial.customProgramCacheKey=()=> 'street-light-pool-v1';this.signalGroup=new THREE.Group();v.scene.add(this.signalGroup);}
 clear(){this.group.traverse(o=>{if(o.geometry&&o.geometry!==this.v.unitBox)o.geometry.dispose()});this.group.clear();this.lamps=[];this.signalKey=null;}
 height(w,x,z){return Math.max(.32,floorHeight(w,x,z))+.1+wetness(w,x,z)*1.2}
-surface(w,points,profile,material){const stations=streetStations(points);if(stations.length<2)return null;const mesh=new THREE.Mesh(streetSurface(stations,profile,(x,z)=>this.height(w,x,z)),material);mesh.receiveShadow=true;this.group.add(mesh);return mesh;}
-ribbon(w,points,width,offset,material,raise=.08){return this.surface(w,points,[[offset-width*.5,raise],[offset+width*.5,raise]],material);}
+surface(w,points,profile,material){const stations=points[0]?.nx!==undefined?points:streetStations(points);if(stations.length<2)return null;const mesh=new THREE.Mesh(streetSurface(stations,profile,(x,z)=>this.height(w,x,z)),material);mesh.receiveShadow=true;this.group.add(mesh);return mesh;}
+ribbon(w,points,width,offset,material,raise=.08){return this.surface(w,points,p=>{const w=typeof width==='function'?width(p):width,o=typeof offset==='function'?offset(p):offset;return [[o-w*.5,raise],[o+w*.5,raise]];},material);}
 curbs(w,points,width,walk,curb,base=.08,sidewalk=.42){
- for(const side of [-1,1]){const edge=width*.5,profile=[[edge,base],[edge+.045,base+.045],[edge+.11,base+.06],[edge+sidewalk,base+.06],[edge+sidewalk,base-.015]].map(([x,y])=>[x*side,y]);if(side<0)profile.reverse();
-  this.surface(w,points,profile,walk);this.ribbon(w,points,.055,side*(edge+.075),curb,base+.062);
+ for(const side of [-1,1]){const profile=p=>{const edge=(typeof width==='function'?width(p):width)*.5;const entries=[[edge,base],[edge+.045,base+.045],[edge+.11,base+.06],[edge+sidewalk,base+.06],[edge+sidewalk,base-.015]].map(([x,y])=>[x*side,y]);if(side<0)entries.reverse();return entries;};
+  this.surface(w,points,profile,walk);this.ribbon(w,points,.055,p=>side*((typeof width==='function'?width(p):width)/2+.075),curb,base+.062);
  }
 }
 dash(w,stations,offset,color,period=1.6,length=.8,raise=.105,cuts=[]){for(let d=.25;d<stations.at(-1).distance;d+=period)for(const [a,b]of clearRanges(d,Math.min(d+length,stations.at(-1).distance),cuts)){const segment=distanceSection(stations,a,b);this.ribbon(w,segment,.028,offset,this.v.mat(color),raise);}}
@@ -53,14 +53,16 @@ outside(w,p,asphalt){const points=[];for(let d=0;d<=280;d+=4)points.push({x:p.x+
  const canvas=document.createElement('canvas');canvas.width=512;canvas.height=128;const c=canvas.getContext('2d');c.fillStyle='#164f43';c.fillRect(0,0,512,128);c.strokeStyle='#ffffff';c.lineWidth=6;c.strokeRect(5,5,502,118);c.fillStyle='#ffffff';c.font='bold 34px sans-serif';c.textAlign='center';c.fillText('OUTSIDE CONNECTION',256,54);c.font='27px sans-serif';c.fillText('Regional highway  ↔',256,97);const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;const sign=new THREE.Mesh(new THREE.PlaneGeometry(5,1.25),new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide}));sign.position.set(x,y+4,z);sign.rotation.y=p.dx?Math.PI/2:0;this.group.add(sign);}
 path(w,path,asphalt,walk,curb){const spec=CityEngine.ROADS[path.type],planned=this.renderRoads?.get(path.id),points=planned?.stations||CityEngine.sampleRoad(path.controls).map(p=>({x:(p.x+.5)*4-96,z:(p.y+.5)*4-96})),stations=planned?.stations||streetStations(points),width=spec.width;
 if(stations.length<2)return;
+const tapers=this.junctionPlan?.tapers?.get(path.id),widthAt=p=>tapers?transitionWidth(planned,tapers,p.distance):width;
 const sections=clearSections(stations,junctionCuts(stations,this.junctionPlan?.junctions||[])),cuts=junctionCuts(stations,this.junctionPlan?.junctions||[],1.2);
-if(!spec.sidewalk)this.ribbon(w,points,width+.35,0,this.v.mat('#a39f8b'),.04);
-this.ribbon(w,points,width,0,path.type==='gravel'?this.v.mat('#928875'):asphalt,.08);
-for(const section of sections){if(spec.sidewalk)this.curbs(w,section,width,walk,curb,.08,.38);else if(path.type!=='gravel')for(const side of [-1,1])this.ribbon(w,section,.04,side*(width/2-.12),this.v.mat('#e0dfd0'),.105);}
-if(spec.median)for(const section of clearSections(stations,junctionCuts(stations,this.junctionPlan?.junctions||[],1.1)))this.surface(w,section,[[-.16,.09],[-.13,.16],[.13,.16],[.16,.09]],curb);
-if(path.type!=='gravel')for(const lane of laneLayout(spec).dividers)this.dash(w,stations,lane.offset,lane.center?'#d4cba8':'#e0ded2',2.4,1.25,.105,cuts);
+if(!spec.sidewalk)this.ribbon(w,points,p=>widthAt(p)+.35,0,this.v.mat('#a39f8b'),.04);
+this.ribbon(w,points,widthAt,0,path.type==='gravel'?this.v.mat('#928875'):asphalt,.08);
+for(const section of sections){if(spec.sidewalk)this.curbs(w,section,widthAt,walk,curb,.08,.38);else if(path.type!=='gravel')for(const side of [-1,1])this.ribbon(w,section,.04,p=>side*(widthAt(p)/2-.12),this.v.mat('#e0dfd0'),.105);}
+if(spec.median)for(const section of clearSections(stations,junctionCuts(stations,this.junctionPlan?.junctions||[],1.1)))this.surface(w,section,p=>{let scale=1;for(const t of tapers||[])if(!t.median)scale=Math.min(scale,Math.max(0,(t.end?stations.at(-1).distance-p.distance:p.distance)/2));return [[-.16*scale,.09],[-.13*scale,.09+.07*scale],[.13*scale,.09+.07*scale],[.16*scale,.09]];},curb);
+const laneCuts=[...cuts,...(tapers||[]).map(t=>t.end?[stations.at(-1).distance-t.length,stations.at(-1).distance]:[0,t.length])];
+if(path.type!=='gravel')for(const lane of laneLayout(spec).dividers)this.dash(w,stations,lane.offset,lane.center?'#d4cba8':'#e0ded2',2.4,1.25,.105,laneCuts);
 for(let distance=3;distance<stations.at(-1).distance-1;distance+=12){const p=atDistance(stations,distance),dx=p.tx,dz=p.tz;if(this.nearJunction(p.x,p.z,1.5))continue;
- if(spec.sidewalk)this.lamp(p.x-dz*(width/2+.25),this.height(w,p.x,p.z),p.z+dx*(width/2+.25),Math.abs(dx)>Math.abs(dz),{x:dz,z:-dx});
+ if(spec.sidewalk)this.lamp(p.x-dz*(widthAt(p)/2+.25),this.height(w,p.x,p.z),p.z+dx*(widthAt(p)/2+.25),Math.abs(dx)>Math.abs(dz),{x:dz,z:-dx});
  if(wetness(w,p.x,p.z)>.3)this.v.box(this.group,p.x,this.height(w,p.x,p.z)/2-1,p.z,.4,this.height(w,p.x,p.z)+2,.4,'#9a9a8f');
  if(spec.oneway)for(const side of [-1,1])this.ribbon(w,[{x:p.x-dx*.4-dz*side*.22,z:p.z-dz*.4+dx*side*.22},p],.07,0,this.v.mat('#dedbc9'),.105);
  if(spec.green){this.treeWell(w,p,width);}

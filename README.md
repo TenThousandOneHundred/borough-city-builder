@@ -333,3 +333,10 @@ Regression coverage checks all eight road types, distinct lanes on wide roads, o
 New vehicle routes now merge upstream of lane drops and spread out downstream of lane gains over a distance measured along the road. A highway outer lane joining a street previously changed lateral position over one sample; it now uses a smooth transition that finishes before narrower pavement. The measured largest heading change in the reproduced route fell from 14.37 to 1.41 degrees. Unchanged lane offsets use a fast path and retain their original points, including on curves. Existing saved journeys retain their route geometry.
 
 Tests cover merges in both directions, pavement clearance, monotonic travel, sample-density independence, closely spaced transitions, and trips completing without a renderer. This remains predetermined route placement; dynamic overtaking and a full lane-choice planner are separate unfinished work.
+
+
+## Edition 50: tapered road-width joins
+
+Aligned authored roads now narrow smoothly over the wider approach instead of ending in a square pavement step. Pavement, shoulder, curb, edge paint, and lamp placement share the width profile. Extra lane dashes end before the merge; a median that meets an undivided road ends in a tapered tip. Equal-width roads and shared multi-arm junction surfaces keep their existing shape. Short approaches limit taper length to half the road so opposing transitions do not overlap.
+
+Transition planning uses nearby endpoint buckets and the existing road-edit cache. It neither changes saved road controls nor advances agents. Tests check width continuity, exclusions at junctions, geometry normals and UVs, and vehicle-body clearance through the rendered taper in both directions. Legacy grid-road joins are not tapered yet.

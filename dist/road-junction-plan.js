@@ -1,4 +1,4 @@
-import {streetStations,atDistance,distanceSection} from './street-geometry.js?v=49';
+import {streetStations,atDistance,distanceSection} from './street-geometry.js?v=50';
 const cross=(a,b)=>a.x*b.z-a.z*b.x;
 const point=(j,a,d,offset=0)=>({x:j.x+a.tx*d-a.tz*offset,z:j.z+a.tz*d+a.tx*offset});
 
@@ -9,7 +9,7 @@ const geometryCache=new WeakMap();
 export function roadGeometry(world,engine){
  const signature=JSON.stringify([world.roadPaths||[],world.tiles.map((t,i)=>t.type==='road'?[i,t.roadType,t.roadWidth,t.legacyRoad,t.pathIds]:null).filter(Boolean)]),cached=geometryCache.get(world);
  if(cached?.engine===engine&&cached.signature===signature)return cached.value;
- const roads=roadDescriptors(world,engine),value={roads,...planJunctions(roads)};geometryCache.set(world,{engine,signature,value});return value;
+ const roads=roadDescriptors(world,engine),value={roads,...planJunctions(roads)};value.tapers=planWidthTransitions(roads,value.junctions);geometryCache.set(world,{engine,signature,value});return value;
 }
 
 // Use the same sampled centerlines as pavement rendering. Grid roads participate
@@ -124,4 +124,27 @@ export function signalPlacements(junctions,controllers){
   for(const a of j.arms){if(a.spec.oneway&&a.sign>0)continue;const p=point(j,a,j.radius+1.05,-a.width/2-.23);placements.push({...p,tx:a.tx,tz:a.tz,axis:Math.abs(a.tx)>Math.abs(a.tz)?'x':'z',controller:control.id});}
  }
  return placements;
+}
+
+
+// Only uninterrupted, aligned endpoint joins receive tapers. Intersections keep
+// their shared junction surface, and road edits reuse the same cached plan.
+export function planWidthTransitions(roads,junctions=[]){
+ const ends=[];for(const road of roads){if(road.legacy||road.stations.length<2)continue;for(const end of [0,1]){const p=end?road.stations.at(-1):road.stations[0],sign=end?1:-1;ends.push({road,end,p,tx:p.tx*sign,tz:p.tz*sign});}}
+ const bins=new Map();for(const end of ends){const key=Math.floor(end.p.x/.1)+','+Math.floor(end.p.z/.1);if(!bins.has(key))bins.set(key,[]);bins.get(key).push(end);}
+ const result=new Map();
+ for(let i=0;i<ends.length;i++){
+  const a=ends[i],near=[],bx=Math.floor(a.p.x/.1),bz=Math.floor(a.p.z/.1);
+  for(let x=bx-1;x<=bx+1;x++)for(let z=bz-1;z<=bz+1;z++)for(const b of bins.get(x+','+z)||[])if(b!==a&&Math.hypot(a.p.x-b.p.x,a.p.z-b.p.z)<.05)near.push(b);
+  if(near.length!==1)continue;const b=near[0];
+  if(a.road===b.road||a.tx*b.tx+a.tz*b.tz>-.995||a.road.spec.width<=b.road.spec.width+.01||junctions.some(j=>Math.hypot(a.p.x-j.x,a.p.z-j.z)<j.radius))continue;
+  if(!result.has(a.road.id))result.set(a.road.id,[]);
+  result.get(a.road.id).push({end:a.end,width:b.road.spec.width,median:!!b.road.spec.median,length:Math.min(8,a.road.stations.at(-1).distance/2)});
+ }
+ return result;
+}
+export function transitionWidth(road,tapers,distance){
+ let width=road.spec.width;const total=road.stations.at(-1).distance;
+ for(const taper of tapers||[]){const away=taper.end?total-distance:distance;if(away>=taper.length)continue;const t=Math.max(0,away/taper.length),blend=t*t*(3-2*t);width=Math.min(width,taper.width+(road.spec.width-taper.width)*blend);}
+ return width;
 }

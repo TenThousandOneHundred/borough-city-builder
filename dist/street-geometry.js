@@ -17,10 +17,10 @@ export function distanceSection(stations,start,end){
 // Profile entries are [lateral offset, elevation above the road datum]. Each
 // profile edge gets its own normal so curb faces stay crisp instead of rounded.
 export function streetSurface(stations,profile,height){
- const positions=[],uv=[],indices=[];
- for(let k=0;k<profile.length-1;k++){
+ const positions=[],uv=[],indices=[],profiles=stations.map(p=>typeof profile==='function'?profile(p):profile);
+ for(let k=0;k<profiles[0].length-1;k++){
   const base=positions.length/3;
-  for(const p of stations)for(const [offset,raise]of [profile[k],profile[k+1]]){const x=p.x+p.nx*offset,z=p.z+p.nz*offset;positions.push(x,height(x,z)+raise,z);uv.push(offset,p.distance);}
+  for(let i=0;i<stations.length;i++){const p=stations[i];for(const [offset,raise]of [profiles[i][k],profiles[i][k+1]]){const x=p.x+p.nx*offset,z=p.z+p.nz*offset;positions.push(x,height(x,z)+raise,z);uv.push(offset,p.distance);}}
   for(let i=0;i<stations.length-1;i++){const q=base+i*2;indices.push(q,q+1,q+2,q+1,q+3,q+2);}
  }
  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(indices);g.computeVertexNormals();g.computeBoundingSphere();return g;

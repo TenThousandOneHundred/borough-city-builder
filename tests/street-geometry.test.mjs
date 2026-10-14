@@ -46,3 +46,10 @@ test('legacy bridge decks support the unified pavement height instead of floatin
  const r=new Roadworks(v),w=E.createWorld('Bridge support','plains',42);w.tiles[24*48+10].ground='water';r.outside=()=>{};r.build(w);
  const deck=boxes.find(([,x,y,z,width,height])=>width===4&&height===.55);assert.ok(deck);const [,x,y,z,,thickness]=deck;assert.ok(Math.abs(y+thickness/2-(r.height(w,x,z)+.075))<1e-8);
 });
+
+
+test('variable street profiles keep finite geometry and continuous arc-length texture coordinates',()=>{
+ const stations=streetStations([{x:0,z:0},{x:4,z:0},{x:8,z:0}]),g=streetSurface(stations,p=>[[-(2-p.distance/8),.08],[2-p.distance/8,.08]],()=>0),pos=g.attributes.position,uv=g.attributes.uv;
+ assert.equal(pos.count,6);assert.equal(pos.getZ(0),-2);assert.equal(pos.getZ(4),-1);assert.equal(uv.getY(4),8);
+ assert.ok([...pos.array,...g.attributes.normal.array].every(Number.isFinite));assert.equal(g.index.count,12);
+});

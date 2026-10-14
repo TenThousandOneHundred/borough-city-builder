@@ -4,7 +4,7 @@ import E from '../dist/engine.js';
 import * as THREE from '../dist/vendor/three.module.js';
 import {Roadworks} from '../dist/roadworks.js';
 import {streetStations} from '../dist/street-geometry.js';
-import {roadGeometry,roadDescriptors,planJunctions,junctionCorners,junctionCuts,clearRanges,clearSections,signalPlacements,extendJunctionEndpoints} from '../dist/road-junction-plan.js';
+import {planWidthTransitions,transitionWidth,roadGeometry,roadDescriptors,planJunctions,junctionCorners,junctionCuts,clearRanges,clearSections,signalPlacements,extendJunctionEndpoints} from '../dist/road-junction-plan.js';
 globalThis.CityEngine=E;
 const road=(id,points,type='street')=>({id,spec:E.ROADS[type],stations:streetStations(points)});
 const cross=()=>[road('a',[{x:-20,z:0},{x:20,z:0}]),road('b',[{x:0,z:-20},{x:0,z:20}])];
@@ -103,4 +103,28 @@ test('outside connections preserve authored road width, dividers and median',asy
   assert.deepEqual(edges,[-(spec.width/2-.12),spec.width/2-.12]);
   assert.equal(medians.length,spec.median?1:0);
  }}finally{globalThis.document=old;}
+});
+
+
+test('aligned width changes taper only the wider approach and preserve world controls',()=>{
+ for(const reverse of [false,true]){
+  const points=[{x:-30,z:0},{x:0,z:0}],wide=road('wide',reverse?[...points].reverse():points,'highway'),narrow=road('narrow',[{x:0,z:0},{x:30,z:0}]);
+  const before=JSON.stringify([wide,narrow]),plan=planWidthTransitions([wide,narrow]);assert.equal(plan.size,1);const tapers=plan.get('wide');assert.equal(tapers.length,1);assert.equal(tapers[0].end,reverse?0:1);
+  assert.equal(transitionWidth(wide,tapers,reverse?0:30),narrow.spec.width);assert.equal(transitionWidth(wide,tapers,15),wide.spec.width);
+  for(let d=0;d<=30;d+=.1){const width=transitionWidth(wide,tapers,d);assert.ok(width>=narrow.spec.width&&width<=wide.spec.width);}
+  assert.equal(JSON.stringify([wide,narrow]),before);
+  assert.equal(planWidthTransitions([wide,narrow],[{x:0,z:0,radius:3}]).size,0,'junction surfaces take priority');
+  assert.equal(planWidthTransitions([wide,{...narrow,spec:wide.spec}]).size,0,'equal widths remain unchanged');
+  assert.equal(planWidthTransitions([wide,narrow,road('branch',[{x:0,z:0},{x:0,z:20}])]).size,0,'multi-arm joins do not become tapers');
+ }
+});
+test('lane-merge vehicles fit inside the rendered pavement taper in either direction',async()=>{
+ const {Traffic}=await import('../dist/traffic.js');
+ const w=E.createWorld('Taper clearance','plains',42);w.tiles.forEach(t=>Object.assign(t,{type:null,level:0}));w.money=1000000;
+ E.buildRoadPath(w,[{x:5,y:24},{x:24,y:24}],'highway');E.buildRoadPath(w,[{x:24,y:24},{x:42,y:24}],'street');
+ const t=new Traffic(w,E),plan=roadGeometry(w,E),wide=plan.roads.find(r=>r.spec===E.ROADS.highway),tapers=plan.tapers.get(wide.id);
+ for(const reverse of [false,true])for(let lane=0;lane<3;lane++){
+  const cells=t.trace(t.search(24*48+(reverse?42:5)),24*48+(reverse?5:42)),route=t.route(cells,null,false,lane);
+  for(const p of route){const width=p.x<2?transitionWidth(wide,tapers,p.x-wide.stations[0].x):E.ROADS.street.width;assert.ok(Math.abs(p.z-2)+.25<width/2,'body clears tapered pavement');}
+ }
 });
