@@ -402,3 +402,6 @@ Paved roads now show subtle wheel-path darkening aligned with their lane widths,
 
 ## Edition 61 — connected urban courtyards
 Urban lots now have paved side passages, divided planted borders, rear courts with clear central access, and recessed planting behind front seating. Existing shared geometry and materials keep the added hardscape below 1,000 triangles per tested lot. Residential house layouts and traffic simulation are unchanged.
+
+## Edition 62 — exact tree selection with less camera work
+Camera movement now uses a bounded, reusable nearest-tree selection instead of allocating and sorting all tree candidates. The same ten closest eligible models, distances, tie order and hysteresis are retained. No geometry, textures, shadows or simulation rules change. Run `node scripts/benchmark-tree-selection.mjs` for the isolated CPU comparison.

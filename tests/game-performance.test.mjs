@@ -149,3 +149,21 @@ test('shadow batches include one representation of near/far site vegetation',asy
  factory.rebuild(new Map([[1,root]]));const {shadow}=factory.instanceBatches[0];shadow.onBeforeShadow();assert.equal(shadow.count,2,'one full tree silhouette, without its distant billboard duplicate');shadow.onAfterShadow();assert.equal(shadow.count,0);
  const version=shadow.instanceMatrix.version;factory.rebuild(new Map([[1,root]]));assert.equal(shadow.instanceMatrix.version,version,'unchanged shadow transforms are not uploaded again');
 });
+
+test('bounded tree selection exactly matches full sorting through camera paths, ties and hysteresis',async()=>{
+ const {TreeSelection}=await import('../dist/tree-selection.js'),select=new TreeSelection();
+ let seed=37;const random=()=>((seed=Math.imul(seed,1664525)+1013904223>>>0)/4294967296);
+ const records=Array.from({length:5000},(_,i)=>({i,x:random()*192-96,y:random()*8,z:random()*192-96,h:2+random()*6,source:i%9!==0}));
+ records.push(...[5000,5001,5002].map(i=>({i,x:0,y:0,z:0,h:2,source:true})));
+ const near=new Map();let scratch;
+ for(let step=0;step<400;step++){
+  const camera={x:Math.sin(step*.08)*80,y:step%17,z:Math.cos(step*.08)*80},detail=step%13!==0;
+  const expected=detail?records.map(r=>({r,d:(r.x-camera.x)**2+(r.y+r.h*.5-camera.y)**2+(r.z-camera.z)**2})).filter(({r,d})=>r.source&&d<(near.has(r.i)?32:28)**2).sort((a,b)=>a.d-b.d||a.r.i-b.r.i).slice(0,10).map(a=>a.r):[];
+  const actual=select.select(records,camera,near,detail);assert.deepEqual(actual,expected);if(scratch)assert.equal(actual,scratch);scratch=actual;
+  near.clear();for(const r of actual)near.set(r.i,true);
+ }
+ const ties=records.slice(-3).reverse();assert.deepEqual(select.select(ties,{x:0,y:1,z:0},new Map()).map(r=>r.i),[5000,5001,5002]);
+ assert.equal(select.select(ties,{x:28,y:1,z:0},new Map()).length,0);
+ assert.equal(select.select(ties,{x:28,y:1,z:0},new Map([[5000,true]])).length,1);
+ assert.equal(select.select(ties,{x:32,y:1,z:0},new Map([[5000,true]])).length,0);
+});

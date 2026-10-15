@@ -1,3 +1,4 @@
+import {TreeSelection} from './tree-selection.js?v=62';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 export class Vegetation{
@@ -21,9 +22,9 @@ export class Vegetation{
   const population=this.population;if(!population)return;const {records,near,objects,group}=population,camera=v.camera.position,detail=v.detailEnabled!==false;
   const moved=!this.nearCamera||camera.distanceToSquared(this.nearCamera)>=4||this.nearDetail!==detail;
   if(moved){
-   const candidates=detail?records.map(r=>({r,d:(r.x-camera.x)**2+(r.y+r.h*.5-camera.y)**2+(r.z-camera.z)**2})).filter(({r,d})=>r.source&&d<(near.has(r.i)?32:28)**2).sort((a,b)=>a.d-b.d||a.r.i-b.r.i).slice(0,10):[],selected=new Set(candidates.map(c=>c.r.i));let changed=false;
+   this.treeSelection ||= new TreeSelection();const candidates=this.treeSelection.select(records,camera,near,detail),selected=new Set(candidates.map(r=>r.i));let changed=false;
    for(const [i,tree]of near)if(!selected.has(i)){group.remove(tree);objects.splice(objects.indexOf(tree),1);near.delete(i);changed=true;}
-   for(const {r}of candidates)if(!near.has(r.i)){const tree=r.source.clone(true);tree.position.set(r.x,r.y,r.z);tree.scale.multiplyScalar(r.h);tree.rotation.y=r.i*2.399;tree.traverse(o=>{o.userData.sharedAsset=true;o.userData.sharedMaterial=true;});group.add(tree);objects.push(tree);near.set(r.i,tree);changed=true;}
+   for(const r of candidates)if(!near.has(r.i)){const tree=r.source.clone(true);tree.position.set(r.x,r.y,r.z);tree.scale.multiplyScalar(r.h);tree.rotation.y=r.i*2.399;tree.traverse(o=>{o.userData.sharedAsset=true;o.userData.sharedMaterial=true;});group.add(tree);objects.push(tree);near.set(r.i,tree);changed=true;}
    this.nearCamera ||= new THREE.Vector3();this.nearCamera.copy(camera);this.nearDetail=detail;
    if(changed&&v.renderer?.shadowMap)v.renderer.shadowMap.needsUpdate=true;
   }
