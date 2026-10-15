@@ -11,7 +11,7 @@ function protection(world,x,z){
  let weight=ease(clamp((96-Math.max(Math.abs(x),Math.abs(z)))/4,0,1));
  const gx=Math.floor((x+96)/4),gz=Math.floor((z+96)/4);
  for(let y=Math.max(0,gz-3);y<=Math.min(47,gz+3);y++)for(let xx=Math.max(0,gx-3);xx<=Math.min(47,gx+3);xx++){
-  const tile=world.tiles[y*48+xx];if(!tile.type&&!tile.construction)continue;
+  const tile=world.tiles[y*48+xx];if(!tile.type&&!tile.construction&&tile.zoneOwner===undefined)continue;
   const distance=Math.max(Math.abs(x-((xx+.5)*4-96)),Math.abs(z-((y+.5)*4-96)));
   weight=Math.min(weight,ease(clamp((distance-4.25)/4,0,1)));
  }
@@ -36,7 +36,7 @@ export function sculptTerrain(world,{x,z,mode,radius=12,strength=.6,target=2},he
  if(world.money<cost)return {ok:false,reason:'Not enough funds for earthworks'};
  world.elevation=old;for(const c of changes)old[c.i]=c.after;
  for(let y=Math.max(0,Math.floor((bounds.minZ+94)/4));y<=Math.min(47,Math.ceil((bounds.maxZ+98)/4));y++)for(let xx=Math.max(0,Math.floor((bounds.minX+94)/4));xx<=Math.min(47,Math.ceil((bounds.maxX+98)/4));xx++){
-  const i=y*48+xx,t=world.tiles[i];if(t.type||t.construction)continue;
+  const i=y*48+xx,t=world.tiles[i];if(t.type||t.construction||t.zoneOwner!==undefined)continue;
   const ground=height(world,(xx+.5)*4-96,(y+.5)*4-96)<.12?'water':'land';
   if(t.ground!==ground){grounds.push({i,before:t.ground,after:ground});t.ground=ground;}
  }

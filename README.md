@@ -417,3 +417,11 @@ Trees within large building lots now use cached individual visibility bounds. Tr
 
 ## Edition 65: less repetitive office districts
 Independent seeded architectural choices separate parcel coverage from building height and model choice. High-density offices mix more podium, stepped and rounded towers with perimeter blocks while retaining uniform metre-scale fitting and shared detailed meshes. The 144-lot regression district selects seven silhouettes, reduces its most repeated model from 91 to 61 lots, and uses 5,964,265 full-detail building triangles instead of 6,781,475 (12% fewer). This is a geometry comparison, not an FPS claim. Selection happens on building creation; traffic, offscreen simulation, shadows and saving are unchanged.
+
+
+## Edition 66: road-following zoning and saved building lots
+Zoning cells follow the tangent of straight and curved streets. Rectangle selection follows the selected road side, and fill stays on that side. Junction conflicts and overlapping cells are discarded. The grid is cached across population changes; overlay cells batch by color rather than requiring a draw call per cell. This remains Borough's larger, simplified cell scale, not the commercial game's exact 8-metre zoning implementation.
+
+New development reserves one persistent lot across multiple cells, with construction and population held by one building owner. Detached homes use 2–4 cells, row houses 2–4, medium apartments 4–6 and high apartments 4–9. Single cells stay vacant. Detached homes, row houses, medium apartments and high apartments are separate zoning choices; each uses its corresponding existing model family. Lots start at the street-facing row. Tight curves can leave unbuildable wedges. Demolishing any lot member removes the entire building; roads, footpaths, facilities and terrain tools respect reservations. Saves validate ownership and retain the exact footprint. Previously built cities retain their existing buildings. Mixed-use and low-rent zoning are not implemented.
+
+Reference study: the official Zones & Signature Buildings development diary, and selected frames from AgoAgo Game's “Cities Skylines 2 - All the Building Zone Sizes!” (1:06 and 2:04). BonBonB's low-density tutorial failed playback early; neither video was watched continuously end to end. Reference images are not shipped.

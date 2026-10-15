@@ -1,12 +1,14 @@
-import {roadParcels} from './road-parcels.js?v=65';
+import {roadParcels} from './road-parcels.js?v=66';
 const cache=new WeakMap();
 // Visual consolidation only: every zoning cell, resident and save remains intact.
 // Never combine across a road, service, construction site or density boundary.
 export function visualParcels(world){
- const signature=world.seed+'|'+JSON.stringify(world.roadPaths||[])+'|'+world.tiles.map(t=>[t.type,t.density,t.level,t.variant,t.building,t.construction,t.ground,t.facilityOwner,t.facilitySite?.width,t.facilitySite?.depth,t.facilitySite?.rotation].join('/')).join(';'),cached=cache.get(world);if(cached?.signature===signature)return cached.result;
+ const signature=world.seed+'|'+JSON.stringify(world.roadPaths||[])+'|'+world.tiles.map(t=>[t.type,t.density,t.level,t.variant,t.building,t.construction,t.ground,t.zoneOwner,JSON.stringify(t.zoneSite),t.facilityOwner,t.facilitySite?.width,t.facilitySite?.depth,t.facilitySite?.rotation].join('/')).join(';'),cached=cache.get(world);if(cached?.signature===signature)return cached.result;
  const N=48;
- const eligible=t=>t&&t.level>0&&!t.construction&&(t.type==='office'||t.type==='commercial'&&t.density==='high'||t.type==='residential'&&t.density!=='low');
+ const eligible=t=>t&&t.zoneOwner===undefined&&t.level>0&&!t.construction&&(t.type==='office'||t.type==='commercial'&&t.density==='high'||t.type==='residential'&&t.density!=='low');
  const result=roadParcels(world,eligible);
+ // Developed lots are simulation-owned sites, not transient visual merges.
+ for(let i=0;i<world.tiles.length;i++){const t=world.tiles[i];if(!t.zoneSite)continue;const parcel={...t.zoneSite,key:'growable/'+i+'/'+JSON.stringify(t.zoneSite)+'/'+t.level+'/'+t.building};for(const j of parcel.members)result.set(j,parcel);}
  // Civic sites own their entire footprint; only the anchor renders a building.
  for(let i=0;i<world.tiles.length;i++){
   const t=world.tiles[i],site=t.facilitySite;if(!site||t.facilityOwner!==i)continue;

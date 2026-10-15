@@ -41,7 +41,7 @@ export function lotPlan(world,index,parcel){
  // Fit the rotated envelope within the owned parcel: no overlap with roads or neighbours.
  const fit=Math.min(1,width*4/(cos*lotWidth+sin*lotDepth),depth*4/(sin*lotWidth+cos*lotDepth));
  lotWidth*=fit;lotDepth*=fit;if(parcel?.oriented){lotWidth=parcel.oriented.width;lotDepth=parcel.oriented.depth;}
- const type=tile.type,density=tile.density||'high',low=type==='residential'&&density==='low';
+ const type=tile.type,density=tile.density||'high',low=type==='residential'&&(density==='low'||tile.building==='townhouse');
  let floors;
  if(low)floors=style===0?1:2;
  else if(type==='commercial'&&density==='low')floors=style%3===0?2:1;
