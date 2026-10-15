@@ -27,12 +27,37 @@ export function sitePlan(plan,footprint){
   if(sideLeft>.3)rect('garden',left,back,b.minX-.1,frontStart-.1);
   if(sideRight>.3)rect('garden',b.maxX+.1,back,right,frontStart-.1);
  }else{
-  for(const [x0,x1]of [[left,b.minX-.16],[b.maxX+.16,right]])if(x1-x0>.38){rect('garden',x0,back+.1,x1,front-.12);}
-  if(rear>.7){rect('garden',Math.max(left,b.minX),back+.1,Math.min(right,b.maxX),rearEnd-.2);rect('walk',left,rearEnd-.17,right,rearEnd);}
-  if(fore>.5){rect('plaza',left,frontStart,right,front);for(const sign of [-1,1]){const x=sign*Math.min(W*.28,W/2-.5);if(Math.abs(x)>.5)items.push({kind:'bench',x,z:front-.22,w:.65,d:.25});}}
+  // Connected paved courtyards replace uninterrupted strips of lawn. Beds
+  // are inset into paving and split at the side passage to the rear court.
+  for(const [x0,x1]of [[left,b.minX-.16],[b.maxX+.16,right]])if(x1-x0>.38){
+   const z0=back+.1,z1=frontStart-.1,passage=Math.min(.42,(x1-x0)*.35),outerLeft=x1<0;
+   rect('plaza',x0,z0,x1,z1);
+   const bedLeft=x0+(outerLeft?.08:passage),bedRight=x1-(outerLeft?passage:.08);
+   const cross=(b.minZ+b.maxZ)/2;
+   rect('garden',bedLeft,z0+.08,bedRight,cross-.2);
+   rect('garden',bedLeft,cross+.2,bedRight,z1-.08);
+  }
+  if(rear>.7){
+   const x0=Math.max(left,b.minX),x1=Math.min(right,b.maxX),z0=back+.1;
+   rect('plaza',x0,z0,x1,rearEnd);
+   // Leave a central route from the rear door, with planted courts on either side.
+   rect('garden',x0+.12,z0+.12,-.3,rearEnd-.34);
+   rect('garden',.3,z0+.12,x1-.12,rearEnd-.34);
+   rect('walk',left,rearEnd-.17,right,rearEnd);
+  }
+  if(fore>.5){
+   rect('plaza',left,frontStart,right,front);
+   for(const sign of [-1,1]){
+    const x=sign*Math.min(W*.28,W/2-.5);
+    if(Math.abs(x)>.5)items.push({kind:'bench',x,z:front-.22,w:.65,d:.25});
+    // Recessed planting behind seating keeps the main entrance unobstructed.
+    if(fore>1.15){const x0=sign<0?left+.16:.6,x1=sign<0?-.6:right-.16;
+     rect('garden',x0,frontStart+.12,x1,front-.55);}
+   }
+  }
  }
  // Small trees occupy the widest planted strips; canopies fit inside each bed.
- const beds=items.filter(i=>i.kind==='garden');for(const bed of beds){if(Math.min(bed.w,bed.d)<.48)continue;const alongX=bed.w>bed.d,long=Math.max(bed.w,bed.d),short=Math.min(bed.w,bed.d),count=Math.min(4,Math.max(1,Math.floor(long/1.7)));
+ const beds=items.filter(i=>i.kind==='garden');for(const bed of beds){if(Math.min(bed.w,bed.d)<.48)continue;const alongX=bed.w>bed.d,long=Math.max(bed.w,bed.d),short=Math.min(bed.w,bed.d),count=Math.min(4,Math.max(1,Math.floor(long/(plan.low?1.7:2.2))));
   for(let n=0;n<count;n++){const offset=((n+.5)/count-.5)*long,span=Math.min(short-.12,long/count-.12);items.push({kind:'tree',x:bed.x+(alongX?offset:0),z:bed.z+(alongX?0:offset),w:span,d:span,height:Math.min(plan.low?1.35:1.9,span*1.7)});}
  }
  // Equipment is placed only where its complete footprint fits.

@@ -399,3 +399,6 @@ Modern upper-floor windows now have stable per-room glazing variation, partially
 ### Edition 60: lane-aware pavement wear
 
 Paved roads now show subtle wheel-path darkening aligned with their lane widths, including curved roads, tapers, and outside highways. The finish fades at distance to avoid shimmering. It uses the existing pavement meshes and textures with no extra triangles, draw calls, or per-frame JavaScript updates. Static batching preserves the road attributes and leaves intersection surfaces unmarked. Building quality, save behavior, and offscreen traffic simulation are unchanged.
+
+## Edition 61 — connected urban courtyards
+Urban lots now have paved side passages, divided planted borders, rear courts with clear central access, and recessed planting behind front seating. Existing shared geometry and materials keep the added hardscape below 1,000 triangles per tested lot. Residential house layouts and traffic simulation are unchanged.

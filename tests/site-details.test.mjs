@@ -52,3 +52,21 @@ test('paired entrances and driveways have separate clear routes through front pl
   assert.ok(overlapX<=1e-8||overlapZ<=1e-8,'planting cannot cover an entrance or driveway');
  }
 });
+
+
+test('urban courtyard planting leaves continuous side and rear access without crossing model bounds',()=>{
+ for(const size of [4,8,12]){
+  const b={minX:-size*.25,maxX:size*.25,minZ:-size*.25,maxZ:size*.25},plan={...house,low:false,type:'office',lotWidth:size,lotDepth:size},items=sitePlan(plan,b);
+  for(const a of items){
+   assert.ok(a.x-a.w/2>=-size/2&&a.x+a.w/2<=size/2);
+   assert.ok(a.z-a.d/2>=-size/2&&a.z+a.d/2<=size/2);
+   assert.ok(a.x+a.w/2<=b.minX||a.x-a.w/2>=b.maxX||a.z+a.d/2<=b.minZ||a.z-a.d/2>=b.maxZ,a.kind);
+  }
+  const beds=items.filter(a=>a.kind==='garden');
+  for(const a of beds)if(a.z+a.d/2<b.minZ)assert.ok(a.x+a.w/2<=-.3+1e-8||a.x-a.w/2>=.3-1e-8,'rear entrance remains clear');
+  const root=new SiteDetails({}).build(plan,b);let triangles=0;const geometries=new Set(),materials=new Set();
+  root.traverse(o=>{if(o.isMesh){triangles+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3;geometries.add(o.geometry);materials.add(o.material);}});
+  assert.ok(triangles<1000,'courtyard hardscape remains under 1000 triangles per lot');
+  assert.ok(geometries.size<=3&&materials.size<=5,'courtyard uses shared existing batches');
+ }
+});

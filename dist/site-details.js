@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import {sitePlan} from './site-plan.js?v=60';
+import {sitePlan} from './site-plan.js?v=61';
 // All props share geometry and materials across the city, allowing the existing
 // building instancer to submit them in a bounded number of draw calls.
 export class SiteDetails{
@@ -25,7 +25,7 @@ export class SiteDetails{
  tree(root,{x,y,z,w,d,height,minimum=.4,detailDistance=30}){const source=this.view.vegetation?.broadPrototype;if(!source)return;this.treeBounds ||= new THREE.Box3().setFromObject(source).getSize(new THREE.Vector3());const h=Math.min(height,w/this.treeBounds.x,d/this.treeBounds.z);if(h<minimum)return;const tree=source.clone(true);tree.scale.multiplyScalar(h);tree.position.set(x,y,z);tree.traverse(o=>{if(o.isMesh){o.userData.sharedAsset=true;o.userData.siteDetail=true;o.userData.siteRange=[0,detailDistance];}});root.add(tree);const material=this.view.vegetation?.broadleaf?.[0]?.material;if(material)for(let k=0;k<3;k++){const mesh=new THREE.Mesh(this.treePlane,material);mesh.position.set(x,y+h*.5,z);mesh.scale.set(this.treeBounds.x*h,h,1);mesh.rotation.y=k*Math.PI/3;mesh.castShadow=true;mesh.userData.sharedAsset=true;mesh.userData.siteDetail=true;mesh.userData.siteRange=[detailDistance,Infinity];root.add(mesh);}else tree.traverse(o=>{delete o.userData.siteRange;}); }
  build(plan,footprint){const root=new THREE.Group(),items=sitePlan(plan,footprint);root.userData.sitePlan=items;
   for(const a of items){const {kind,x,z,w,d}=a;
-   if(['walk','drive','patio','garden','yard','plaza'].includes(kind)){this.surface(root,kind,x,z,w,d,kind==='walk'?.018:.006);if(kind==='garden'&&w>.3&&d>.3){for(const sign of [-1,1]){this.piece(root,'walk',x+sign*w/2,.015,z,.025,.04,d);this.piece(root,'walk',x,.015,z+sign*d/2,w,.04,.025);}}}
+   if(['walk','drive','patio','garden','yard','plaza'].includes(kind)){this.surface(root,kind,x,z,w,d,kind==='walk'?.018:kind==='garden'?.012:.006);if(kind==='garden'&&w>.3&&d>.3){for(const sign of [-1,1]){this.piece(root,'walk',x+sign*w/2,.015,z,.025,.04,d);this.piece(root,'walk',x,.015,z+sign*d/2,w,.04,.025);}}}
    else if(kind==='fence'){const along=a.axis==='x',length=along?w:d,count=Math.max(1,Math.ceil(length/.48));for(let i=0;i<=count;i++){const offset=-length/2+i*length/count;this.piece(root,'wood',x+(along?offset:0),.13,z+(along?0:offset),.025,.26,.025);}for(const y of [.08,.18])this.piece(root,'wood',x,y,z,along?w:.018,.036,along?.018:d);}
    else if(kind==='bench'){for(let i=0;i<4;i++)this.piece(root,'wood',x,.105,z-.07+i*.047,w,.024,.032);for(const side of [-1,1]){this.piece(root,'metal',x+side*w*.35,.05,z,.028,.1,.17);this.piece(root,'metal',x+side*w*.35,.17,z-.11,.025,.23,.025);}for(let i=0;i<3;i++)this.piece(root,'wood',x,.17+i*.038,z-.115,w,.026,.023);}
    else if(kind==='parking'){this.surface(root,'paint',x-w/2,z,.018,d,.022);this.surface(root,'paint',x+w/2,z,.018,d,.022);this.surface(root,'paint',x,z-d/2,w,.018,.023);this.piece(root,'walk',x,.035,z-d/2+.09,w*.65,.065,.06);}
