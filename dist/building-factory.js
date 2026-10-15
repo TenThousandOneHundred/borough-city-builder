@@ -1,12 +1,12 @@
-import {ModelLibrary} from './model-library.js?v=63';
-import {buildHouse} from './house-architecture.js?v=63';
-import {buildUrban} from './city-architecture.js?v=63';
+import {ModelLibrary} from './model-library.js?v=64';
+import {buildHouse} from './house-architecture.js?v=64';
+import {buildUrban} from './city-architecture.js?v=64';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import * as THREE from './vendor/three.module.js';
-import {MeshBuilder} from './mesh-builder.js?v=63';
-import {BuildingMaterials} from './building-materials.js?v=63';
-import {lotPlan} from './building-plan.js?v=63';
-import {floorHeight} from './landscape.js?v=63';
+import {MeshBuilder} from './mesh-builder.js?v=64';
+import {BuildingMaterials} from './building-materials.js?v=64';
+import {lotPlan} from './building-plan.js?v=64';
+import {floorHeight} from './landscape.js?v=64';
 
 export class BuildingFactory{
  constructor(view){this.view=view;this.library=view.renderer?new ModelLibrary(view):null;this.ready=this.library?.ready||Promise.resolve();this.materials=new BuildingMaterials(view);this.batchRoot=new THREE.Group();view.scene.add(this.batchRoot);}
@@ -21,7 +21,8 @@ export class BuildingFactory{
   root.traverse(o=>{
    if(!o.isMesh)return;
    if(root.userData.asset&&o.userData.sharedAsset){
-    entry.instances.push({key:o.geometry.uuid+':'+o.material.uuid,geometry:o.geometry,material:o.material,transform:{matrix:o.matrixWorld.clone(),sphere,renderRange:o.userData.siteRange,rangeOrigin:o.userData.siteRange?new THREE.Vector3().setFromMatrixPosition(o.matrixWorld):null}});
+    const detailBounds=o.userData.siteRange?new THREE.Box3().setFromBufferAttribute(o.geometry.attributes.position).applyMatrix4(o.matrixWorld).getBoundingSphere(new THREE.Sphere()):null;
+    entry.instances.push({key:o.geometry.uuid+':'+o.material.uuid,geometry:o.geometry,material:o.material,transform:{matrix:o.matrixWorld.clone(),sphere,detailBounds,renderRange:o.userData.siteRange,rangeOrigin:o.userData.siteRange?new THREE.Vector3().setFromMatrixPosition(o.matrixWorld):null}});
    }else entry.statics.push({material:o.material,geometry:o.geometry.clone().applyMatrix4(o.matrixWorld)});
   });
   if(immutable)this.renderCache.set(root,entry);
@@ -87,11 +88,18 @@ export class BuildingFactory{
  updateVisibility(){if(!this.view.camera)return;const camera=this.view.camera;camera.updateMatrixWorld();const signature=camera.matrixWorld.elements.join(',')+camera.projectionMatrix.elements.join(',')+this.view.detailEnabled;if(signature===this.visibilitySignature)return;this.visibilitySignature=signature;const frustum=new THREE.Frustum().setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse));const threshold=this.view.detailEnabled===false?0:18;
   // All material parts of a building share one sphere. Classify it once, then
   // reuse that result for windows, roofs, walls and grounds.
-  const visibility=new Map();this.visibilityChecks=0;
+  const visibility=new Map(),reflectionBounds=new THREE.Sphere();this.visibilityChecks=0;this.detailCulled=0;
   for(const batch of this.instanceBatches||[]){const {near,far,transforms}=batch;let nearCount=0,farCount=0,nearFirst=Infinity,nearLast=0,farFirst=Infinity,farLast=0;batch.nearSlots ||= [];batch.farSlots ||= [];
    for(const transform of transforms){const {sphere,matrix}=transform;let state=visibility.get(sphere);
     if(state===undefined){this.visibilityChecks++;state=!frustum.intersectsSphere(sphere)?0:camera.position.distanceToSquared(sphere.center)>(this.view.detailEnabled===false?0:(sphere.lodDistance||threshold))**2?2:1;visibility.set(sphere,state);}
-    if(!state)continue;if(transform.renderRange){const d=camera.position.distanceToSquared(transform.rangeOrigin),[min,max]=transform.renderRange;if(d<min*min||d>=max*max)continue;}const distant=far&&state===2,mesh=distant?far:near,slots=distant?batch.farSlots:batch.nearSlots,index=distant?farCount++:nearCount++;
+    if(!state)continue;if(transform.renderRange){const d=camera.position.distanceToSquared(transform.rangeOrigin),[min,max]=transform.renderRange;if(d<min*min||d>=max*max)continue;
+     if(transform.detailBounds&&!frustum.intersectsSphere(transform.detailBounds)){
+      // A plane at water y=-.1 reflects each point to y=-.2-y.
+      // Keep geometry that can contribute to the reflected camera as well.
+      reflectionBounds.copy(transform.detailBounds);reflectionBounds.center.y=-.2-reflectionBounds.center.y;
+      if(this.view.reflectionsEnabled===false||this.view.detailEnabled===false||!frustum.intersectsSphere(reflectionBounds)){this.detailCulled++;continue;}
+     }
+    }const distant=far&&state===2,mesh=distant?far:near,slots=distant?batch.farSlots:batch.nearSlots,index=distant?farCount++:nearCount++;
     if(slots[index]!==transform){mesh.setMatrixAt(index,matrix);slots[index]=transform;if(distant){farFirst=Math.min(farFirst,index*16);farLast=(index+1)*16;}else{nearFirst=Math.min(nearFirst,index*16);nearLast=(index+1)*16;}}
    }
    near.count=nearCount;this.uploadRange(near,nearFirst,nearLast);

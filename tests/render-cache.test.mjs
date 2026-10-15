@@ -34,3 +34,21 @@ test('restoring natural terrain colors uses the saved colors and sculpting updat
  const w=E.createWorld('Overlay cache','plains',22),ground=new THREE.Mesh(new THREE.PlaneGeometry(2,2,2,2),new THREE.MeshStandardMaterial());ground.geometry.rotateX(-Math.PI/2);ground.geometry.setAttribute('color',new THREE.BufferAttribute(new Float32Array(27),3));const baseColors=new Float32Array(27).fill(.4),view={world:w,overlay:'none',landscape:{ground,baseColors}};CityView.prototype.updateOverlay.call(view);assert.deepEqual(ground.geometry.attributes.color.array,baseColors);ground.geometry.attributes.color.array.fill(.9);CityView.prototype.updateOverlay.call(view);assert.deepEqual(ground.geometry.attributes.color.array,baseColors);
  const landscape={ground,baseColors,world:w,view:{renderer:{shadowMap:{}}}};Landscape.prototype.refreshTerrain.call(landscape,w,null,false);assert.deepEqual(baseColors,ground.geometry.attributes.color.array);assert.notEqual(baseColors[0],.4);
 });
+
+test('large lots cull offscreen tree detail while retaining silhouettes, reflections and cached bounds',()=>{
+ const {factory,camera}=setup();camera.position.set(0,2,0);camera.lookAt(0,2,-20);camera.updateMatrixWorld();
+ const root=new THREE.Group();root.userData={factory:true,asset:true,renderImmutable:true};
+ const geo=new THREE.BoxGeometry(1,2,1),mat=new THREE.MeshStandardMaterial();
+ // A large building sphere intersects the view, but only one small tree does.
+ for(const x of [0,20,-20]){const tree=new THREE.Mesh(geo,mat);tree.position.set(x,2,-10);tree.userData={sharedAsset:true,siteRange:[0,30]};root.add(tree);}
+ const saved=root.children.map(c=>c.position.toArray());factory.rebuild(new Map([[1,root]]));const batch=factory.instanceBatches[0];
+ assert.equal(batch.near.count,1);assert.equal(factory.detailCulled,2);assert.equal(batch.shadow.userData.casterCount,3);
+ const bounds=batch.transforms.map(t=>t.detailBounds);factory.rebuild(new Map([[1,root]]));assert.equal(factory.cacheHits,1);assert.ok(batch.transforms.every((t,i)=>t.detailBounds===bounds[i]));
+ camera.lookAt(20,2,-10);factory.updateVisibility();assert.ok(factory.instanceBatches[0].near.count>=1);assert.deepEqual(root.children.map(c=>c.position.toArray()),saved);
+ // Mirror-only geometry: main camera aims below water while the tree is above it.
+ const high=root.children[0];high.position.set(0,8,-10);root.userData.renderVersion=1;camera.lookAt(0,-8.2,-10);factory.rebuild(new Map([[1,root]]));
+ const frustum=new THREE.Frustum().setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse));
+ const sphere=factory.instanceBatches[0].transforms[0].detailBounds;assert.equal(frustum.intersectsSphere(sphere),false);const mirrored=sphere.clone();mirrored.center.y=-.2-mirrored.center.y;assert.equal(frustum.intersectsSphere(mirrored),true);
+ // The shared root sphere still touches the view; reflection keeps the tree.
+ assert.ok(factory.instanceBatches[0].near.count>=1);
+});

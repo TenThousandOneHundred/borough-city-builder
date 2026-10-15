@@ -1,13 +1,13 @@
-import {bakeRoofFinish} from './roof-finishes.js?v=63';
-import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=63';
-import {loadBinary} from './asset-transfer.js?v=63';
-import {SiteDetails} from './site-details.js?v=63';
-import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=63';
+import {bakeRoofFinish} from './roof-finishes.js?v=64';
+import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=64';
+import {loadBinary} from './asset-transfer.js?v=64';
+import {SiteDetails} from './site-details.js?v=64';
+import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=64';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {lotPlan} from './building-plan.js?v=63';
-import {floorHeight} from './landscape.js?v=63';
+import {lotPlan} from './building-plan.js?v=64';
+import {floorHeight} from './landscape.js?v=64';
 const IDENTITY=new THREE.Matrix4();
 const civicDefaults={hospital:'clinic',school:'elementary',police:'police',fire:'fire'};
 // Complete textured assets are loaded once, batched per material, and instanced.

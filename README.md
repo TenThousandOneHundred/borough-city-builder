@@ -409,3 +409,7 @@ Camera movement now uses a bounded, reusable nearest-tree selection instead of a
 ## Edition 63: muted roof gardens and weathered roof surfaces
 
 Raised planting now uses varied, muted foliage and soil tones instead of a flat bright green surface. Flat upper roofs have subtle weathering. The variation is baked into existing vertex colours when assets load and shared by near and distant models. This adds no shaders, meshes, textures, draw calls or per-frame work. Ground paving and pitched roofs retain their existing finish. Simulation scheduling and offscreen traffic are unchanged.
+
+## Edition 64: precise site vegetation culling
+
+Trees within large building lots now use cached individual visibility bounds. Trees outside the camera and its water reflection are omitted from color draws, while their full shadow silhouettes remain present. Close visible trees keep their original geometry and existing distance thresholds. This affects rendering only, not traffic or residents.
