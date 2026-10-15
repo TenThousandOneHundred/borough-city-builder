@@ -1,6 +1,6 @@
-import {coverBatches} from './ground-cover-batches.js?v=59';
+import {coverBatches} from './ground-cover-batches.js?v=60';
 import * as THREE from './vendor/three.module.js';
-import {terrainNoise} from './terrain-field.js?v=59';
+import {terrainNoise} from './terrain-field.js?v=60';
 // Small 3D grasses and reeds break up flat ground at street-level camera distances.
 export function groundCover(view,world,height,wetness){
  const positions=[],colors=[],normals=[];

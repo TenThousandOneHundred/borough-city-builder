@@ -53,3 +53,14 @@ test('variable street profiles keep finite geometry and continuous arc-length te
  assert.equal(pos.count,6);assert.equal(pos.getZ(0),-2);assert.equal(pos.getZ(4),-1);assert.equal(uv.getY(4),8);
  assert.ok([...pos.array,...g.attributes.normal.array].every(Number.isFinite));assert.equal(g.index.count,12);
 });
+
+test('wheel-path finish follows all road widths and survives batching without adding triangles',async()=>{
+ const {roadFinishData,configureRoadFinish}=await import('../dist/road-finish.js');
+ for(const spec of Object.values(E.ROADS)){
+  const stations=streetStations([{x:0,z:0},{x:3,z:2},{x:5,z:6}]),width=p=>spec.width*(1-p.distance*.01),g=streetSurface(stations,p=>[[-width(p)/2,.08],[width(p)/2,.08]],()=>0),positions=g.attributes.position.array.slice(),indices=g.index.array.slice();
+  roadFinishData(g,stations,width,spec);assert.deepEqual(g.attributes.position.array,positions);assert.deepEqual(g.index.array,indices);
+  const finish=g.attributes.roadFinish;for(let i=0;i<stations.length;i++){const expected=spec.oneway?width(stations[i])/spec.lanes:(width(stations[i])/2-(spec.median?.16:0))/Math.max(1,spec.lanes/2);assert.ok(Math.abs(finish.getX(i*2)-expected)<1e-6);assert.equal(finish.getZ(i*2),1);assert.equal(finish.getX(i*2),finish.getX(i*2+1));}
+  const m=configureRoadFinish(new THREE.MeshStandardMaterial()),group=new THREE.Group();group.add(new THREE.Mesh(g,m));const junction=new THREE.PlaneGeometry(2,2);group.add(new THREE.Mesh(junction,m));const before=g.index.count+junction.index.count;
+  batchStatic(group);let count=0,covered=0,plain=0;group.traverse(o=>{if(!o.isMesh)return;const f=o.geometry.attributes.roadFinish;count+=o.geometry.attributes.position.count;for(let i=0;i<f.count;i++){if(f.getZ(i))covered++;else plain++;}});assert.equal(count,before);assert.ok(covered>0&&plain>0,'junctions stay free of lane wear');
+ }
+});

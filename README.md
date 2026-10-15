@@ -395,3 +395,7 @@ A local five-trial median benchmark with 512 vehicles and 600 steps measured 563
 
 ## Edition 59: occupied-looking daytime façades
 Modern upper-floor windows now have stable per-room glazing variation, partially lowered blinds, and soft recess shading. Blinds reduce reflections and transmitted room light at night. Pane edges use screen-space antialiasing instead of fine repeating stripes. Existing near/far geometry and room attributes are reused: no added vertices, draw calls, textures, or per-frame JavaScript updates. The shader adds modest arithmetic, so unchanged geometry alone does not guarantee identical frame times on every device. Traffic simulation and save formats are unchanged.
+
+### Edition 60: lane-aware pavement wear
+
+Paved roads now show subtle wheel-path darkening aligned with their lane widths, including curved roads, tapers, and outside highways. The finish fades at distance to avoid shimmering. It uses the existing pavement meshes and textures with no extra triangles, draw calls, or per-frame JavaScript updates. Static batching preserves the road attributes and leaves intersection surfaces unmarked. Building quality, save behavior, and offscreen traffic simulation are unchanged.
