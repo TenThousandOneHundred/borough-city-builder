@@ -279,3 +279,16 @@ test('office districts mix full-scale silhouettes without increasing model geome
 });
 
  test('mixed-use lots select detailed shopfront apartment models with shared geometry',async()=>{const lib=await library(),w=E.createWorld('Mixed models','plains',8),index=23*48+8;Object.assign(w.tiles[index],{type:'residential',building:'mixeduse',density:'medium',level:2});const g=lib.create(w,index,{width:2,depth:2});assert.ok(g.userData.model.includes('mixed-use'));const asset=lib.models.find(m=>m.name===g.userData.model);assert.equal(g.children[0].children[0].geometry,asset.root.children[0].geometry);assert.equal(g.children[0].children[0].material,asset.root.children[0].material);});
+
+test('road-facing row lots repeat full-size shared homes with individual doors and bounded rear gardens',async()=>{
+ const lib=await library(),world=E.createWorld('Terrace frontage','plains',431),index=20*48+20;world.tiles[index]={type:'residential',density:'medium',building:'townhouse',level:2};
+ const parcel={width:2,depth:2,members:[index,index+1,index+48,index+49],oriented:{cx:0,cz:0,width:7.88,depth:7.88,angle:.35,frontage:{x:0,z:6}}},before=JSON.stringify(world),root=lib.create(world,index,parcel),asset=lib.models.find(m=>m.name===root.userData.model),copies=root.userData.homeCopies,p=root.userData.plan;
+ assert.ok(copies>=2);const homes=root.children.slice(0,copies);assert.ok(homes.every(h=>Math.abs(h.scale.x-.2)<1e-8&&h.scale.x===h.scale.z));
+ for(const home of homes)for(let j=0;j<home.children.length;j++){assert.equal(home.children[j].geometry,asset.root.children[j].geometry);assert.equal(home.children[j].material,asset.root.children[j].material);}
+ for(const home of homes){assert.ok(Math.abs(home.position.x)+asset.size.x*home.scale.x/2<=p.lotWidth/2-.14);assert.ok(Math.abs(home.position.z)+asset.size.z*home.scale.z/2<=p.lotDepth/2-.14);}for(let j=1;j<homes.length;j++)assert.ok(homes[j].position.x-homes[j-1].position.x>=asset.size.x*.2,'roof envelopes do not overlap');
+ assert.ok(p.entranceXs.length>=copies);for(const x of p.entranceXs)assert.ok(p.accessPoints.some(a=>a.kind==='walk'&&Math.abs(a.x-x)<1e-8));
+ const grounds=root.children.find(c=>c.userData.sitePlan);assert.ok(grounds.userData.sitePlan.filter(a=>a.kind==='fence'&&a.axis==='z').length>=p.entranceXs.length-1);
+ for(const item of grounds.userData.sitePlan)assert.ok(Math.abs(item.x)+item.w/2<=p.lotWidth/2+.001&&Math.abs(item.z)+item.d/2<=p.lotDepth/2+.001);
+ const factory=new BuildingFactory({scene:new THREE.Scene(),landscape:{assets:{}}});factory.rebuild(new Map([[index,root]]));for(const part of asset.root.children){const batch=factory.instanceBatches.find(b=>b.near.geometry===part.geometry);assert.equal(batch.transforms.length,copies,'repeated homes use the same material batch');}
+ assert.equal(JSON.stringify(world),before);assert.equal(lib.create(world,index,parcel).userData.homeCopies,copies);
+});

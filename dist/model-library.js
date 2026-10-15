@@ -1,13 +1,13 @@
-import {bakeRoofFinish} from './roof-finishes.js?v=69';
-import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=69';
-import {loadBinary} from './asset-transfer.js?v=69';
-import {SiteDetails} from './site-details.js?v=69';
-import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=69';
+import {bakeRoofFinish} from './roof-finishes.js?v=70';
+import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=70';
+import {loadBinary} from './asset-transfer.js?v=70';
+import {SiteDetails} from './site-details.js?v=70';
+import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=70';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {lotPlan} from './building-plan.js?v=69';
-import {floorHeight} from './landscape.js?v=69';
+import {lotPlan} from './building-plan.js?v=70';
+import {floorHeight} from './landscape.js?v=70';
 const IDENTITY=new THREE.Matrix4();
 const civicDefaults={hospital:'clinic',school:'elementary',police:'police',fire:'fire'};
 // Complete textured assets are loaded once, batched per material, and instanced.
@@ -64,7 +64,12 @@ export class ModelLibrary {
   const civic=civicDefaults[p.type],id=world.tiles[index].building||civic;let candidates=this.models.filter(a=>a.category===category&&(!mixed||a.name.includes('mixed-use'))&&(!civic||a.building===id&&a.site===p.facility));if(!candidates.length)return null;
   if(p.low){const homes=candidates.filter(a=>a.houseForm);if(homes.length)candidates=homes;const forms=candidates.filter(a=>id==='townhouse'?['semi','terrace'].includes(a.houseForm):a.houseForm==='detached');if(forms.length)candidates=forms;}
   const densityFit=candidates.filter(a=>!a.floors||(p.type==='residential'&&!p.low?(p.density==='medium'?a.floors<=9:a.floors>=9):p.type==='commercial'?(p.density==='low'?a.floors<=3:a.floors>=4):true));if(densityFit.length)candidates=densityFit;
-  const W=p.lotWidth,D=p.lotDepth,fit=a=>Math.min(.2,(W-.3)/a.size.x,(D-.3)/a.size.z);
+  const W=p.lotWidth,D=p.lotDepth,row=p.oriented&&id==='townhouse';
+  // One saved row-house parcel can contain several homes, at their authored
+  // metre scale. Repeat shared assets rather than stretching a single house.
+  const rowCount=a=>row?Math.max(1,Math.min(6,Math.floor((W-.3+.04)/(a.size.x*.2+.04)))):1;
+  const fit=a=>Math.min(.2,(W-.3-.04*(rowCount(a)-1))/(a.size.x*rowCount(a)),(D-.3)/a.size.z);
+  const widthOf=a=>a.size.x*fit(a)*rowCount(a)+.04*(rowCount(a)-1);
   // First fit metre-sized architecture to the parcel. A large block must not
   // shrink into a miniature tower when selected for a single-cell lot.
   const fullScale=candidates.filter(a=>fit(a)>=.17);if(fullScale.length)candidates=fullScale;
@@ -74,24 +79,24 @@ export class ModelLibrary {
   // choice to the same six styles, which repeated one block across districts.
   const sample=salt=>{let h=(p.seed^salt)>>>0;h=Math.imul(h^(h>>>16),0x21f0aaad);h=Math.imul(h^(h>>>15),0x735a2d97);return ((h^(h>>>15))>>>0)/4294967296;};
   const openLot=p.density==='high'&&sample(0x19ab37)<(p.type==='office'?.72:p.type==='residential'?.5:p.type==='commercial'?.34:0);
-  const targetCoverage=openLot?.2+sample(0x73d928)*.3:p.low?.34:p.type==='commercial'&&p.density==='low'?.48:.72;
+  const targetCoverage=openLot?.2+sample(0x73d928)*.3:row?.62:p.low?.34:p.type==='commercial'&&p.density==='low'?.48:.72;
   const targetHeight=p.floors*.64,score=a=>{
-   const scale=fit(a),coverage=a.size.x*a.size.z*scale*scale/(W*D);
+   const scale=fit(a),coverage=widthOf(a)*a.size.z*scale/(W*D);
    return Math.abs(Math.log(Math.max(.1,a.size.y*scale)/targetHeight))*(openLot?1.1:.45)+Math.abs(targetCoverage-coverage)*3;
   };
   candidates.sort((a,b)=>score(a)-score(b)||a.name.localeCompare(b.name));
   const best=score(candidates[0]);candidates=candidates.filter(a=>score(a)<=best+(p.low?.65:openLot?.38:p.type==='office'?.3:.16));
   const modernShare=p.type==='office'?.94:p.low?.28:p.type==='commercial'?.60:.58,familyVariation=(Math.imul(p.seed^(p.seed>>>16),0x45d9f3b)>>>0)/4294967296;const family=familyVariation<modernShare?'modern':'masonry',preferred=candidates.filter(a=>a.family===family);if(preferred.length)candidates=preferred;
-  const asset=candidates[Math.floor(sample(0x94eb51)*candidates.length)],root=new THREE.Group(),model=asset.root.clone(true),scale=fit(asset);
+  const asset=candidates[Math.floor(sample(0x94eb51)*candidates.length)],root=new THREE.Group(),model=asset.root.clone(true),scale=fit(asset),copies=rowCount(asset),buildingWidth=widthOf(asset),centers=Array.from({length:copies},(_,i)=>(i-(copies-1)/2)*(asset.size.x*scale+.04));
   // Move frontage toward its road, within the original owned rectangle.
   // Project the remaining axis-aligned clearance onto the local front vector.
   const c=Math.abs(Math.cos(p.angle)),s=Math.abs(Math.sin(p.angle));
-  const occupiedX=(asset.size.x*c+asset.size.z*s)*scale,occupiedZ=(asset.size.x*s+asset.size.z*c)*scale;
+  const occupiedX=buildingWidth*c+asset.size.z*s*scale,occupiedZ=buildingWidth*s+asset.size.z*c*scale;
   const clearanceX=Math.max(0,(p.parcelWidth-occupiedX)/2-.18),clearanceZ=Math.max(0,(p.parcelDepth-occupiedZ)/2-.18);
-  const frontageSpace=Math.max(0,(D-asset.size.z*scale)/2-.25);const setback=p.frontage&&!p.facility?Math.min(!p.oriented&&s>1e-6?clearanceX/s:Infinity,!p.oriented&&c>1e-6?clearanceZ/c:Infinity,frontageSpace)*(p.type==='industrial'||p.type==='commercial'&&p.density==='low'?-1:p.low?.2+p.variation*.45:1):0;
-  model.position.z=setback;
-  if(p.low){const fronts=asset.streetFronts.filter(f=>f.kind==='entrance'&&f.normal[1]>.9),frontZ=Math.max(...fronts.map(f=>f.position[2]));p.entranceXs=fronts.filter(f=>f.position[2]>=frontZ-.5).map(f=>(f.position[0]+asset.origin.x)*scale);}
-  model.scale.setScalar(scale);root.add(model);root.rotation.y=p.angle;
+  const frontageSpace=Math.max(0,(D-asset.size.z*scale)/2-.25);const setback=p.frontage&&!p.facility?Math.min(!p.oriented&&s>1e-6?clearanceX/s:Infinity,!p.oriented&&c>1e-6?clearanceZ/c:Infinity,frontageSpace)*(p.type==='industrial'||p.type==='commercial'&&p.density==='low'?-1:row?1:p.low?.2+p.variation*.45:1):0;
+  model.position.set(centers[0],0,setback);
+  if(p.low){const fronts=asset.streetFronts.filter(f=>f.kind==='entrance'&&f.normal[1]>.9),frontZ=Math.max(...fronts.map(f=>f.position[2]));p.entranceXs=centers.flatMap(x=>fronts.filter(f=>f.position[2]>=frontZ-.5).map(f=>x+(f.position[0]+asset.origin.x)*scale));if(row)p.rowEntrances=[...p.entranceXs].sort((a,b)=>a-b);}
+  model.scale.setScalar(scale);root.add(model);for(const x of centers.slice(1)){const home=model.clone(true);home.position.x=x;root.add(home);}root.rotation.y=p.angle;
   const lawn=category==='residential-low',surface=lawn?'grass':category==='industrial'?'asphalt':'paving';this.lotMaterials ||= {};
   let lotMaterial=this.lotMaterials[surface];
   if(!lotMaterial){lotMaterial=this.lotMaterials[surface]=this.view.landscape.material(lawn?'grass':'asphalt',lawn?2:3,lawn?'#9fb78c':surface==='paving'?'#93988e':'#a7aaa5');
@@ -127,15 +132,15 @@ export class ModelLibrary {
    root.add(gardens);
   }
 
-  this.siteDetails ||= new SiteDetails(this.view,this.lotMaterials);const grounds=this.siteDetails.build(p,{minX:-asset.size.x*scale/2,maxX:asset.size.x*scale/2,minZ:setback-asset.size.z*scale/2,maxZ:setback+asset.size.z*scale/2});root.add(grounds);
+  this.siteDetails ||= new SiteDetails(this.view,this.lotMaterials);const grounds=this.siteDetails.build(p,{minX:-buildingWidth/2,maxX:buildingWidth/2,minZ:setback-asset.size.z*scale/2,maxZ:setback+asset.size.z*scale/2});root.add(grounds);
   if(p.low)p.accessPoints=grounds.userData.sitePlan.filter(a=>['walk','drive'].includes(a.kind)&&a.z+a.d/2>=p.lotDepth/2-.091).map(a=>({x:a.x,width:a.w,kind:a.kind}));
   root.add(this.siteDetails.buildGardens(asset.gardens,asset.origin,scale,setback));
-  const footprintX=asset.size.x*scale/2,footprintZ=asset.size.z*scale/2;let base=floorHeight(world,p.cx,p.cz);
+  const footprintX=buildingWidth/2,footprintZ=asset.size.z*scale/2;let base=floorHeight(world,p.cx,p.cz);
   for(const x of [-footprintX,footprintX])for(const z of [-footprintZ,footprintZ])base=Math.max(base,floorHeight(world,p.cx+x*Math.cos(p.angle)+(z+setback)*Math.sin(p.angle),p.cz-x*Math.sin(p.angle)+(z+setback)*Math.cos(p.angle)));
   if(world.landformVersion===1)for(const point of lotPerimeter(p))base=Math.max(base,floorHeight(world,p.cx+point.x,p.cz+point.z));
   const foundation=lotFoundation(world,p,base+.04,floorHeight);if(foundation){if(!this.foundationMaterial){const material=this.view.landscape.material('brick',1,'#9b9e94');material.onBeforeCompile=shader=>{shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`#ifdef USE_MAP
 vec3 sampleColor=texture2D(map,vMapUv).rgb;float grain=dot(sampleColor,vec3(.3,.59,.11));diffuseColor.rgb*=.55+grain*.9;
 #endif`);};material.customProgramCacheKey=()=> 'borough-retaining-masonry-28';this.foundationMaterial=material;}const wall=new THREE.Mesh(foundation,this.foundationMaterial);wall.rotation.y=-p.angle;wall.castShadow=wall.receiveShadow=true;root.add(wall);}
-  root.position.set(p.cx,base+.04,p.cz);root.userData={factory:true,asset:true,renderImmutable:true,model:asset.name,plan:p,lodDistance:asset.family==='modern'?64:undefined};return root;
+  root.position.set(p.cx,base+.04,p.cz);root.userData={factory:true,asset:true,renderImmutable:true,model:asset.name,homeCopies:copies,plan:p,lodDistance:asset.family==='modern'?64:undefined};return root;
  }
 }

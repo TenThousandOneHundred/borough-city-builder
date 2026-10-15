@@ -20,7 +20,7 @@ export function sitePlan(plan,footprint){
    let edge=left;for(const [a,b]of reserved){rect('garden',edge,frontStart,a,front);edge=Math.max(edge,b);}rect('garden',edge,frontStart,right,front);
   }
   // Rear and side fences stop before the front entrance and driveway.
-  if(rear>.28){rect('fence',left,back,right,back+.03,{axis:'x'});rect('fence',left,back,left+.03,rearEnd,{axis:'z'});rect('fence',right-.03,back,right,rearEnd,{axis:'z'});}
+  if(rear>.28){for(let i=1;i<(plan.rowEntrances?.length||0);i++){const x=(plan.rowEntrances[i-1]+plan.rowEntrances[i])/2;rect('fence',x-.015,back,x+.015,rearEnd,{axis:'z'});}rect('fence',left,back,right,back+.03,{axis:'x'});rect('fence',left,back,left+.03,rearEnd,{axis:'z'});rect('fence',right-.03,back,right,rearEnd,{axis:'z'});}
  }else if(business){
   if(fore>1.18){rect('yard',left,frontStart,right,front);const depth=Math.min(.95,fore-.22),row=front-depth/2;for(let x=left+.34;x<right-.26;x+=.57){if(Math.abs(x)<.5)continue;items.push({kind:'parking',x,z:row,w:.5,d:depth});}}
   if(rear>.7)rect('yard',left,back,right,rearEnd);
