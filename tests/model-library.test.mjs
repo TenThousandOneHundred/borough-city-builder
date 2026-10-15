@@ -236,3 +236,25 @@ test('individual window rooms retain geometry and shared LOD attributes while ex
  const railing=new THREE.PlaneGeometry(3,1),pane=new THREE.PlaneGeometry(2,2),skylight=new THREE.PlaneGeometry(2,2);skylight.rotateX(-Math.PI/2);assert.equal(addWindowRooms(railing).eligible,0);assert.equal(addWindowRooms(skylight).eligible,0);assert.equal(addWindowRooms(pane).eligible,1);
  const material=lib.models.flatMap(m=>m.root.children).find(m=>m.material.userData.roomLighting).material,shader={uniforms:{},vertexShader:'#include <begin_vertex>',fragmentShader:'#include <emissivemap_fragment>'};material.onBeforeCompile(shader);assert.equal(shader.uniforms.roomNight,material.userData.roomLightingState);lib.setNight(true);assert.equal(shader.uniforms.roomNight.value,1);lib.setNight(false);assert.equal(shader.uniforms.roomNight.value,0);
 });
+
+test('roof finishes reuse shared asset materials and geometry across full and distant buildings',async()=>{
+ const lib=await library(),bytes=fs.readFileSync(new URL('../dist/assets/buildings/lod.bin',import.meta.url));
+ lib.ingestLod(JSON.parse(fs.readFileSync(new URL('../dist/assets/buildings/lod.json',import.meta.url))),bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.length));
+ for(const name of ['modern-roof','modern-leaves']){
+  const meshes=lib.models.flatMap(m=>m.root.children).filter(m=>m.material.name===name);
+  assert.ok(meshes.length>20);assert.equal(new Set(meshes.map(m=>m.material)).size,1,'finish remains one shared material');
+  assert.ok(meshes.every(m=>m.material.userData.roofFinish));
+  for(const mesh of meshes){assert.equal(mesh.geometry.userData.lod.attributes.position,mesh.geometry.attributes.position);assert.equal(mesh.geometry.userData.lod.attributes.normal,mesh.geometry.attributes.normal);}
+ }
+ const world=E.createWorld('Roof batch QA','plains',324),index=20*48+20;world.tiles[index]={type:'office',density:'high',level:3};
+ const root=lib.create(world,index,{width:3,depth:2}),view={scene:new THREE.Scene(),landscape:{assets:{}}},factory=new BuildingFactory(view);
+ factory.rebuild(new Map([[index,root]]));const batches=factory.instanceBatches.filter(b=>b.near.material.userData.roofFinish);assert.ok(batches.length);
+ for(const batch of batches)assert.equal(batch.near.material,batch.far.material,'distance transitions retain the same finish');
+});
+
+test('baked roof variation preserves geometry and leaves ground and pitched roofs unchanged',async()=>{
+ const {bakeRoofFinish}=await import('../dist/roof-finishes.js');
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute([1,8,2,1,0,2,1,8,2],3));g.setAttribute('normal',new THREE.Float32BufferAttribute([0,1,0,0,1,0,0,.7,.7],3));g.setAttribute('color',new THREE.Float32BufferAttribute([1,1,1,1,1,1,1,1,1],3));
+ const material=new THREE.MeshStandardMaterial({vertexColors:true});material.name='modern-roof';const shader=material.onBeforeCompile,positions=g.attributes.position.array.slice();bakeRoofFinish(g,material);
+ assert.deepEqual(g.attributes.position.array,positions);assert.equal(material.onBeforeCompile,shader,'no additional runtime shader');assert.equal(material.map,null,'no additional texture');assert.ok(g.attributes.color.getX(0)<1);assert.equal(g.attributes.color.getX(1),1);assert.equal(g.attributes.color.getX(2),1);
+});

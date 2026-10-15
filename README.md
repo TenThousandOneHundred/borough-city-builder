@@ -405,3 +405,7 @@ Urban lots now have paved side passages, divided planted borders, rear courts wi
 
 ## Edition 62 — exact tree selection with less camera work
 Camera movement now uses a bounded, reusable nearest-tree selection instead of allocating and sorting all tree candidates. The same ten closest eligible models, distances, tie order and hysteresis are retained. No geometry, textures, shadows or simulation rules change. Run `node scripts/benchmark-tree-selection.mjs` for the isolated CPU comparison.
+
+## Edition 63: muted roof gardens and weathered roof surfaces
+
+Raised planting now uses varied, muted foliage and soil tones instead of a flat bright green surface. Flat upper roofs have subtle weathering. The variation is baked into existing vertex colours when assets load and shared by near and distant models. This adds no shaders, meshes, textures, draw calls or per-frame work. Ground paving and pitched roofs retain their existing finish. Simulation scheduling and offscreen traffic are unchanged.

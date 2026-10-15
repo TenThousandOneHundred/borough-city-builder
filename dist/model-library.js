@@ -1,12 +1,13 @@
-import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=62';
-import {loadBinary} from './asset-transfer.js?v=62';
-import {SiteDetails} from './site-details.js?v=62';
-import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=62';
+import {bakeRoofFinish} from './roof-finishes.js?v=63';
+import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=63';
+import {loadBinary} from './asset-transfer.js?v=63';
+import {SiteDetails} from './site-details.js?v=63';
+import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=63';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {lotPlan} from './building-plan.js?v=62';
-import {floorHeight} from './landscape.js?v=62';
+import {lotPlan} from './building-plan.js?v=63';
+import {floorHeight} from './landscape.js?v=63';
 const IDENTITY=new THREE.Matrix4();
 const civicDefaults={hospital:'clinic',school:'elementary',police:'police',fire:'fire'};
 // Complete textured assets are loaded once, batched per material, and instanced.
@@ -41,7 +42,7 @@ export class ModelLibrary {
        material.onBeforeCompile=shader=>{shader.vertexShader='varying vec3 modernPoint;\n'+shader.vertexShader;shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nmodernPoint=position;');shader.fragmentShader='varying vec3 modernPoint;\n'+shader.fragmentShader;shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
         float stain=sin(modernPoint.x*13.1+modernPoint.z*17.3)*sin(modernPoint.x*5.7-modernPoint.z*7.9);
         diffuseColor.rgb*=.94+.035*stain+.02*sin(modernPoint.y*2.3+modernPoint.x*.3);`);};material.customProgramCacheKey=()=> 'borough-modern-concrete-21';
-      }this.materials.add(material);material.envMapIntensity=.55;material.roughness=Math.max(.24,material.roughness);material.userData.modelAsset=true;
+      }if(modern)bakeRoofFinish(geometry,material);this.materials.add(material);material.envMapIntensity=.55;material.roughness=Math.max(.24,material.roughness);material.userData.modelAsset=true;
       if(material.name.includes('glass')){if(!modern){material.metalness=.38;material.roughness=.24;}else material.envMapIntensity=.85;material.userData.glass=true;if(modern&&['modern-glass','modern-glass-occupied'].includes(material.name))configureWindowLighting(material);}
       for(const key of ['map','normalMap','roughnessMap','metalnessMap','aoMap'])if(material[key])material[key].anisotropy=Math.min(8,this.view.renderer.capabilities.getMaxAnisotropy());
       if(!batches.has(material))batches.set(material,[]);batches.get(material).push(geometry);
