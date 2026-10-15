@@ -1,4 +1,4 @@
-import {floorHeight} from './landscape.js?v=64';
+import {floorHeight} from './landscape.js?v=65';
 import * as THREE from './vendor/three.module.js';
 // Gameplay pedestrians mirror saved simulation agents. Only the menu uses ambient walkers.
 export class StreetLife{

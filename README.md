@@ -413,3 +413,7 @@ Raised planting now uses varied, muted foliage and soil tones instead of a flat 
 ## Edition 64: precise site vegetation culling
 
 Trees within large building lots now use cached individual visibility bounds. Trees outside the camera and its water reflection are omitted from color draws, while their full shadow silhouettes remain present. Close visible trees keep their original geometry and existing distance thresholds. This affects rendering only, not traffic or residents.
+
+
+## Edition 65: less repetitive office districts
+Independent seeded architectural choices separate parcel coverage from building height and model choice. High-density offices mix more podium, stepped and rounded towers with perimeter blocks while retaining uniform metre-scale fitting and shared detailed meshes. The 144-lot regression district selects seven silhouettes, reduces its most repeated model from 91 to 61 lots, and uses 5,964,265 full-detail building triangles instead of 6,781,475 (12% fewer). This is a geometry comparison, not an FPS claim. Selection happens on building creation; traffic, offscreen simulation, shadows and saving are unchanged.

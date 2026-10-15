@@ -258,3 +258,22 @@ test('baked roof variation preserves geometry and leaves ground and pitched roof
  const material=new THREE.MeshStandardMaterial({vertexColors:true});material.name='modern-roof';const shader=material.onBeforeCompile,positions=g.attributes.position.array.slice();bakeRoofFinish(g,material);
  assert.deepEqual(g.attributes.position.array,positions);assert.equal(material.onBeforeCompile,shader,'no additional runtime shader');assert.equal(material.map,null,'no additional texture');assert.ok(g.attributes.color.getX(0)<1);assert.equal(g.attributes.color.getX(1),1);assert.equal(g.attributes.color.getX(2),1);
 });
+
+
+test('office districts mix full-scale silhouettes without increasing model geometry',async()=>{
+ const lib=await library(),world=E.createWorld('Variety','flat',324),counts=new Map();let triangles=0;
+ const costs=new Map(lib.models.map(m=>[m.name,m.root.children.reduce((sum,o)=>sum+o.geometry.index.count/3,0)]));
+ const previous={'perimeter-campus-offices':91,'crescent-offices':11,'stepped-concrete-offices':6,'glass-podium-offices':10,'office-tower':22,'civic-offices':3,'elliptic-glass-offices':1};
+ for(let y=10;y<34;y+=2)for(let x=6;x<42;x+=3){
+  const i=y*48+x;world.tiles[i]={type:'office',density:'high',level:3};
+  const before=JSON.stringify(world),root=lib.create(world,i,{width:3,depth:2}),name=root.userData.model;
+  assert.equal(lib.create(world,i,{width:3,depth:2}).userData.model,name,'reload selects the same architecture');
+  assert.equal(JSON.stringify(world),before,'visual selection never changes resident or save state');
+  assert.ok(root.children[0].scale.x>=.17,'buildings retain metre-scale proportions');
+  counts.set(name,(counts.get(name)||0)+1);triangles+=costs.get(name);
+ }
+ assert.ok(counts.size>=7);assert.ok(Math.max(...counts.values())<72,'no one model dominates half the district');
+ assert.ok(counts.get('elliptic-glass-offices')>=10,'rounded towers actually appear');
+ const baseline=Object.entries(previous).reduce((sum,[name,count])=>sum+costs.get(name)*count,0);
+ assert.ok(triangles<=baseline,'more varied architecture does not increase full-detail geometry');
+});
