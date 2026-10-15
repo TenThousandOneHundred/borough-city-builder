@@ -277,3 +277,5 @@ test('office districts mix full-scale silhouettes without increasing model geome
  const baseline=Object.entries(previous).reduce((sum,[name,count])=>sum+costs.get(name)*count,0);
  assert.ok(triangles<=baseline,'more varied architecture does not increase full-detail geometry');
 });
+
+ test('mixed-use lots select detailed shopfront apartment models with shared geometry',async()=>{const lib=await library(),w=E.createWorld('Mixed models','plains',8),index=23*48+8;Object.assign(w.tiles[index],{type:'residential',building:'mixeduse',density:'medium',level:2});const g=lib.create(w,index,{width:2,depth:2});assert.ok(g.userData.model.includes('mixed-use'));const asset=lib.models.find(m=>m.name===g.userData.model);assert.equal(g.children[0].children[0].geometry,asset.root.children[0].geometry);assert.equal(g.children[0].children[0].material,asset.root.children[0].material);});

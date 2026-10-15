@@ -1,13 +1,13 @@
-import {bakeRoofFinish} from './roof-finishes.js?v=66';
-import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=66';
-import {loadBinary} from './asset-transfer.js?v=66';
-import {SiteDetails} from './site-details.js?v=66';
-import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=66';
+import {bakeRoofFinish} from './roof-finishes.js?v=68';
+import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=68';
+import {loadBinary} from './asset-transfer.js?v=68';
+import {SiteDetails} from './site-details.js?v=68';
+import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=68';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {lotPlan} from './building-plan.js?v=66';
-import {floorHeight} from './landscape.js?v=66';
+import {lotPlan} from './building-plan.js?v=68';
+import {floorHeight} from './landscape.js?v=68';
 const IDENTITY=new THREE.Matrix4();
 const civicDefaults={hospital:'clinic',school:'elementary',police:'police',fire:'fire'};
 // Complete textured assets are loaded once, batched per material, and instanced.
@@ -60,8 +60,8 @@ export class ModelLibrary {
  setNight(on){for(const material of this.materials)if(material.userData.glass){const lit=on;if(material.userData.roomLightingState)material.userData.roomLightingState.value=on?1:0;material.emissive.set(lit?(material.userData.roomLighting?'#ffffff':'#bc9d6e'):'#000000');material.emissiveIntensity=lit?(material.userData.roomLighting?1.15:.23):0;material.emissiveMap=lit?material.map:null;material.needsUpdate=true;}}
  acceptsCivic(tile){const id=tile.building||civicDefaults[tile.type];return !!id&&this.models.some(a=>a.category===tile.type&&a.building===id&&a.site===!!tile.facilitySite);}
  create(world,index,parcel){
-  if(!this.models.length)return null;const p=lotPlan(world,index,parcel),category=p.low?'residential-low':p.type;
-  const civic=civicDefaults[p.type],id=world.tiles[index].building||civic;let candidates=this.models.filter(a=>a.category===category&&(!civic||a.building===id&&a.site===p.facility));if(!candidates.length)return null;
+  if(!this.models.length)return null;const p=lotPlan(world,index,parcel),mixed=world.tiles[index].building==='mixeduse',category=mixed?'commercial':p.low?'residential-low':p.type;
+  const civic=civicDefaults[p.type],id=world.tiles[index].building||civic;let candidates=this.models.filter(a=>a.category===category&&(!mixed||a.name.includes('mixed-use'))&&(!civic||a.building===id&&a.site===p.facility));if(!candidates.length)return null;
   if(p.low){const homes=candidates.filter(a=>a.houseForm);if(homes.length)candidates=homes;const forms=candidates.filter(a=>id==='townhouse'?['semi','terrace'].includes(a.houseForm):a.houseForm==='detached');if(forms.length)candidates=forms;}
   const densityFit=candidates.filter(a=>!a.floors||(p.type==='residential'&&!p.low?(p.density==='medium'?a.floors<=9:a.floors>=9):p.type==='commercial'?(p.density==='low'?a.floors<=3:a.floors>=4):true));if(densityFit.length)candidates=densityFit;
   const W=p.lotWidth,D=p.lotDepth,fit=a=>Math.min(.2,(W-.3)/a.size.x,(D-.3)/a.size.z);

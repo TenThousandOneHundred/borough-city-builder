@@ -429,3 +429,6 @@ Reference study: the official Zones & Signature Buildings development diary, and
 
 ## Edition 67: zoning clearance at junctions
 The whole rotated zoning cell is checked against nearby road and sidewalk ribbons, including highways. Center-cell eligibility alone missed cell corners crossing angled junctions. A spatial index restricts these checks to nearby road segments; the result remains cached across population updates. Rectangle overlap uses projected extents instead of allocating corner arrays for every comparison. Wide legacy roads now offset zoning by their actual width. Existing saved lots and simulation progress are not changed.
+
+## Edition 68: apartments above shops
+Mixed-use zoning grows multi-cell apartments with ground-floor shops. These lots house residents, provide jobs and accept shopping visits. Residents working or shopping in their own building complete those activities without spawning a road trip. Uses the existing detailed mixed-use models and shared rendering assets. The simulation remains simplified; rent, shop inventory and separate commercial leases are not modeled.
