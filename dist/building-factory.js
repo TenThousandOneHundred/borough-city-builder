@@ -1,12 +1,12 @@
-import {ModelLibrary} from './model-library.js?v=68';
-import {buildHouse} from './house-architecture.js?v=68';
-import {buildUrban} from './city-architecture.js?v=68';
+import {ModelLibrary} from './model-library.js?v=69';
+import {buildHouse} from './house-architecture.js?v=69';
+import {buildUrban} from './city-architecture.js?v=69';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import * as THREE from './vendor/three.module.js';
-import {MeshBuilder} from './mesh-builder.js?v=68';
-import {BuildingMaterials} from './building-materials.js?v=68';
-import {lotPlan} from './building-plan.js?v=68';
-import {floorHeight} from './landscape.js?v=68';
+import {MeshBuilder} from './mesh-builder.js?v=69';
+import {BuildingMaterials} from './building-materials.js?v=69';
+import {lotPlan} from './building-plan.js?v=69';
+import {floorHeight} from './landscape.js?v=69';
 
 export class BuildingFactory{
  constructor(view){this.view=view;this.library=view.renderer?new ModelLibrary(view):null;this.ready=this.library?.ready||Promise.resolve();this.materials=new BuildingMaterials(view);this.batchRoot=new THREE.Group();view.scene.add(this.batchRoot);}
@@ -85,13 +85,17 @@ export class BuildingFactory{
   this.visibilitySignature=null;this.updateVisibility();
  }
 
- updateVisibility(){if(!this.view.camera)return;const camera=this.view.camera;camera.updateMatrixWorld();const signature=camera.matrixWorld.elements.join(',')+camera.projectionMatrix.elements.join(',')+this.view.detailEnabled;if(signature===this.visibilitySignature)return;this.visibilitySignature=signature;const frustum=new THREE.Frustum().setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse));const threshold=this.view.detailEnabled===false?0:18;
+ updateVisibility(){if(!this.view.camera)return;const camera=this.view.camera;camera.updateMatrixWorld();const signature=camera.matrixWorld.elements.join(',')+camera.projectionMatrix.elements.join(',')+this.view.detailEnabled+':'+this.view.reflectionsEnabled;if(signature===this.visibilitySignature)return;this.visibilitySignature=signature;const frustum=new THREE.Frustum().setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse));const threshold=this.view.detailEnabled===false?0:18;
   // All material parts of a building share one sphere. Classify it once, then
   // reuse that result for windows, roofs, walls and grounds.
   const visibility=new Map(),reflectionBounds=new THREE.Sphere();this.visibilityChecks=0;this.detailCulled=0;
   for(const batch of this.instanceBatches||[]){const {near,far,transforms}=batch;let nearCount=0,farCount=0,nearFirst=Infinity,nearLast=0,farFirst=Infinity,farLast=0;batch.nearSlots ||= [];batch.farSlots ||= [];
    for(const transform of transforms){const {sphere,matrix}=transform;let state=visibility.get(sphere);
-    if(state===undefined){this.visibilityChecks++;state=!frustum.intersectsSphere(sphere)?0:camera.position.distanceToSquared(sphere.center)>(this.view.detailEnabled===false?0:(sphere.lodDistance||threshold))**2?2:1;visibility.set(sphere,state);}
+    if(state===undefined){this.visibilityChecks++;let visible=frustum.intersectsSphere(sphere);
+     // The reflected camera can see buildings above the main camera's view.
+     // Reflect the conservative bounds across the same plane as the river.
+     if(!visible&&this.view.reflectionsEnabled!==false&&this.view.detailEnabled!==false){reflectionBounds.copy(sphere);reflectionBounds.center.y=-.2-reflectionBounds.center.y;visible=frustum.intersectsSphere(reflectionBounds);}
+     state=!visible?0:camera.position.distanceToSquared(sphere.center)>(this.view.detailEnabled===false?0:(sphere.lodDistance||threshold))**2?2:1;visibility.set(sphere,state);}
     if(!state)continue;if(transform.renderRange){const d=camera.position.distanceToSquared(transform.rangeOrigin),[min,max]=transform.renderRange;if(d<min*min||d>=max*max)continue;
      if(transform.detailBounds&&!frustum.intersectsSphere(transform.detailBounds)){
       // A plane at water y=-.1 reflects each point to y=-.2-y.

@@ -432,3 +432,6 @@ The whole rotated zoning cell is checked against nearby road and sidewalk ribbon
 
 ## Edition 68: apartments above shops
 Mixed-use zoning grows multi-cell apartments with ground-floor shops. These lots house residents, provide jobs and accept shopping visits. Residents working or shopping in their own building complete those activities without spawning a road trip. Uses the existing detailed mixed-use models and shared rendering assets. The simulation remains simplified; rent, shop inventory and separate commercial leases are not modeled.
+
+## Edition 69: keep buildings in river reflections
+Building visibility includes the reflected camera volume, using one cached conservative bound per building. Buildings just outside the main view remain available to the river reflection. Toggling reflections invalidates visibility immediately. Unchanged views reuse instance buffers; shadow geometry and independent traffic/resident simulation are preserved. This fixes missing reflected buildings, rather than lowering geometry quality to reduce startup shadow work.

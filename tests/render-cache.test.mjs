@@ -52,3 +52,11 @@ test('large lots cull offscreen tree detail while retaining silhouettes, reflect
  // The shared root sphere still touches the view; reflection keeps the tree.
  assert.ok(factory.instanceBatches[0].near.count>=1);
 });
+
+ test('buildings visible only in river reflections retain full geometry and respond to reflection settings',()=>{
+ const camera=new THREE.PerspectiveCamera(24,1,.1,100);camera.position.set(0,1,0);camera.lookAt(0,-8.2,-20);
+ const view={scene:new THREE.Scene(),camera,landscape:{assets:{}},reflectionsEnabled:true},factory=new BuildingFactory(view),root=new THREE.Group(),geometry=new THREE.BoxGeometry(2,2,2),mesh=new THREE.Mesh(geometry,new THREE.MeshStandardMaterial());mesh.userData.sharedAsset=true;root.add(mesh);root.position.set(0,8,-20);root.userData={factory:true,asset:true,renderImmutable:true};factory.rebuild(new Map([[1,root]]));const batch=factory.instanceBatches[0],frustum=new THREE.Frustum().setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse));assert.equal(frustum.intersectsSphere(batch.transforms[0].sphere),false);assert.equal(batch.near.count,1);assert.equal(batch.near.geometry,geometry);const version=batch.near.instanceMatrix.version;factory.updateVisibility();assert.equal(batch.near.instanceMatrix.version,version);
+ view.reflectionsEnabled=false;factory.updateVisibility();assert.equal(batch.near.count,0);assert.equal(batch.shadow.userData.casterCount,1);
+ view.reflectionsEnabled=true;factory.updateVisibility();assert.equal(batch.near.count,1);assert.equal(batch.near.instanceMatrix.version,version);
+ camera.lookAt(40,-8,-20);factory.updateVisibility();assert.equal(batch.near.count,0);
+ });
