@@ -1,7 +1,7 @@
 import * as THREE from './vendor/three.module.js';
-import {streetStations,streetSurface,pavementMaterial} from './street-geometry.js?v=58';
-import {floorHeight} from './landscape.js?v=58';
-import {batchStatic} from './static-batch.js?v=58';
+import {streetStations,streetSurface,pavementMaterial} from './street-geometry.js?v=59';
+import {floorHeight} from './landscape.js?v=59';
+import {batchStatic} from './static-batch.js?v=59';
 const material=pavementMaterial();
 export function buildFootpaths(world,group){
  for(const path of world.walkPaths||[]){const points=CityEngine.sampleRoad(path.controls).map(p=>({x:(p.x+.5)*4-96,z:(p.y+.5)*4-96}));

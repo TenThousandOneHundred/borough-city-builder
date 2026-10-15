@@ -20,10 +20,10 @@ export function configureWindowLighting(material){
  if(material.userData.roomLighting)return;material.userData.roomLighting=true;material.userData.roomLightingState={value:0};
  material.onBeforeCompile=shader=>{
   shader.uniforms.roomNight=material.userData.roomLightingState;
-  shader.vertexShader='uniform float roomNight;\nattribute vec2 windowRoom;\nvarying vec3 roomLight;\nvarying vec2 roomUv;\n'+shader.vertexShader;
+  shader.vertexShader='uniform float roomNight;\nattribute vec2 windowRoom;\nvarying vec3 roomLight;\nvarying vec2 roomUv;\nvarying vec3 roomFinish;\n'+shader.vertexShader;
   shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
-   roomLight=vec3(0.);roomUv=uv;
-   if(roomNight>.5&&windowRoom.y>.5){
+   roomLight=vec3(0.);roomUv=uv;roomFinish=vec3(1.,1.1,0.);
+   if(windowRoom.y>.5){
    vec3 roomAnchor=modelMatrix[3].xyz;
    #ifdef USE_INSTANCING
     roomAnchor=(modelMatrix*instanceMatrix[3]).xyz;
@@ -32,16 +32,33 @@ export function configureWindowLighting(material){
    float occupied=fract(sin(roomSeed*1.137)*4375.8545);
    float warmth=fract(sin(roomSeed*2.731)*1964.743);
    float brightness=fract(sin(roomSeed*3.919)*1237.137);
+   // Stable pane variation computed per vertex, shared by both distance LODs.
+   roomFinish=vec3(.78+.44*brightness,warmth>.48?mix(.25,.88,occupied):1.1,1.);
    vec3 roomColour=warmth>.90?vec3(.68,.82,1.):mix(vec3(1.,.55,.24),vec3(1.,.87,.64),warmth/.9);
-   roomLight=roomColour*(.42+.58*brightness)*step(.62,occupied)*windowRoom.y;
+   roomLight=roomColour*(.42+.58*brightness)*step(.62,occupied)*windowRoom.y*step(.5,roomNight);
    }
   `);
-  shader.fragmentShader='varying vec3 roomLight;\nvarying vec2 roomUv;\n'+shader.fragmentShader;
-  shader.fragmentShader=shader.fragmentShader.replace('#include <emissivemap_fragment>',`#include <emissivemap_fragment>
+  shader.fragmentShader='varying vec3 roomLight;\nvarying vec2 roomUv;\nvarying vec3 roomFinish;\n'+shader.fragmentShader;
+  shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+   // A broad, antialiased blind edge avoids fine stripes shimmering at distance.
+   float blindEdge=max(fwidth(roomUv.y)*1.5,.012);
+   float roomBlind=smoothstep(roomFinish.y-blindEdge,roomFinish.y+blindEdge,roomUv.y)*roomFinish.z;
+   vec2 reveal=smoothstep(vec2(0.),vec2(.12),roomUv)*smoothstep(vec2(0.),vec2(.12),1.-roomUv);
+   float roomDepth=mix(1.,.76+.24*reveal.x*reveal.y,roomFinish.z);
+   diffuseColor.rgb*=roomFinish.x*roomDepth;
+   vec3 blindColour=mix(vec3(.17,.19,.18),vec3(.29,.27,.22),roomFinish.x-.65);
+   diffuseColor.rgb=mix(diffuseColor.rgb,blindColour,roomBlind*.72);
+  `);
+  shader.fragmentShader=shader.fragmentShader.replace('#include <roughnessmap_fragment>',`#include <roughnessmap_fragment>
+   roughnessFactor=mix(roughnessFactor,max(roughnessFactor,.42),roomBlind*.7);
+  `).replace('#include <metalnessmap_fragment>',`#include <metalnessmap_fragment>
+   metalnessFactor*=1.-roomBlind*.55;
+  `);
+  shader.fragmentShader=shader.fragmentShader.replace('#include <emissivemap_fragment>' ,`#include <emissivemap_fragment>
    vec2 roomEdge=smoothstep(vec2(0.),vec2(.08),roomUv)*smoothstep(vec2(0.),vec2(.08),1.-roomUv);
    float roomShade=.83+.17*smoothstep(.1,.9,roomUv.y);
-   totalEmissiveRadiance*=roomLight*mix(.55,1.,roomEdge.x*roomEdge.y)*roomShade;
+   totalEmissiveRadiance*=roomLight*mix(.55,1.,roomEdge.x*roomEdge.y)*roomShade*(1.-roomBlind*.58);
   `);
  };
- material.customProgramCacheKey=()=> 'borough-window-rooms-57';
+ material.customProgramCacheKey=()=> 'borough-window-finishes-59';
 }
