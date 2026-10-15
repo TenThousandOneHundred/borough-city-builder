@@ -438,3 +438,6 @@ Building visibility includes the reflected camera volume, using one cached conse
 
 ## Edition 70: row-house frontage and private gardens
 Saved road-facing row-house lots now fit repeated full-size paired or terrace homes across their frontage, instead of placing a single small model in a large lawn. Each authored front door receives a separate garden walk; rear fences divide gardens between entrances. Repeated houses share model geometry and materials and remain in existing instance batches. Lot ownership, resident counts, simulation and saves are unchanged. More visible homes add geometry, so this is a frontage-fidelity improvement rather than an FPS gain.
+
+## Edition 71: exact pedestrian pose reuse
+Waiting passengers retain their exact body-part transforms as simulation time advances. Moving people update only changed instance slots, preserving pending GPU writes until consumed. Ground heights are reused at unchanged positions and invalidated after terrain edits. Projection changes recalculate visibility even while paused. The optimization affects rendering only: walking, traffic and household clocks remain independent. A 200-passenger CPU fixture compares final matrices against the previous renderer; this is not a whole-game FPS benchmark.
