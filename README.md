@@ -498,3 +498,6 @@ The paint is generated only when the road geometry rebuilds, uses the existing r
 
 ## Edition 80 — Road-connected zoning and building lots
 Roadside zoning now rejects cells behind missing frontage at curves, junctions and blocked service sites. Each available column extends continuously from its road. Developed housing displays one saved lot rather than an internal cell checkerboard, including when its road is removed. The six existing residential categories retain their distinct multi-cell footprints and models. Changes do not add per-frame work or alter traffic advancement.
+
+## Edition 81 — Attached terrace housing
+Oriented row-house lots use the terrace model with solid party walls, flush side roof edges and no side gutters. Repeated homes meet along their boundaries with uniform scaling and individually connected entrances and rear gardens. New row zoning varies between one-, two- and three-cell frontages; existing saved parcel boundaries stay intact. The revised asset removes 504 full-detail triangles, keeps the existing shared instance batches, and changes compressed catalogue transfer by about 1.2 KB. Traffic and resident simulation are unchanged.

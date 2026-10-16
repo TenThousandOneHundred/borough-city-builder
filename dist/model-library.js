@@ -1,13 +1,13 @@
-import {bakeRoofFinish} from './roof-finishes.js?v=80';
-import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=80';
-import {loadBinary} from './asset-transfer.js?v=80';
-import {SiteDetails} from './site-details.js?v=80';
-import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=80';
+import {bakeRoofFinish} from './roof-finishes.js?v=81';
+import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=81';
+import {loadBinary} from './asset-transfer.js?v=81';
+import {SiteDetails} from './site-details.js?v=81';
+import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=81';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {lotPlan} from './building-plan.js?v=80';
-import {floorHeight} from './landscape.js?v=80';
+import {lotPlan} from './building-plan.js?v=81';
+import {floorHeight} from './landscape.js?v=81';
 const IDENTITY=new THREE.Matrix4();
 const civicDefaults={hospital:'clinic',school:'elementary',police:'police',fire:'fire'};
 // Complete textured assets are loaded once, batched per material, and instanced.
@@ -17,9 +17,9 @@ export class ModelLibrary {
   const loader=new GLTFLoader();
   // Fetch the distant indices alongside the models instead of adding another
   // large download after all three catalogues have finished.
-  const distant=Promise.all([fetch(new URL('./assets/buildings/lod.json?v=55',import.meta.url)).then(r=>{if(!r.ok)throw Error(r.status);return r.json()}),loadBinary(new URL('./assets/buildings/lod.bin?v=55',import.meta.url))]).then(value=>({value}),error=>({error}));
+  const distant=Promise.all([fetch(new URL('./assets/buildings/lod.json?v=56',import.meta.url)).then(r=>{if(!r.ok)throw Error(r.status);return r.json()}),loadBinary(new URL('./assets/buildings/lod.bin?v=56',import.meta.url))]).then(value=>({value}),error=>({error}));
   await Promise.all(['urban','industry','modern'].map(async file=>{
-   try{const url=new URL(`./assets/buildings/${file}.glb?v=${file==='modern'?'45':21}`,import.meta.url),{scene}=await loader.parseAsync(await loadBinary(url),new URL('.',url).href);
+   try{const url=new URL(`./assets/buildings/${file}.glb?v=${file==='modern'?'46':21}`,import.meta.url),{scene}=await loader.parseAsync(await loadBinary(url),new URL('.',url).href);
     this.ingest(scene);
    }catch(error){console.warn('Building model fallback:',file,error.message);}
   }));
@@ -63,14 +63,15 @@ export class ModelLibrary {
   if(!this.models.length)return null;const p=lotPlan(world,index,parcel),definition=parcel?.definition||world.tiles[index],mixed=definition.building==='mixeduse',category=mixed?'commercial':p.low?'residential-low':p.type;
   const civic=civicDefaults[p.type],id=definition.building||civic;let candidates=this.models.filter(a=>a.category===category&&(a.building!=='lowrent'||id==='lowrent')&&(!mixed||a.name.includes('mixed-use'))&&(!civic||a.building===id&&a.site===p.facility));if(!candidates.length)return null;
   if(id==='lowrent'){const name=p.lotWidth>=7.8&&p.lotDepth>=7.8?'lowrent-court-block':'lowrent-staggered-slab',slabs=candidates.filter(a=>a.building==='lowrent'&&a.name===name);if(slabs.length)candidates=slabs;}
-  if(p.low){const homes=candidates.filter(a=>a.houseForm);if(homes.length)candidates=homes;const forms=candidates.filter(a=>id==='townhouse'?['semi','terrace'].includes(a.houseForm):a.houseForm==='detached');if(forms.length)candidates=forms;}
+  if(p.low){const homes=candidates.filter(a=>a.houseForm);if(homes.length)candidates=homes;const forms=candidates.filter(a=>id==='townhouse'?(p.oriented?a.houseForm==='terrace':['semi','terrace'].includes(a.houseForm)):a.houseForm==='detached');if(forms.length)candidates=forms;}
   const densityFit=candidates.filter(a=>id==='lowrent'||!a.floors||(p.type==='residential'&&!p.low?(p.density==='medium'?a.floors<=9:a.floors>=9):p.type==='commercial'?(p.density==='low'?a.floors<=3:a.floors>=4):true));if(densityFit.length)candidates=densityFit;
   const W=p.lotWidth,D=p.lotDepth,row=p.oriented&&id==='townhouse';
   // One saved row-house parcel can contain several homes, at their authored
   // metre scale. Repeat shared assets rather than stretching a single house.
-  const rowCount=a=>row?Math.max(1,Math.min(6,Math.floor((W-.3+.04)/(a.size.x*.2+.04)))):1;
-  const fit=a=>Math.min(.2,(W-.3-.04*(rowCount(a)-1))/(a.size.x*rowCount(a)),(D-.3)/a.size.z);
-  const widthOf=a=>a.size.x*fit(a)*rowCount(a)+.04*(rowCount(a)-1);
+  const attached=a=>row&&a.houseForm==='terrace';
+  const rowCount=a=>row?Math.max(1,Math.min(6,attached(a)?Math.round((W-.04)/(a.size.x*.2)):Math.floor((W-.3+.04)/(a.size.x*.2+.04)))):1;
+  const fit=a=>Math.min(attached(a)?.24:.2,(W-(attached(a)?.04:.3)-(attached(a)?0:.04)*(rowCount(a)-1))/(a.size.x*rowCount(a)),(D-.3)/a.size.z);
+  const widthOf=a=>a.size.x*fit(a)*rowCount(a)+(attached(a)?0:.04)*(rowCount(a)-1);
   // First fit metre-sized architecture to the parcel. A large block must not
   // shrink into a miniature tower when selected for a single-cell lot.
   const fullScale=candidates.filter(a=>fit(a)>=.17);if(fullScale.length)candidates=fullScale;
@@ -89,7 +90,7 @@ export class ModelLibrary {
   candidates.sort((a,b)=>score(a)-score(b)||a.name.localeCompare(b.name));
   const best=score(candidates[0]);candidates=candidates.filter(a=>score(a)<=best+(p.low?.65:openLot?.38:p.type==='office'?.3:mediumHomes?.42:.16));
   const modernShare=p.type==='office'?.94:p.low?.28:p.type==='commercial'?.60:.58,familyVariation=(Math.imul(p.seed^(p.seed>>>16),0x45d9f3b)>>>0)/4294967296;const family=familyVariation<modernShare?'modern':'masonry',preferred=candidates.filter(a=>a.family===family);if(preferred.length)candidates=preferred;
-  const asset=candidates[Math.floor(sample(0x94eb51)*candidates.length)],root=new THREE.Group(),model=asset.root.clone(true),scale=fit(asset),copies=rowCount(asset),buildingWidth=widthOf(asset),centers=Array.from({length:copies},(_,i)=>(i-(copies-1)/2)*(asset.size.x*scale+.04));
+  const asset=candidates[Math.floor(sample(0x94eb51)*candidates.length)],root=new THREE.Group(),model=asset.root.clone(true),scale=fit(asset),copies=rowCount(asset),buildingWidth=widthOf(asset),centers=Array.from({length:copies},(_,i)=>(i-(copies-1)/2)*(asset.size.x*scale+(attached(asset)?0:.04)));
   // Move frontage toward its road, within the original owned rectangle.
   // Project the remaining axis-aligned clearance onto the local front vector.
   const c=Math.abs(Math.cos(p.angle)),s=Math.abs(Math.sin(p.angle));

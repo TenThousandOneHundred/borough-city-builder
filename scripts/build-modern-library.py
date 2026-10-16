@@ -185,8 +185,8 @@ class Model:
 # roof planes and human-scale covered entries. Dimensions remain in metres.
 def dwelling(name,w,d,floors,form='detached',roof='gable',tint=(.85,.88,.80),brick=False,siding=False,porch=True):
  m=Model(name,'residential-low',floors);m.houseForm=form;m.roofForm=roof
- domestic_block(m,w,d,floors,tint=tint,brick=brick,siding=siding,paired=form=='semi')
- pitched_roof(m,0,0,w,d,floors*2.85,2.1 if floors==1 else 2.7,hip=min(w,d)*.23 if roof=='hip' else 0,tint=(.82,.83,.79) if brick else (.74,.78,.79))
+ domestic_block(m,w,d,floors,tint=tint,brick=brick,siding=siding,paired=form=='semi',attached=form=='terrace')
+ pitched_roof(m,0,0,w,d,floors*2.85,2.1 if floors==1 else 2.7,hip=min(w,d)*.23 if roof=='hip' else 0,tint=(.82,.83,.79) if brick else (.74,.78,.79),attached=form=='terrace')
  if porch:
   for front in list(m.streetFronts):covered_entry(m,front['position'][0],d/2+.95,3.1,1.9)
  # Chimney, vent cap and rainwater pipes break the silhouette at realistic scale.
@@ -194,10 +194,10 @@ def dwelling(name,w,d,floors,form='detached',roof='gable',tint=(.85,.88,.80),bri
  m.box(-w*.26,floors*2.85+3.1,-d*.26,.82,.14,.92,CONCRETE)
  return m
 
-def domestic_block(m,w,d,floors,x=0,z=0,tint=(.8,.84,.78),brick=False,siding=False,paired=False):
+def domestic_block(m,w,d,floors,x=0,z=0,tint=(.8,.84,.78),brick=False,siding=False,paired=False,attached=False):
  h=floors*2.85;cladding=BRICK if brick else PAINT
  points=[(x-w/2,z-d/2),(x+w/2,z-d/2),(x+w/2,z+d/2),(x-w/2,z+d/2)]
- m.box(x,0,z,w+.10,.16,d+.10,CONCRETE,(.8,.8,.75))
+ m.box(x,0,z,w if attached else w+.10,.16,d+.10,CONCRETE,(.8,.8,.75))
  for side,(a,b) in enumerate(zip(points,points[1:]+points[:1])):
   dx,dz=b[0]-a[0],b[1]-a[1];length=math.hypot(dx,dz);tx,tz=dx/length,dz/length;nx,nz=tz,-tx;front=nz>.9
   def p(u,y,out=0):return(a[0]+tx*u+nx*out,y,a[1]+tz*u+nz*out)
@@ -208,6 +208,8 @@ def domestic_block(m,w,d,floors,x=0,z=0,tint=(.8,.84,.78),brick=False,siding=Fal
    for k in range(n):
     y0=lo+(hi-lo)*k/n;y1=lo+(hi-lo)*(k+1)/n;c=tuple(v*(.96+(k*13+side*7)%9*.008) for v in tint)
     m.quad(p(r,y0,.04),p(l,y0,.04),p(l,y1,.015),p(r,y1,.015),PAINT,c)
+  if attached and abs(nx)>.9:
+   m.quad(p(length,0),p(0,0),p(0,h),p(length,h),cladding,tint);continue
   bays=max(2,round(length/3.2));bay=length/bays
   for f in range(floors):
    base=f*2.85
@@ -230,8 +232,8 @@ def domestic_block(m,w,d,floors,x=0,z=0,tint=(.8,.84,.78),brick=False,siding=Fal
      m.detail=True;m.quad(p(l-.14,lo-.08,.19),p(r+.14,lo-.08,.19),p(r+.14,lo-.08,-.04),p(l-.14,lo-.08,-.04),CONCRETE);m.detail=False
  return h
 
-def pitched_roof(m,x,z,w,d,y,rise,hip=0,tint=(.78,.81,.82),gutters=True):
- W=w+.7;D=d+.7;a=(x-W/2,y,z+D/2);b=(x+W/2,y,z+D/2);c=(x+W/2,y,z-D/2);e=(x-W/2,y,z-D/2);rf=(x,y+rise,z+D/2-hip);rb=(x,y+rise,z-D/2+hip)
+def pitched_roof(m,x,z,w,d,y,rise,hip=0,tint=(.78,.81,.82),gutters=True,attached=False):
+ W=w-.12 if attached else w+.7;D=d+.7;a=(x-W/2,y,z+D/2);b=(x+W/2,y,z+D/2);c=(x+W/2,y,z-D/2);e=(x-W/2,y,z-D/2);rf=(x,y+rise,z+D/2-hip);rb=(x,y+rise,z-D/2+hip)
  def facet(q):
   # Roof texture coordinates use physical distance, not one image per roof.
   u=math.dist(q[0],q[1])/2;v=math.dist(q[1],q[2])/2;m.quad(*q,ROOF,tint,uvs=[(0,0),(u,0),(u,v),(0,v)])
@@ -254,7 +256,7 @@ def pitched_roof(m,x,z,w,d,y,rise,hip=0,tint=(.78,.81,.82),gutters=True):
    t=k/rows;xx=x+side*W/2*(1-t);yy=y+rise*t+.018;z0=z-D/2+hip*t;z1=z+D/2-hip*t
    course=[(xx,yy,z0),(xx,yy,z1),(xx+side*.032,yy-.008,z1),(xx+side*.032,yy-.008,z0)]
    m.quad(*(course if side>0 else course[::-1]),ROOF,tuple(v*.7 for v in tint))
- if gutters:
+ if gutters and not attached:
   for side in [-1,1]:
    m.box(x+side*(W/2+.035),y-.05,z,.10,.10,D,FRAME)
    m.cylinder(x+side*(w/2+.07),.06,z-d/2+.20,.045,max(.1,y-.11),FRAME,6)

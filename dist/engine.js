@@ -183,7 +183,7 @@ function developFineZones(w,a,budget){
  for(const p of layout.values()){
   if(starts>=6||power<8||water<8)break;const cell=state.cells[p.id],zone=ZONES[cell?.zone];if(!zone||cell.owner||p.row!==0||!a.roads.has(p.roadIndex))continue;
   const demand=zone.form==='mixed'?Math.min(a.demand[0],a.demand[1]):a.demand[zone.type==='residential'?0:zone.type==='commercial'?1:2];if(demand<15||random()>demand/500)continue;
-  const seed=Buildings.seed(p.id)^w.seed,shapes=zone.form==='lowrent'?apartmentShapes(seed).filter(([width,depth])=>width>=4&&depth>=4):zone.form==='row'?[[1,3],[2,3],[1,2]]:zone.type==='residential'&&zone.density==='low'?(seed%2?[[2,3],[2,2],[3,3]]:[[2,2],[2,3],[3,2]]):zone.density==='high'?[[6,6],[5,5],[4,4],[3,4]]:zone.type==='residential'?(zone.form==='mixed'?[[4,4],[3,4],[3,3]]:apartmentShapes(seed)):[[4,3],[3,3],[2,3],[2,2]];
+  const seed=Buildings.seed(p.id)^w.seed,shapes=zone.form==='lowrent'?apartmentShapes(seed).filter(([width,depth])=>width>=4&&depth>=4):zone.form==='row'?[[1+(seed>>>0)%3,3],[2,3],[1,3],[1,2]]:zone.type==='residential'&&zone.density==='low'?(seed%2?[[2,3],[2,2],[3,3]]:[[2,2],[2,3],[3,2]]):zone.density==='high'?[[6,6],[5,5],[4,4],[3,4]]:zone.type==='residential'?(zone.form==='mixed'?[[4,4],[3,4],[3,3]]:apartmentShapes(seed)):[[4,3],[3,3],[2,3],[2,2]];
   let parcel;for(const [width,depth]of shapes){parcel=FineZones.reserve(state,layout,p.id,width,depth);if(parcel)break;}if(!parcel)continue;
   parcel.occupant={type:zone.type,building:fineBuilding(zone,seed>>>0),density:zone.density,level:1,people:0,variant:(seed>>>0)%4,construction:1};power-=8;water-=8;starts++;
  }
