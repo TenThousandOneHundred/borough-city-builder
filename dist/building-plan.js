@@ -13,9 +13,9 @@ function segments(path){
  pathSamples.set(path,points);return points;
 }
 export function lotPlan(world,index,parcel){
- const tile=world.tiles[index],width=parcel?.width||1,depth=parcel?.depth||1;
+ const tile=parcel?.definition||world.tiles[index],width=parcel?.width||1,depth=parcel?.depth||1;
  let cx=(index%48+.5)*4-96+(width-1)*2,cz=(Math.floor(index/48)+.5)*4-96+(depth-1)*2;
- let seed=(Math.imul(index+17,73856093)^Math.imul(world.seed,19349663))>>>0;
+ let seed=(Math.imul((parcel?.entitySeed??index)+17,73856093)^Math.imul(world.seed,19349663))>>>0;
  const next=()=>{seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;return(seed>>>0)/4294967296;};
  const variation=next(),style=Math.floor(next()*6),tone=Math.floor(next()*5);
  let nearest=null,distance=Infinity;const nearbyPaths=new Set();
@@ -48,5 +48,5 @@ export function lotPlan(world,index,parcel){
  else if(type==='industrial')floors=1;
  else if(density==='medium'||tile.building==='apartments')floors=3+style%4;
  else{const large=width*depth>1;floors=type==='office'?(large?8:5)+Math.floor(variation*16):(large?5:3)+Math.floor(variation*10);}
- return{facility:!!parcel?.facility,oriented:!!parcel?.oriented,ownedCells:parcel?.oriented?parcel.members:undefined,index,type,density,low,style,tone,variation,floors,angle,frontage,cx,cz,lotWidth,lotDepth,parcelWidth:width*4,parcelDepth:depth*4,seed:seed>>>0,level:tile.level};
+ return{entityId:parcel?.entityId,facility:!!parcel?.facility,oriented:!!parcel?.oriented,ownedCells:parcel?.oriented&&!parcel.entityId?parcel.members:undefined,index,type,density,low,style,tone,variation,floors,angle,frontage,cx,cz,lotWidth,lotDepth,parcelWidth:parcel?.entityId?lotWidth:width*4,parcelDepth:parcel?.entityId?lotDepth:depth*4,seed:seed>>>0,level:tile.level};
 }

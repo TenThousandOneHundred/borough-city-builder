@@ -1,3 +1,5 @@
+import './building-entities.js?v=72';
+const Buildings=globalThis.BoroughBuildings;
 import * as THREE from './vendor/three.module.js';
 
 // Connect an owned parcel edge to its actual street sidewalk. This only builds
@@ -27,8 +29,8 @@ function accessStrip(world,plan,base,engine,height,roadHeight,centre=0,requested
  const owned=(x,z)=>Math.abs(x-plan.cx)<=plan.parcelWidth/2+.01&&Math.abs(z-plan.cz)<=plan.parcelDepth/2+.01;
  const allowed=(x,z)=>{
   const gx=Math.floor((x+96)/4),gy=Math.floor((z+96)/4);if(gx<0||gy<0||gx>=48||gy>=48)return false;
-  const index=gy*48+gx,t=world.tiles[index];if(t.ground==='water')return false;if(plan.ownedCells?plan.ownedCells.includes(index):owned(x,z))return true;
-  if(t.type==='road')return f.pathId?(t.pathIds||[]).includes(f.pathId):index===f.roadIndex;
+  if(Buildings.blocked(world,x,z,plan.entityId))return false;const index=gy*48+gx,t=world.tiles[index];if(t.ground==='water')return false;if(plan.ownedCells?plan.ownedCells.includes(index):owned(x,z))return true;
+  if(t.type==='road')return f.pathId?(t.pathIds||[]).includes(f.pathId):(index===f.roadIndex||!!plan.entityId&&!t.pathIds?.length&&t.roadType!=='highway');
   return !t.type&&!t.construction;
  };
  // A broad urban apron can narrow to an entrance walk around adjacent parcels.

@@ -1,3 +1,5 @@
+import './building-entities.js?v=72';
+const Buildings=globalThis.BoroughBuildings;
 // Save-owned elevation offsets on a two-world-unit grid. Rendering and simulation
 // read the same surface; old saves with no elevation edits retain their terrain.
 export const ELEVATION_SIZE=97,ELEVATION_STEP=2,ELEVATION_HALF=96;
@@ -15,6 +17,7 @@ function protection(world,x,z){
   const distance=Math.max(Math.abs(x-((xx+.5)*4-96)),Math.abs(z-((y+.5)*4-96)));
   weight=Math.min(weight,ease(clamp((distance-4.25)/4,0,1)));
  }
+ for(const p of Buildings.near(world,x,z,7)){const f=p.frame,dx=x-f.cx,dz=z-f.cz,c=Math.cos(f.angle),s=Math.sin(f.angle),distance=Math.max(Math.abs(dx*c-dz*s)-f.width/2,Math.abs(dx*s+dz*c)-f.depth/2);weight=Math.min(weight,ease(clamp((distance-2.25)/4,0,1)));}
  return weight;
 }
 export function sculptTerrain(world,{x,z,mode,radius=12,strength=.6,target=2},height){

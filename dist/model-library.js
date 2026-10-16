@@ -1,13 +1,13 @@
-import {bakeRoofFinish} from './roof-finishes.js?v=71';
-import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=71';
-import {loadBinary} from './asset-transfer.js?v=71';
-import {SiteDetails} from './site-details.js?v=71';
-import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=71';
+import {bakeRoofFinish} from './roof-finishes.js?v=72';
+import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=72';
+import {loadBinary} from './asset-transfer.js?v=72';
+import {SiteDetails} from './site-details.js?v=72';
+import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=72';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {lotPlan} from './building-plan.js?v=71';
-import {floorHeight} from './landscape.js?v=71';
+import {lotPlan} from './building-plan.js?v=72';
+import {floorHeight} from './landscape.js?v=72';
 const IDENTITY=new THREE.Matrix4();
 const civicDefaults={hospital:'clinic',school:'elementary',police:'police',fire:'fire'};
 // Complete textured assets are loaded once, batched per material, and instanced.
@@ -60,8 +60,8 @@ export class ModelLibrary {
  setNight(on){for(const material of this.materials)if(material.userData.glass){const lit=on;if(material.userData.roomLightingState)material.userData.roomLightingState.value=on?1:0;material.emissive.set(lit?(material.userData.roomLighting?'#ffffff':'#bc9d6e'):'#000000');material.emissiveIntensity=lit?(material.userData.roomLighting?1.15:.23):0;material.emissiveMap=lit?material.map:null;material.needsUpdate=true;}}
  acceptsCivic(tile){const id=tile.building||civicDefaults[tile.type];return !!id&&this.models.some(a=>a.category===tile.type&&a.building===id&&a.site===!!tile.facilitySite);}
  create(world,index,parcel){
-  if(!this.models.length)return null;const p=lotPlan(world,index,parcel),mixed=world.tiles[index].building==='mixeduse',category=mixed?'commercial':p.low?'residential-low':p.type;
-  const civic=civicDefaults[p.type],id=world.tiles[index].building||civic;let candidates=this.models.filter(a=>a.category===category&&(!mixed||a.name.includes('mixed-use'))&&(!civic||a.building===id&&a.site===p.facility));if(!candidates.length)return null;
+  if(!this.models.length)return null;const p=lotPlan(world,index,parcel),definition=parcel?.definition||world.tiles[index],mixed=definition.building==='mixeduse',category=mixed?'commercial':p.low?'residential-low':p.type;
+  const civic=civicDefaults[p.type],id=definition.building||civic;let candidates=this.models.filter(a=>a.category===category&&(!mixed||a.name.includes('mixed-use'))&&(!civic||a.building===id&&a.site===p.facility));if(!candidates.length)return null;
   if(p.low){const homes=candidates.filter(a=>a.houseForm);if(homes.length)candidates=homes;const forms=candidates.filter(a=>id==='townhouse'?['semi','terrace'].includes(a.houseForm):a.houseForm==='detached');if(forms.length)candidates=forms;}
   const densityFit=candidates.filter(a=>!a.floors||(p.type==='residential'&&!p.low?(p.density==='medium'?a.floors<=9:a.floors>=9):p.type==='commercial'?(p.density==='low'?a.floors<=3:a.floors>=4):true));if(densityFit.length)candidates=densityFit;
   const W=p.lotWidth,D=p.lotDepth,row=p.oriented&&id==='townhouse';
@@ -79,13 +79,14 @@ export class ModelLibrary {
   // choice to the same six styles, which repeated one block across districts.
   const sample=salt=>{let h=(p.seed^salt)>>>0;h=Math.imul(h^(h>>>16),0x21f0aaad);h=Math.imul(h^(h>>>15),0x735a2d97);return ((h^(h>>>15))>>>0)/4294967296;};
   const openLot=p.density==='high'&&sample(0x19ab37)<(p.type==='office'?.72:p.type==='residential'?.5:p.type==='commercial'?.34:0);
-  const targetCoverage=openLot?.2+sample(0x73d928)*.3:row?.62:p.low?.34:p.type==='commercial'&&p.density==='low'?.48:.72;
+  const mediumHomes=p.type==='residential'&&p.density==='medium'&&!p.low;
+  const targetCoverage=openLot?.2+sample(0x73d928)*.3:row?.62:p.low?.34:mediumHomes?.45+sample(0x73d928)*.35:p.type==='commercial'&&p.density==='low'?.48:.72;
   const targetHeight=p.floors*.64,score=a=>{
    const scale=fit(a),coverage=widthOf(a)*a.size.z*scale/(W*D);
    return Math.abs(Math.log(Math.max(.1,a.size.y*scale)/targetHeight))*(openLot?1.1:.45)+Math.abs(targetCoverage-coverage)*3;
   };
   candidates.sort((a,b)=>score(a)-score(b)||a.name.localeCompare(b.name));
-  const best=score(candidates[0]);candidates=candidates.filter(a=>score(a)<=best+(p.low?.65:openLot?.38:p.type==='office'?.3:.16));
+  const best=score(candidates[0]);candidates=candidates.filter(a=>score(a)<=best+(p.low?.65:openLot?.38:p.type==='office'?.3:mediumHomes?.42:.16));
   const modernShare=p.type==='office'?.94:p.low?.28:p.type==='commercial'?.60:.58,familyVariation=(Math.imul(p.seed^(p.seed>>>16),0x45d9f3b)>>>0)/4294967296;const family=familyVariation<modernShare?'modern':'masonry',preferred=candidates.filter(a=>a.family===family);if(preferred.length)candidates=preferred;
   const asset=candidates[Math.floor(sample(0x94eb51)*candidates.length)],root=new THREE.Group(),model=asset.root.clone(true),scale=fit(asset),copies=rowCount(asset),buildingWidth=widthOf(asset),centers=Array.from({length:copies},(_,i)=>(i-(copies-1)/2)*(asset.size.x*scale+.04));
   // Move frontage toward its road, within the original owned rectangle.

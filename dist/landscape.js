@@ -1,14 +1,16 @@
-import {supportsTree} from './tree-placement.js?v=71';
-import {terrainMeshes} from './terrain-mesh.js?v=71';
-import {inlandRelief} from './landforms.js?v=71';
-import {streetStations,atDistance} from './street-geometry.js?v=71';
-import {terrainOffset} from './terrain-edit.js?v=71';
-import {outsidePortals} from './traffic.js?v=71';
-import {ScannedRocks} from './scanned-rocks.js?v=71';
-import {groundCover} from './ground-cover.js?v=71';
-import {terrainField} from './terrain-field.js?v=71';
-import {reflectedWater} from './water.js?v=71';
-import {naturalTerrain} from './terrain-material.js?v=71';
+import './building-entities.js?v=72';
+const Buildings=globalThis.BoroughBuildings;
+import {supportsTree} from './tree-placement.js?v=72';
+import {terrainMeshes} from './terrain-mesh.js?v=72';
+import {inlandRelief} from './landforms.js?v=72';
+import {streetStations,atDistance} from './street-geometry.js?v=72';
+import {terrainOffset} from './terrain-edit.js?v=72';
+import {outsidePortals} from './traffic.js?v=72';
+import {ScannedRocks} from './scanned-rocks.js?v=72';
+import {groundCover} from './ground-cover.js?v=72';
+import {terrainField} from './terrain-field.js?v=72';
+import {reflectedWater} from './water.js?v=72';
+import {naturalTerrain} from './terrain-material.js?v=72';
 import * as THREE from './vendor/three.module.js';
 export const TILE=4,SIZE=48,HALF=96;
 const landBase=new THREE.Color('#c8e0ad'),landLight=new THREE.Color('#d4dfb3'),shoreColor=new THREE.Color('#c3bda6'),slopeColor=new THREE.Color('#959a8d');
@@ -38,9 +40,9 @@ for(let i=0;i<w.tiles.length;i++){const t=w.tiles[i];if(t.type!=='road'||t.groun
 // Small neighborhood trees soften developed block interiors without hiding roads.
 for(const path of w.roadPaths||[]){const spec=CityEngine.ROADS[path.type];if(!spec?.green)continue;const stations=streetStations(CityEngine.sampleRoad(path.controls).map(p=>({x:(p.x+.5)*4-96,z:(p.y+.5)*4-96})));if(stations.length<2)continue;for(let d=3;d<stations.at(-1).distance-1;d+=12){const p=atDistance(stations,d),x=p.x+p.tz*(spec.width/2+.25),z=p.z-p.tx*(spec.width/2+.25);if(wetness(w,x,z)<.3)positions.push([x,z,2.6,positions.length%4]);}}
 for(let i=0;i<w.tiles.length;i++){const t=w.tiles[i];if(t.type||t.zone||t.ground!=='land'||t.tree)continue;const neighbors=CityEngine.neighbors(i);if(neighbors.some(j=>['residential','commercial','office'].includes(w.tiles[j].type))&&!neighbors.some(j=>w.tiles[j].type==='road')&&hash(i,307,w.seed)>.4){const x=(i%48+.5)*4-96,z=(Math.floor(i/48)+.5)*4-96;positions.push([x,z,1.9+hash(i,311,w.seed)*1.2,i%4])}}
-for(let k=0;k<4200;k++){const x=hash(k,77,w.seed)*640-320,z=hash(k,83,w.seed)*640-320;if(Math.abs(x)<98&&Math.abs(z)<98||Math.abs(z-2)<4&&x<0||wetness(w,x,z)>.08||noise(x*.017,z*.017,w.seed+7)<.42)continue;positions.push([x,z,4+hash(k,91,w.seed)*4,k%4])}const portals=outsidePortals(w),clearPositions=positions.filter(([x,z])=>supportsTree(w,x,z,groundHeight)&&!portals.some(p=>(x-p.x)*p.dx+(z-p.z)*p.dz>0&&Math.abs((x-p.x)*p.dz-(z-p.z)*p.dx)<3));const realistic=this.view.vegetation.populate(this.group,clearPositions,(x,z)=>floorHeight(w,x,z));if(realistic){this.trees=realistic;return}const trunk=new THREE.InstancedMesh(new THREE.CylinderGeometry(.045,.12,1,7),this.view.mat('#746958'),clearPositions.length),leaves=new THREE.InstancedMesh(new THREE.PlaneGeometry(1,1),this.leafMaterial(),clearPositions.length*24);const d=new THREE.Object3D();clearPositions.forEach(([x,z,h,v],i)=>{const y=floorHeight(w,x,z);d.rotation.set(0,0,0);d.position.set(x,y+h*.43,z);d.scale.set(1,h*.85,1);d.updateMatrix();trunk.setMatrixAt(i,d.matrix);for(let j=0;j<24;j++){const a=j*2.399+i,r=Math.sqrt((j%8)/8)*h*.24;d.position.set(x+Math.cos(a)*r,y+h*.55+Math.sin(j*1.7)*h*.13+(j%3)*h*.08,z+Math.sin(a)*r);d.rotation.set((j%3-1)*.45,a,(j%2)*.25);const size=h*(.42+(j%4)*.035);d.scale.set(size,size*(j%2?.9:1.1),1);d.updateMatrix();leaves.setMatrixAt(i*24+j,d.matrix);const col=new THREE.Color(['#b9cba4','#95b09c','#c7cfa7','#acc294'][v]);leaves.setColorAt(i*24+j,col)}});trunk.castShadow=true;leaves.castShadow=true;leaves.receiveShadow=true;this.group.add(trunk,leaves);this.trees=[trunk,leaves]}
+for(let k=0;k<4200;k++){const x=hash(k,77,w.seed)*640-320,z=hash(k,83,w.seed)*640-320;if(Math.abs(x)<98&&Math.abs(z)<98||Math.abs(z-2)<4&&x<0||wetness(w,x,z)>.08||noise(x*.017,z*.017,w.seed+7)<.42)continue;positions.push([x,z,4+hash(k,91,w.seed)*4,k%4])}const portals=outsidePortals(w),clearPositions=positions.filter(([x,z])=>!Buildings.blocked(w,x,z)&&supportsTree(w,x,z,groundHeight)&&!portals.some(p=>(x-p.x)*p.dx+(z-p.z)*p.dz>0&&Math.abs((x-p.x)*p.dz-(z-p.z)*p.dx)<3));const realistic=this.view.vegetation.populate(this.group,clearPositions,(x,z)=>floorHeight(w,x,z));if(realistic){this.trees=realistic;return}const trunk=new THREE.InstancedMesh(new THREE.CylinderGeometry(.045,.12,1,7),this.view.mat('#746958'),clearPositions.length),leaves=new THREE.InstancedMesh(new THREE.PlaneGeometry(1,1),this.leafMaterial(),clearPositions.length*24);const d=new THREE.Object3D();clearPositions.forEach(([x,z,h,v],i)=>{const y=floorHeight(w,x,z);d.rotation.set(0,0,0);d.position.set(x,y+h*.43,z);d.scale.set(1,h*.85,1);d.updateMatrix();trunk.setMatrixAt(i,d.matrix);for(let j=0;j<24;j++){const a=j*2.399+i,r=Math.sqrt((j%8)/8)*h*.24;d.position.set(x+Math.cos(a)*r,y+h*.55+Math.sin(j*1.7)*h*.13+(j%3)*h*.08,z+Math.sin(a)*r);d.rotation.set((j%3-1)*.45,a,(j%2)*.25);const size=h*(.42+(j%4)*.035);d.scale.set(size,size*(j%2?.9:1.1),1);d.updateMatrix();leaves.setMatrixAt(i*24+j,d.matrix);const col=new THREE.Color(['#b9cba4','#95b09c','#c7cfa7','#acc294'][v]);leaves.setColorAt(i*24+j,col)}});trunk.castShadow=true;leaves.castShadow=true;leaves.receiveShadow=true;this.group.add(trunk,leaves);this.trees=[trunk,leaves]}
 
-makeRocks(w){const group=this.rockGroup||this.group,points=[];for(let k=0;k<1700;k++){const x=hash(k,131,w.seed)*470-235,z=hash(k,139,w.seed)*470-235,wet=wetness(w,x,z);if(wet<.12||wet>.45||Math.abs(z-2)<5&&x<0)continue;const ix=Math.floor((x+96)/4),iy=Math.floor((z+96)/4);if(ix>=0&&iy>=0&&ix<48&&iy<48&&w.tiles[iy*48+ix].type)continue;points.push([x,z,.15+hash(k,143,w.seed)*.5])}if(this.scannedRocks.populate(group,points,groundHeight,w))return;const geo=new THREE.IcosahedronGeometry(1,2),a=geo.attributes.position;for(let i=0;i<a.count;i++){const v=1+.16*Math.sin(a.getX(i)*8+a.getY(i)*7+a.getZ(i)*5);a.setXYZ(i,a.getX(i)*v,a.getY(i)*v,a.getZ(i)*v)}geo.computeVertexNormals();const mesh=new THREE.InstancedMesh(geo,this.view.mat('#87897c'),points.length),d=new THREE.Object3D();points.forEach(([x,z,r],i)=>{d.position.set(x,groundHeight(w,x,z)+r*.23,z);d.scale.set(r*1.4,r*.65,r);d.rotation.set(i*.31,i*.77,0);d.updateMatrix();mesh.setMatrixAt(i,d.matrix);mesh.setColorAt(i,new THREE.Color().setHSL(.14,.06,.68+(i%5)*.035))});mesh.castShadow=true;mesh.receiveShadow=true;group.add(mesh)}
+makeRocks(w){const group=this.rockGroup||this.group,points=[];for(let k=0;k<1700;k++){const x=hash(k,131,w.seed)*470-235,z=hash(k,139,w.seed)*470-235,wet=wetness(w,x,z);if(Buildings.blocked(w,x,z)||wet<.12||wet>.45||Math.abs(z-2)<5&&x<0)continue;const ix=Math.floor((x+96)/4),iy=Math.floor((z+96)/4);if(ix>=0&&iy>=0&&ix<48&&iy<48&&w.tiles[iy*48+ix].type)continue;points.push([x,z,.15+hash(k,143,w.seed)*.5])}if(this.scannedRocks.populate(group,points,groundHeight,w))return;const geo=new THREE.IcosahedronGeometry(1,2),a=geo.attributes.position;for(let i=0;i<a.count;i++){const v=1+.16*Math.sin(a.getX(i)*8+a.getY(i)*7+a.getZ(i)*5);a.setXYZ(i,a.getX(i)*v,a.getY(i)*v,a.getZ(i)*v)}geo.computeVertexNormals();const mesh=new THREE.InstancedMesh(geo,this.view.mat('#87897c'),points.length),d=new THREE.Object3D();points.forEach(([x,z,r],i)=>{d.position.set(x,groundHeight(w,x,z)+r*.23,z);d.scale.set(r*1.4,r*.65,r);d.rotation.set(i*.31,i*.77,0);d.updateMatrix();mesh.setMatrixAt(i,d.matrix);mesh.setColorAt(i,new THREE.Color().setHSL(.14,.06,.68+(i%5)*.035))});mesh.castShadow=true;mesh.receiveShadow=true;group.add(mesh)}
 
 refreshTerrain(w,bounds,finish=false){
  const geometry=this.ground.geometry,pos=geometry.attributes.position,colors=geometry.attributes.color;
@@ -49,6 +51,7 @@ refreshTerrain(w,bounds,finish=false){
  pos.needsUpdate=true;colors.needsUpdate=true;geometry.computeVertexNormals();geometry.computeBoundingSphere();
  if(finish){this.refreshTrees(w);if(this.rockGroup){this.rockGroup.traverse(o=>{o.userData.dispose?.();if(o.geometry&&!o.userData.sharedAsset)o.geometry.dispose();});this.rockGroup.clear();this.makeRocks(w);}}
 }
+refreshDevelopment(w){this.refreshTrees(w);if(this.rockGroup){this.rockGroup.traverse(o=>{o.userData.dispose?.();if(o.geometry&&!o.userData.sharedAsset)o.geometry.dispose();});this.rockGroup.clear();this.makeRocks(w);}}
 refreshTrees(w){if(this.cover){this.group.remove(this.cover);this.cover.userData.dispose();this.cover=groundCover(this.view,w,groundHeight,wetness);this.group.add(this.cover);}for(let o of this.trees||[]){this.group.remove(o);o.dispose?.();o.traverse(m=>{if(m.geometry&&!m.userData.sharedAsset)m.geometry.dispose()})}this.makeTrees(w)}
 update(time,night){if(this.cover){this.cover.visible=this.view.detailEnabled!==false;if(this.cover.visible)this.cover.userData.update(this.view.camera);}if(this.waterMaterial){this.waterMaterial.uniforms.time.value=time;this.waterMaterial.uniforms.night.value=night?1:0;this.waterMaterial.uniforms.reflectionEnabled.value=this.view.reflectionsEnabled===false||this.view.detailEnabled===false?0:1}}
 }

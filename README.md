@@ -441,3 +441,13 @@ Saved road-facing row-house lots now fit repeated full-size paired or terrace ho
 
 ## Edition 71: exact pedestrian pose reuse
 Waiting passengers retain their exact body-part transforms as simulation time advances. Moving people update only changed instance slots, preserving pending GPU writes until consumed. Ground heights are reused at unchanged positions and invalidated after terrain edits. Projection changes recalculate visibility even while paused. The optimization affects rendering only: walking, traffic and household clocks remain independent. A 200-passenger CPU fixture compares final matrices against the previous renderer; this is not a whole-game FPS benchmark.
+
+## Edition 72: independent roadside zoning
+
+New zoning uses 8-metre cells in six rows along eligible streets. Brush, rectangle and connected fill tools paint those cells; houses, row housing, apartments and businesses grow into multi-cell lots. Each occupied lot has a stable address, its own construction progress and residents, an exact rotated footprint, and an independently selectable model. Several lots can share a terrain tile. Existing saved tile-based buildings remain supported.
+
+The inspector lists lot dimensions, residents and road access. Bulldozing one lot preserves neighboring buildings and reconciles displaced residents. Roads, footpaths and facilities check occupied lot footprints before placement; earthworks protect their foundations. Replacing a removed street reconnects eligible frontage without moving buildings. The compact zoning panel leaves more of the map available for painting.
+
+Residents, cars, walking and transit resolve both legacy tile addresses and independent lot addresses. Their simulation remains independent of render visibility. Building geometry and materials stay shared, population-only updates retain model roots, and exact parcel occupancy controls vegetation removal. Medium-density apartment selection includes several fitting full-detail models.
+
+The development collection serializes with the existing WorldStore save, import and export format. It does not change the storage key or replace existing worlds.

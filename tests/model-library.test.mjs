@@ -292,3 +292,16 @@ test('road-facing row lots repeat full-size shared homes with individual doors a
  const factory=new BuildingFactory({scene:new THREE.Scene(),landscape:{assets:{}}});factory.rebuild(new Map([[index,root]]));for(const part of asset.root.children){const batch=factory.instanceBatches.find(b=>b.near.geometry===part.geometry);assert.equal(batch.transforms.length,copies,'repeated homes use the same material batch');}
  assert.equal(JSON.stringify(world),before);assert.equal(lib.create(world,index,parcel).userData.homeCopies,copies);
 });
+
+test('independent households use shipped models at separate saved parcel positions',async()=>{
+ const {district}=await import('./independent-fixture.mjs'),{world,homes}=district(),B=globalThis.BoroughBuildings,lib=await library(),before=JSON.stringify(world),roots=new Map();
+ for(const home of homes){const p=B.renderParcel(world,home.id),root=lib.create(world,p.index,p);assert.ok(root?.userData.asset);assert.equal(root.position.x,home.frame.cx);assert.equal(root.position.z,home.frame.cz);assert.equal(root.rotation.y,home.frame.angle);assert.equal(root.userData.plan.entityId,home.id);const box=new THREE.Box3().setFromObject(root);assert.ok(Number.isFinite(box.max.y));roots.set(home.id,root);}
+ assert.equal(JSON.stringify(world),before);const factory=new BuildingFactory({scene:new THREE.Scene(),landscape:{assets:{}}});factory.rebuild(roots);assert.ok(factory.instanceBatches.length);const survivor=roots.get(homes[1].id);roots.delete(homes[0].id);factory.rebuild(roots);assert.equal(roots.get(homes[1].id),survivor);assert.ok(factory.instanceBatches.some(b=>b.near.count>0));
+});
+
+
+test('medium-density independent lots select varied shared apartment models deterministically',async()=>{
+ const lib=await library(),world=E.createWorld('Apartment variety','plains',8),B=globalThis.BoroughBuildings,models=new Set(),before=JSON.stringify(world);
+ for(let i=1;i<=40;i++){const id='parcel-'+i,p={entityId:id,entitySeed:B.seed(id),definition:{type:'residential',density:'medium',building:'apartments',level:1},width:4,depth:4,oriented:{cx:0,cz:0,angle:0,width:6.36,depth:6.36,frontage:{x:0,z:5,roadIndex:1176}}},root=lib.create(world,1176,p),again=lib.create(world,1176,p);assert.equal(root.userData.model,again.userData.model);assert.ok(root.userData.asset);models.add(root.userData.model);const model=lib.models.find(m=>m.name===root.userData.model);assert.ok(!model.floors||model.floors<=9);assert.equal(root.children[0].scale.x,root.children[0].scale.y);}
+ assert.ok(models.size>=3,'apartment districts need several distinct full building models');assert.equal(JSON.stringify(world),before);
+});

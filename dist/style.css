@@ -16,3 +16,8 @@
 .planning-transit .build-options{display:none}
 
 .scene-loading{position:fixed;left:50%;top:80px;transform:translateX(-50%);z-index:20;padding:12px 20px;border:1px solid #608392;border-radius:5px;background:#20394cee;color:#ecf4f5;font-size:14px;pointer-events:none}.scene-loading[hidden]{display:none}
+
+/* Keep the street visible while painting small roadside cells. */
+.zoning-panel{width:min(1040px,calc(100% - 32px))}.zoning-panel .build-options{padding:8px;gap:6px}.zoning-panel .build-option{min-width:110px;width:110px;height:76px;padding:5px}.zoning-panel .model-icon{font-size:23px;line-height:24px;height:24px}.zoning-panel .build-option strong{font-size:10px;margin-top:3px}.zoning-panel .build-option small{display:none}.zoning-panel .build-settings{padding:6px 12px}.zoning-panel .build-settings>span{max-width:none}.zoning-panel .road-modes{padding:6px 10px}.zoning-panel .panel-title{height:30px}
+
+.backup-download{display:block;margin-top:12px;padding:10px;color:#9eddf1;overflow-wrap:anywhere;border:1px solid #647b8b55;border-radius:4px}

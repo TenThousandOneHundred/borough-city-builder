@@ -56,3 +56,9 @@ test('offset household entrances and driveway aprons independently reach the sid
  assert.equal(JSON.stringify(w),before);for(let i=0;i<g.attributes.normal.count;i++)assert.ok(g.attributes.normal.getY(i)>0);
  assert.equal(lotAccess(w,{...p,accessPoints:[]},.04,E,ground,road),null,'no disconnected apron when the lot has no front route');
 });
+
+test('wide independent parcels have centered frontage and sidewalk access',async()=>{
+ const {createRequire}=await import('node:module'),require=createRequire(import.meta.url),F=require('../dist/fine-zoning-state.js'),B=require('../dist/building-entities.js'),w=E.createWorld('Wide fine frontage','plains',8),layout=F.grid(w,E.ROADS);w.development=F.create();F.paint(w.development,layout,[...layout.keys()],'residential_low');
+ let parcel;for(const cell of layout.values())if(cell.row===0&&cell.cx>-70&&cell.cx<-40){parcel=F.reserve(w.development,layout,cell.id,3,3);if(parcel)break;}assert.ok(parcel);parcel.occupant={type:'residential',density:'low',building:'cottage',level:1,people:4};w.development.revision++;
+ const adapter=B.renderParcel(w,parcel.id),plan=lotPlan(w,adapter.index,adapter),tangentOffset=(plan.frontage.x-plan.cx)*Math.cos(plan.angle)-(plan.frontage.z-plan.cz)*Math.sin(plan.angle);assert.ok(Math.abs(tangentOffset)<1e-8);const before=JSON.stringify(w),g=lotAccess(w,plan,.04,E,ground,road);assert.ok(g);assert.equal(JSON.stringify(w),before);for(let i=0;i<g.attributes.normal.count;i++)assert.ok(g.attributes.normal.getY(i)>0);
+});

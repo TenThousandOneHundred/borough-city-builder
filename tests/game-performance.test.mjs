@@ -167,3 +167,12 @@ test('bounded tree selection exactly matches full sorting through camera paths, 
  assert.equal(select.select(ties,{x:28,y:1,z:0},new Map([[5000,true]])).length,1);
  assert.equal(select.select(ties,{x:32,y:1,z:0},new Map([[5000,true]])).length,0);
 });
+
+
+test('independent parcel rendering preserves neighboring roots and skips population-only rebuilds',async()=>{
+ const {district}=await import('./independent-fixture.mjs'),{world,homes}=district(),v=Object.create(CityView.prototype),counts={created:0,models:0,landscape:0,traffic:0};
+ Object.assign(v,{world,camera:new THREE.PerspectiveCamera(),buildings:new Map(),tileGroup:new THREE.Group(),models:{accepts:t=>['residential','commercial','industrial','office'].includes(t.type),create(w,i,p){assert.equal(p.definition,w.development.parcels[p.entityId].occupant);counts.created++;const g=new THREE.Group();g.userData.factory=true;return g;},rebuild(){counts.models++;}},renderer:{shadowMap:{}},roadworks:{buildAccess(){},build(){}},landscape:{refreshTrees(){},refreshDevelopment(){counts.landscape++;}},streetLife:{build(){}},setupCars(){counts.traffic++;},updateOverlay(){},updateZones(){},overlay:'none',night:false});
+ const before=JSON.stringify(world);v.refresh(true);assert.equal(v.buildings.size,4);assert.equal(JSON.stringify(world),before);const neighbor=v.buildings.get(homes[1].id),baseline={...counts};
+ homes[0].occupant.people++;v.refresh();assert.deepEqual(counts,baseline);assert.equal(v.buildings.get(homes[1].id),neighbor);
+ delete world.development.parcels[homes[0].id].occupant;world.development.revision++;v.refresh();assert.equal(v.buildings.size,3);assert.equal(v.buildings.get(homes[1].id),neighbor);assert.equal(counts.created,baseline.created);assert.equal(counts.landscape,baseline.landscape+1);assert.equal(counts.traffic,baseline.traffic+1);
+});
