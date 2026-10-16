@@ -80,7 +80,7 @@ test('street setbacks remain inside owned parcels at every road angle',async()=>
 });
 
 test('brick facades retain metre-scale UVs, PBR textures and accurate packed normals',async()=>{
- const lib=await library(),bricks=lib.models.flatMap(m=>m.root.children).filter(m=>m.material.name==='modern-brick');assert.equal(bricks.length,28);
+ const lib=await library(),bricks=lib.models.flatMap(m=>m.root.children).filter(m=>m.material.name==='modern-brick');assert.equal(bricks.length,29);
  for(const mesh of bricks){assert.ok(mesh.material.map);assert.ok(mesh.material.normalMap);assert.ok(mesh.material.roughnessMap);const uv=mesh.geometry.attributes.uv;const p=mesh.geometry.attributes.position;for(let i=0;i<p.count;i+=4){const metres=Math.hypot(p.getX(i+1)-p.getX(i),p.getY(i+1)-p.getY(i),p.getZ(i+1)-p.getZ(i));assert.ok(Math.abs(uv.getX(i+1)-uv.getX(i)-metres/2)<1e-5,'brick texture maintains two-metre repeat scale');}}
  for(const model of lib.models.filter(m=>m.family==='modern'))for(const mesh of model.root.children){const n=mesh.geometry.attributes.normal;assert.ok(n.normalized);assert.ok(n.array instanceof Int8Array);for(let i=0;i<n.count;i++){const length=Math.hypot(n.getX(i),n.getY(i),n.getZ(i));assert.ok(Math.abs(length-1)<.012,'lighting normals retain unit length');}}
 });
@@ -333,4 +333,14 @@ test('lot surfaces and garden paths share complete materials regardless of the f
   assert.equal(lib.siteDetails.materials.garden,lib.lotMaterials.grass);assert.equal(lib.siteDetails.materials.walk,lib.lotMaterials.paving);assert.equal(lib.siteDetails.materials.plaza,lib.lotMaterials.paving);assert.equal(lib.siteDetails.materials.drive,lib.lotMaterials.asphalt);
   const materials={...lib.lotMaterials};lib.create(world,index,{width:3,depth:4});for(const key of Object.keys(materials))assert.equal(lib.lotMaterials[key],materials[key],'different lot sizes reuse materials');
  }
+});
+
+test('compact courtyard apartment has pitched roof wings and an open furnished garden at full and distant detail',async()=>{
+ const lib=await library(),model=lib.models.find(m=>m.name==='small-courtyard-apartments');assert.ok(model);
+ const roof=model.root.children.find(m=>m.material.name==='modern-roof');assert.ok(roof);const normal=roof.geometry.attributes.normal;let slopes=0;
+ for(let i=0;i<normal.count;i++)if(normal.getY(i)>.2&&normal.getY(i)<.95)slopes++;assert.ok(slopes>20);
+ model.root.updateMatrixWorld(true);const ray=new THREE.Raycaster(new THREE.Vector3(3+model.origin.x,100,3+model.origin.z),new THREE.Vector3(0,-1,0));
+ const hits=ray.intersectObject(model.root,true);assert.ok(hits.length);assert.ok(hits[0].point.y<3,'central garden must not be a filled building volume');
+ const bytes=fs.readFileSync(new URL('../dist/assets/buildings/lod.bin',import.meta.url));lib.ingestLod(JSON.parse(fs.readFileSync(new URL('../dist/assets/buildings/lod.json',import.meta.url))),bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.length));
+ assert.equal(roof.geometry.userData.lod.attributes.position,roof.geometry.attributes.position);assert.ok(roof.geometry.userData.lod.index.count<roof.geometry.index.count);assert.ok(model.gardens.length>0);
 });

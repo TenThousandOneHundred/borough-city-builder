@@ -326,7 +326,34 @@ lowrent_block('lowrent-staggered-slab',26,18,6,(.78,.79,.69))
 lowrent_block('lowrent-court-block',40,28,8,(.74,.79,.81))
 
 m=Model('linear-balcony-apartments','residential',6);h=m.shell(21,11,6,balconies=True);m.roofwork(0,h,0,4,2);m.entrance(6);m.finish()
-m=Model('small-courtyard-apartments','residential',4);m.shell(7,15,4,x=-5);m.shell(7,10,3,x=4,z=-2);m.plant(2,0,5,3,3);m.entrance(8,-5);m.finish()
+# A compact brick courtyard walk-up: two pitched wings enclose a usable
+# garden rather than repeating the flat-roof balcony slab silhouette.
+m=Model('small-courtyard-apartments','residential',4)
+h=m.shell(7,17,4,x=-4.5,bevel=.12,tint=(.70,.48,.34),cladding=BRICK,windowWidth=1.35)
+back=m.shell(9,7,3,x=3.5,z=-5,bevel=.12,tint=(.84,.74,.58),cladding=PAINT,windowWidth=1.3)
+pitched_roof(m,-4.5,0,7,17,h,2.6,hip=2,tint=(.53,.56,.59))
+pitched_roof(m,3.5,-5,9,7,back,2.1,hip=1.4,tint=(.56,.58,.60))
+# Chimneys and the roof silhouette remain in the distant model.
+for z in [-5,4]:m.box(-5,h+1,z,.75,2.1,.9,BRICK,(.62,.40,.29))
+m.box(3.4,.03,4,8.5,.1,8.8,CONCRETE,(.75,.72,.65))
+m.plant(4.8,0,3,3.4,4.5)
+m.entrance(8.7,-4.5)
+# Courtyard seating and a slim pergola create a recognizable shared garden.
+m.detail=True
+for z in [1,6]:
+ m.box(1.6,.4,z,1.8,.12,.5,WOOD);m.box(1.6,.55,z-.22,1.8,.65,.08,WOOD)
+ for x in [.95,2.25]:m.box(x,0,z,.08,.4,.4,FRAME)
+for x in [5.8,7.4]:
+ for z in [-.5,6.5]:m.box(x,0,z,.10,2.5,.10,WOOD)
+for z in [-.5,1,2.5,4,5.5,6.5]:m.box(6.6,2.5,z,2.1,.14,.16,WOOD)
+m.detail=False
+# Blinds are painted panels too: preserve every vertex and its base color
+# while sharing the existing painted-surface material instead of another draw.
+blind=m.parts.pop(BLIND);paint=m.parts[PAINT];offset=len(paint['p'])//3
+for key in ['p','n','uv']:paint[key]+=blind[key]
+paint['c'] += [value*materials[BLIND][1][i%3]/materials[PAINT][1][i%3] for i,value in enumerate(blind['c'])]
+for key in ['i','far']:paint[key]+=[i+offset for i in blind[key]]
+m.finish()
 # Compact street buildings fit 16-metre frontages at authored scale. Distinct
 # materials and rooflines avoid reusing the courtyard block on every small lot.
 m=Model('brick-neighborhood-walkup','residential',3);h=m.shell(12,11,3,bevel=.18,tint=(.72,.43,.29),cladding=BRICK)

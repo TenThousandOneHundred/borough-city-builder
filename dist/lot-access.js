@@ -1,4 +1,4 @@
-import './building-entities.js?v=84';
+import './building-entities.js?v=85';
 const Buildings=globalThis.BoroughBuildings;
 import * as THREE from './vendor/three.module.js';
 
