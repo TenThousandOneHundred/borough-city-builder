@@ -467,3 +467,9 @@ Verification covers deterministic growth, independent residents, save/reload sta
 Distant broadleaf trees now blend four views baked from the existing detailed tree model (ground level through overhead). Cards tilt with the camera, retaining a canopy silhouette in aerial views. Close-range tree meshes are unchanged. A separate light-facing depth shader selects the sun-facing canopy and keeps shadows independent of player-camera rotation; camera movement does not force a city-wide shadow redraw. The 547 KiB RGBA atlas replaces four runtime texture downloads totaling roughly 1.2 MiB. Tree positions and gameplay state are unchanged.
 
 To reproduce the atlas, serve the repository root and open `scripts/bake-tree-atlas.html`, then use its download link. It renders the existing `broadleaf.glb` at 0, 30, 60 and 90 degrees into four 512px panels. Save the PNG as `dist/assets/trees/broadleaf-elevations.png`. Tests cover elevation math, pitched-card bounds, vertical camera motion, retained instance buffers, stable shadows and the atlas format/download limit.
+
+## Edition 75: lossless catalogue and tree transfers
+
+All three complete building catalogues and the detailed broadleaf model now use the existing bounded-inactivity, lossless gzip loader. Previously only the modern catalogue and distant indices used it. Raw files remain available as a compatibility and corrupt/missing-compressed-file fallback. No models, texture resolution, geometry, materials, simulation agents or save data are removed.
+
+The three newly compressed files transfer 21,025,526 bytes instead of 23,838,036 bytes, a reduction of 2,812,510 bytes (11.8%). Their embedded JPEG textures already compress well, so the gain is smaller than for the modern geometry. `node scripts/compress-assets.mjs --check` verifies every decoded asset byte and file-specific transfer budgets. This is a download-size reduction, not a measured FPS improvement.
