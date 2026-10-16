@@ -14,7 +14,7 @@ loader.register(()=>({name:'test-images',loadTexture:()=>Promise.resolve(new THR
 async function library(){const lib=Object.create(ModelLibrary.prototype);lib.models=[];lib.materials=new Set();lib.lotGeometry=new THREE.PlaneGeometry(1,1);lib.lotGeometry.rotateX(-Math.PI/2);lib.view={renderer:{capabilities:{getMaxAnisotropy:()=>8}},landscape:{material:()=>new THREE.MeshStandardMaterial()}};
  for(const file of ['urban','industry','modern']){const data=fs.readFileSync(new URL('../dist/assets/buildings/'+file+'.glb',import.meta.url));const result=await loader.parseAsync(data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength),'');lib.ingest(result.scene);}return lib;}
 test('all complete building assets decode with finite UV-mapped geometry and valid categories',async()=>{
- const lib=await library();assert.equal(lib.models.length,73);assert.deepEqual([...new Set(lib.models.map(m=>m.category))].sort(),['commercial','fire','hospital','industrial','office','police','residential','residential-low','school']);
+ const lib=await library();assert.equal(lib.models.length,74);assert.deepEqual([...new Set(lib.models.map(m=>m.category))].sort(),['commercial','fire','hospital','industrial','office','police','residential','residential-low','school']);
  for(const model of lib.models){assert.ok(model.size.x>0&&model.size.y>0&&model.size.z>0);assert.ok(model.root.children.length<=(model.category==='commercial'?13:model.site?11:10));for(const mesh of model.root.children){if(mesh.material.map)assert.ok(mesh.geometry.attributes.uv);assert.ok([...mesh.geometry.attributes.position.array].every(Number.isFinite));}}
 });
 test('model placement fits saved lots uniformly and instancing survives demolition without disposing shared models',async()=>{
@@ -39,7 +39,7 @@ test('loaded models follow angled roads without stretching or overlapping neighb
 });
 
 test('modern library retains facade detail with shared materials and a bounded geometry cost',async()=>{
- const lib=await library(),modern=lib.models.filter(m=>m.family==='modern');assert.equal(modern.length,52);
+ const lib=await library(),modern=lib.models.filter(m=>m.family==='modern');assert.equal(modern.length,53);
  const materials=new Set();let triangles=0,hasWindowVariation=false;
  for(const model of modern){let count=0;for(const mesh of model.root.children){materials.add(mesh.material);count+=mesh.geometry.index.count/3;const color=mesh.geometry.attributes.color;assert.ok(color,'baked facade variation is retained');assert.ok([...color.array].every(Number.isFinite));if(new Set(color.array).size>3)hasWindowVariation=true;}assert.ok(count<(model.name.startsWith('perimeter-')?17000:model.building==='lowrent'?11000:model.site?8000:6600),model.name+' triangle budget');triangles+=count;}
  assert.ok(materials.size<=13,'materials are reused across modern buildings');assert.ok(triangles<196000);assert.ok(hasWindowVariation);
@@ -343,4 +343,13 @@ test('compact courtyard apartment has pitched roof wings and an open furnished g
  const hits=ray.intersectObject(model.root,true);assert.ok(hits.length);assert.ok(hits[0].point.y<3,'central garden must not be a filled building volume');
  const bytes=fs.readFileSync(new URL('../dist/assets/buildings/lod.bin',import.meta.url));lib.ingestLod(JSON.parse(fs.readFileSync(new URL('../dist/assets/buildings/lod.json',import.meta.url))),bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.length));
  assert.equal(roof.geometry.userData.lod.attributes.position,roof.geometry.attributes.position);assert.ok(roof.geometry.userData.lod.index.count<roof.geometry.index.count);assert.ok(model.gardens.length>0);
+});
+
+test('smallest apartment lots select different full-scale forms while retaining shared geometry',async()=>{
+ const lib=await library(),B=(await import('../dist/building-entities.js')).default,w=E.createWorld('Compact apartments','plains',427),counts=new Map();
+ for(let i=1;i<=60;i++){const id='parcel-'+i,p={entityId:id,entitySeed:B.seed(id),definition:{type:'residential',density:'medium',building:'apartments',level:1},width:2,depth:2,oriented:{cx:0,cz:0,angle:0,width:3.16,depth:3.16,frontage:{x:0,z:5,roadIndex:1176}}},root=lib.create(w,1176,p),asset=lib.models.find(m=>m.name===root.userData.model);
+ counts.set(asset.name,(counts.get(asset.name)||0)+1);assert.equal(root.children[0].scale.x,.2);assert.equal(root.children[0].children[0].geometry,asset.root.children[0].geometry);
+ const bounds=new THREE.Box3().setFromObject(root);assert.ok(bounds.max.x-bounds.min.x<=3.16+.001);assert.ok(bounds.max.z-bounds.min.z<=3.16+.001);assert.equal(lib.create(w,1176,p).userData.model,asset.name);
+ }
+ assert.ok(counts.get('brick-neighborhood-walkup')>=15);assert.ok(counts.get('compact-hipped-apartments')>=15);
 });

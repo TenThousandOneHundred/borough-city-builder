@@ -359,6 +359,18 @@ m.finish()
 m=Model('brick-neighborhood-walkup','residential',3);h=m.shell(12,11,3,bevel=.18,tint=(.72,.43,.29),cladding=BRICK)
 m.box(0,h-.25,0,12.4,.28,11.4,CONCRETE,(.78,.72,.60));m.box(0,h,0,11.6,.16,10.6,ROOF)
 m.roofwork(-2,h,-2,2.5,1.5);m.entrance(5.7);m.finish()
+# A second human-scale apartment type for 16 m square sites. Its pitched
+# attic and projecting entrance contrast with the compact brick walk-up.
+m=Model('compact-hipped-apartments','residential',4)
+h=m.shell(11,10,3,bevel=.18,tint=(.84,.79,.67),cladding=PAINT,windowWidth=1.45)
+pitched_roof(m,0,0,11,10,h,2.5,hip=1.4,tint=(.54,.58,.61))
+dormer(m,0,3.5,h+1.2)
+m.box(-3,h+1.1,-2,.7,1.8,.8,CONCRETE,(.72,.67,.57))
+m.entrance(5.3)
+# Paired entrance piers and a deep canopy provide a visible street threshold.
+for x in [-1,1]:m.box(x,0,5.65,.22,2.6,.22,CONCRETE,(.84,.81,.73))
+m.box(0,2.6,5.6,2.6,.2,1.6,CONCRETE,(.84,.81,.73))
+m.finish()
 m=Model('narrow-balcony-apartments','residential',5);h=m.shell(10,23,4,bevel=.3,balconies=True,tint=(.70,.77,.73),cladding=PAINT)
 h=m.shell(8,17,1,z=-2,y=h,bevel=.3,tint=(.68,.58,.44),cladding=BRICK);m.roofwork(0,h,-3,2.8,1.8);m.plant(0,12.95,8.5,6,1.5);m.entrance(12);m.finish()
 m=Model('stepped-midrise-apartments','residential',8);h=m.shell(18,14,5,balconies=True);h=m.shell(12,11,3,x=-2,y=h,balconies=True);m.plant(6,16.3,3,2,4);m.roofwork(-2,h,0,3,2);m.entrance(8);m.finish()

@@ -1,8 +1,8 @@
-import './building-entities.js?v=85';
+import './building-entities.js?v=86';
 const Buildings=globalThis.BoroughBuildings;
-import {coverBatches} from './ground-cover-batches.js?v=85';
+import {coverBatches} from './ground-cover-batches.js?v=86';
 import * as THREE from './vendor/three.module.js';
-import {terrainNoise} from './terrain-field.js?v=85';
+import {terrainNoise} from './terrain-field.js?v=86';
 // Small 3D grasses and reeds break up flat ground at street-level camera distances.
 export function groundCover(view,world,height,wetness){
  const positions=[],colors=[],normals=[];
