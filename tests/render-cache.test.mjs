@@ -60,3 +60,14 @@ test('large lots cull offscreen tree detail while retaining silhouettes, reflect
  view.reflectionsEnabled=true;factory.updateVisibility();assert.equal(batch.near.count,1);assert.equal(batch.near.instanceMatrix.version,version);
  camera.lookAt(40,-8,-20);factory.updateVisibility();assert.equal(batch.near.count,0);
  });
+
+test('unchanged districts skip batch assembly but still respond to camera motion and late LOD',()=>{
+ const {factory,root,geometry,camera}=setup(),buildings=new Map([[1,root(0)],[2,root(3)]]);factory.view.reflectionsEnabled=false;factory.rebuild(buildings);
+ const batches=factory.instanceBatches,shadow=batches[0].shadow,shadowVersion=shadow.instanceMatrix.version;
+ factory.rebuild(buildings);assert.equal(factory.instanceBatches,batches);assert.equal(shadow.instanceMatrix.version,shadowVersion);
+ camera.lookAt(0,8,100);factory.rebuild(buildings);assert.equal(factory.instanceBatches,batches);assert.equal(batches[0].near.count,0);assert.equal(shadow.userData.casterCount,2);
+ camera.lookAt(0,0,0);factory.rebuild(buildings);assert.equal(batches[0].near.count,2);
+ geometry.userData.lod=new THREE.BoxGeometry(1,2,1);factory.rebuild(buildings);assert.notEqual(factory.instanceBatches,batches);assert.equal(factory.instanceBatches[0].far.geometry,geometry.userData.lod);
+ const withLod=factory.instanceBatches;delete geometry.userData.lod;factory.rebuild(buildings);assert.notEqual(factory.instanceBatches,withLod);assert.equal(factory.instanceBatches[0].far,null);
+ buildings.get(1).userData.renderVersion=1;const previous=factory.instanceBatches;factory.rebuild(buildings);assert.notEqual(factory.instanceBatches,previous);
+});

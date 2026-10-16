@@ -11,7 +11,7 @@ import {ModelLibrary} from '../dist/model-library.js';
 import {BuildingFactory} from '../dist/building-factory.js';
 import E from '../dist/engine.js';
 const baseline=process.argv[2]||'3ef9ad8',base=new URL('../dist/',import.meta.url).href;
-const source=execFileSync('git',['show',baseline+':dist/building-factory.js'],{encoding:'utf8'}).replaceAll("from './","from '"+base);
+const source=execFileSync(process.env.GIT_BIN||'git',['show',baseline+':dist/building-factory.js'],{encoding:'utf8'}).replaceAll("from './","from '"+base);
 const {BuildingFactory:PreviousFactory}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
 const loader=new GLTFLoader();loader.register(()=>({name:'benchmark-images',loadTexture:()=>Promise.resolve(new THREE.Texture())}));
 const library=Object.create(ModelLibrary.prototype);Object.assign(library,{models:[],materials:new Set(),lotGeometry:new THREE.PlaneGeometry(1,1),view:{renderer:{capabilities:{getMaxAnisotropy:()=>4}},landscape:{material:()=>new THREE.MeshStandardMaterial()}}});library.lotGeometry.rotateX(-Math.PI/2);
@@ -26,4 +26,13 @@ const i=30*48+20;Object.assign(world.tiles[i],{type:'residential',density:'low',
 for(const [name,factory]of [['before',old],['after',current]])report[name].oneAddition=elapsed(()=>factory.rebuild(buildings));
 const digest=geometry=>{const hash=createHash('sha256');for(const name of Object.keys(geometry.attributes).sort()){const a=geometry.attributes[name];hash.update(name);hash.update(Buffer.from(a.array.buffer,a.array.byteOffset,a.array.byteLength));}if(geometry.index){const a=geometry.index.array;hash.update(Buffer.from(a.buffer,a.byteOffset,a.byteLength));}return hash.digest('hex');};
 const snapshot=factory=>factory.batchRoot.children.filter(mesh=>!mesh.userData.shadowCaster).map(mesh=>{const geometry=digest(mesh.geometry),key=mesh.material.uuid+':'+geometry;return {key,count:mesh.isInstancedMesh?mesh.count:1,matrix:mesh.isInstancedMesh?Array.from(mesh.instanceMatrix.array.subarray(0,mesh.count*16)):null};}).sort((a,b)=>a.key.localeCompare(b.key));
-assert.deepEqual(snapshot(current),snapshot(old));report.identicalGeometryAndVisibleTransforms=true;console.log(JSON.stringify(report,null,2));
+assert.deepEqual(snapshot(current),snapshot(old));report.identicalGeometryAndVisibleTransforms=true;
+const extra=buildings.get(i),changes={before:[],after:[]};
+for(let n=0;n<31;n++){
+ buildings.delete(i);for(const f of [old,current])f.rebuild(buildings);buildings.set(i,extra);
+ const ordered=n%2?[['after',current],['before',old]]:[['before',old],['after',current]];
+ for(const [name,f]of ordered){const ms=elapsed(()=>f.rebuild(buildings));if(n>3)changes[name].push(ms);}
+ assert.deepEqual(snapshot(current),snapshot(old));
+}
+report.alternatingAdditionMedian=Object.fromEntries(Object.entries(changes).map(([name,values])=>[name,values.sort((a,b)=>a-b)[Math.floor(values.length/2)]]));
+console.log(JSON.stringify(report,null,2));

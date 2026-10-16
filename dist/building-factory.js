@@ -1,12 +1,12 @@
-import {ModelLibrary} from './model-library.js?v=86';
-import {buildHouse} from './house-architecture.js?v=86';
-import {buildUrban} from './city-architecture.js?v=86';
+import {ModelLibrary} from './model-library.js?v=87';
+import {buildHouse} from './house-architecture.js?v=87';
+import {buildUrban} from './city-architecture.js?v=87';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import * as THREE from './vendor/three.module.js';
-import {MeshBuilder} from './mesh-builder.js?v=86';
-import {BuildingMaterials} from './building-materials.js?v=86';
-import {lotPlan} from './building-plan.js?v=86';
-import {floorHeight} from './landscape.js?v=86';
+import {MeshBuilder} from './mesh-builder.js?v=87';
+import {BuildingMaterials} from './building-materials.js?v=87';
+import {lotPlan} from './building-plan.js?v=87';
+import {floorHeight} from './landscape.js?v=87';
 
 export class BuildingFactory{
  constructor(view){this.view=view;this.library=view.renderer?new ModelLibrary(view):null;this.ready=this.library?.ready||Promise.resolve();this.materials=new BuildingMaterials(view);this.batchRoot=new THREE.Group();view.scene.add(this.batchRoot);}
@@ -44,10 +44,15 @@ export class BuildingFactory{
  }
  rebuild(buildings){
   this.renderCache ||= new WeakMap();this.batchByKey ||= new Map();this.staticByMaterial ||= new Map();this.cacheHits=0;this.cacheMisses=0;
+  const entries=[];
+  for(const root of buildings.values())if(root.userData.factory)entries.push(this.collectBuilding(root));
+  // An unchanged immutable district needs no regrouping, shadow-slot scan or
+  // instance-batch allocation. Camera visibility still updates independently.
+  if(this.previousEntries?.length===entries.length&&entries.every((entry,i)=>entry===this.previousEntries[i])&&this.previousLods.every(([geometry,lod])=>geometry.userData.lod===lod)){
+   this.updateVisibility();return;
+  }
   const instances=new Map(),statics=new Map(),temporary=[];
-  for(const root of buildings.values()){
-   if(!root.userData.factory)continue;
-   const entry=this.collectBuilding(root);
+  for(const entry of entries){
    for(const part of entry.instances){if(!instances.has(part.key))instances.set(part.key,{geometry:part.geometry,material:part.material,transforms:[]});instances.get(part.key).transforms.push(part.transform);}
    for(const part of entry.statics){if(!statics.has(part.material))statics.set(part.material,[]);statics.get(part.material).push(part.geometry);if(entry.temporary)temporary.push(part.geometry);}
   }
@@ -82,6 +87,7 @@ export class BuildingFactory{
    this.staticByMaterial.set(material,{mesh,parts});
   }
   temporary.forEach(g=>g.dispose());
+  this.previousEntries=entries;this.previousLods=[...instances.values()].map(({geometry})=>[geometry,geometry.userData.lod]);
   this.visibilitySignature=null;this.updateVisibility();
  }
 

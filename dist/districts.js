@@ -1,5 +1,5 @@
-import {urbanBuilding} from './urban.js?v=86';
-import {sculptedBuilding} from './skyline.js?v=86';
+import {urbanBuilding} from './urban.js?v=87';
+import {sculptedBuilding} from './skyline.js?v=87';
 import * as THREE from './vendor/three.module.js';
 // District buildings use separate wings, roof forms and recessed outdoor spaces.
 // Geometry is deterministic so a saved neighborhood never changes on reload.
