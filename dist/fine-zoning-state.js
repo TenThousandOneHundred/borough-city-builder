@@ -20,9 +20,11 @@ function inside(p,x,z){const dx=x-p.cx,dz=z-p.cz,c=Math.cos(p.angle),s=Math.sin(
 function reserve(state,layout,startId,width,depth){
  const start=layout.get(startId),zone=state.cells[startId]?.zone;
  if(!start||start.row!==0||!zone||![width,depth].every(n=>Number.isInteger(n)&&n>0&&n<=MAX_SIDE)||width*depth<2)return null;
- const coordinates=new Map([...layout.values()].filter(p=>p.source===start.source&&p.side===start.side).map(p=>[p.col+','+p.row,p])),chosen=[];
+ // Cell IDs already encode the road, side and grid coordinates. A lot needs
+ // at most 36 lookups, even when the city contains thousands of zoning cells.
+ const chosen=[];
  for(let row=0;row<depth;row++)for(let col=0;col<width;col++){
-  const p=coordinates.get((start.col+col)+','+(start.row+row));
+  const p=layout.get(JSON.stringify([start.source,start.side,start.col+col,start.row+row]));
   if(!p||state.cells[p.id]?.owner||state.cells[p.id]?.zone!==zone||Math.abs(Math.sin(p.angle-start.angle))>.09)return null;
   chosen.push(p);
  }

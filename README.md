@@ -453,3 +453,5 @@ Residents, cars, walking and transit resolve both legacy tile addresses and inde
 The development collection serializes with the existing WorldStore save, import and export format. It does not change the storage key or replace existing worlds.
 
 Edition 72.1 also preserves selection, brush, fill and erasing for existing legacy zoning. New zoning continues to use independent cells.
+
+Edition 72.2 replaces whole-grid scans for each independent lot reservation with direct road/side/cell lookups (at most 36 cells). It keeps the same saved parcels and does not change model geometry or simulation advancement. `scripts/benchmark-fine-lots.mjs` compares the prior module against the current implementation: a 5,400-cell fixture produced identical 154 parcels over 3,898 attempts, with median reservation CPU time of 755.8 ms before and 6.6 ms after on the development machine. This is a focused CPU benchmark, not a browser FPS claim.
