@@ -48,24 +48,26 @@ class Model:
  def band(self,points,y,h,mat=CONCRETE,color=(1,1,1)):
   for a,b in zip(points,points[1:]+points[:1]):self.quad((b[0],y,b[1]),(a[0],y,a[1]),(a[0],y+h,a[1]),(b[0],y+h,b[1]),mat,color)
   self.surface(points,y+h,mat,color)
- def shell(self,w,d,floors,x=0,z=0,y=0,bevel=.7,balconies=False,curtain=False,oval=False,tint=(1,1,1),cladding=CONCRETE):
+ def shell(self,w,d,floors,x=0,z=0,y=0,bevel=.7,balconies=False,curtain=False,oval=False,tint=(1,1,1),cladding=CONCRETE,windowWidth=None):
   points=([(x+w/2*math.cos(j*math.tau/32),z+d/2*math.sin(j*math.tau/32)) for j in range(32)] if oval else self.ring(w,d,bevel,x,z))
   fh=3.2;top=y+floors*fh
   # Recessed dark walls sit behind individual panes and facade structure.
   for side,(a,b) in enumerate(zip(points,points[1:]+points[:1])):
    dx,dz=b[0]-a[0],b[1]-a[1];length=math.hypot(dx,dz);tx,tz=dx/length,dz/length;nx,nz=tz,-tx
    def p(u,v,out=0):return (a[0]+tx*u+nx*out,v,a[1]+tz*u+nz*out)
+   if windowWidth and length<.5:
+    self.quad(p(length,y),p(0,y),p(0,top),p(length,top),cladding,tint);continue
    front=nz>.9 and length>3 and y==0
    shop=front and self.category=='commercial'
    # Ground-floor shop windows have shallow rooms behind real glazing.
    # Upper windows retain their existing opaque/reflected glazing and detail.
    if not shop or floors>1:self.quad(p(length,y+fh if shop else y,-.1),p(0,y+fh if shop else y,-.1),p(0,top,-.1),p(length,top,-.1),RECESS)
-   bays=max(1,round(length/(1.6 if curtain else 2.6)));bay=length/bays
+   bays=max(1,round(length/(1.6 if curtain else 3.4 if windowWidth else 2.6)));bay=length/bays
    for f in range(floors):
     level=y+f*fh;retail=shop and f==0;bottom=.12 if retail else .32 if curtain else .75;upper=.55 if retail else .13 if curtain else .38
     for lo,hi in [(level,level+bottom),(level+fh-upper,level+fh)]:self.quad(p(length,lo,.025),p(0,lo,.025),p(0,hi,.025),p(length,hi,.025),FRAME if curtain else cladding,(1,1,1) if curtain else tint)
     for j in range(bays):
-     margin=.045 if curtain else .24;l=j*bay+margin;r=(j+1)*bay-margin;shade=.74+((j*17+f*31+side*11)%19)/65
+     margin=.045 if curtain else max(.24,(bay-windowWidth)/2) if windowWidth else .24;l=j*bay+margin;r=(j+1)*bay-margin;shade=.74+((j*17+f*31+side*11)%19)/65
      door=front and f==0 and (j%3==1 if retail else j==bays//2)
      sill=.08 if door else bottom
      if retail:
@@ -113,7 +115,7 @@ class Model:
    self.detail=False
    # Continuous narrow mullions do not duplicate geometry at every floor.
    for j in range(bays+1):
-    u=j*bay;half=.045 if curtain else .22;l=max(0,u-half);r=min(length,u+half)
+    u=j*bay;half=.045 if curtain else max(.22,(bay-windowWidth)/2) if windowWidth else .22;l=max(0,u-half);r=min(length,u+half)
     self.quad(p(r,y,.06),p(l,y,.06),p(l,top,.06),p(r,top,.06),FRAME if curtain else cladding,(1,1,1) if curtain else tint)
   # A raised, hollow parapet has an inner face and coping instead of a
   # solid cap. The membrane remains below its rim and catches roof shadows.
@@ -286,6 +288,41 @@ m=Model('garden-terrace-residences','residential',9);h=m.shell(24,18,4,balconies
 m=Model('balcony-podium-residences','residential',17);h=m.shell(22,19,3,curtain=True);h=m.shell(14,13,14,x=-1,y=h,bevel=1.2,balconies=True);m.roofwork(-1,h,0);m.plant(8,9.9,5,2,4);m.entrance(10);m.finish()
 m=Model('split-wing-residences','residential',10);h=m.shell(10,20,7,x=-6,balconies=True);m.roofwork(-6,h,0,3,2);h=m.shell(11,13,10,x=5,z=-3,balconies=True);m.roofwork(5,h,-3,3,2);m.shell(8,7,2,x=4,z=7,curtain=True);m.plant(5,6.7,7,5,3);m.entrance(11,-5);m.finish()
 m=Model('courtyard-concrete-residences','residential',6);m.shell(8,24,6,x=-8);m.shell(8,24,5,x=8);h=m.shell(8,8,4,z=-8);m.roofwork(0,h,-8,3,2);m.plant(0,0,0,5,8);m.entrance(12,-8);m.finish()
+# Purpose-built compact-apartment blocks: narrow repeated dwelling bays,
+# opaque balcony fronts, distinct stair cores and shared entrances. These use
+# the same material palette/LOD pipeline as the city instead of new textures.
+def lowrent_block(name,width,depth,floors,tint):
+ m=Model(name,'residential',floors,building='lowrent')
+ # Two staggered wings form a sheltered entrance court at street level.
+ wing=width*.56; offset=(width-wing)/2
+ for x,z in [(-offset,-depth*.18),(offset,depth*.18)]:
+  h=m.shell(wing,depth*.58,1,x=x,z=z,bevel=.15,tint=(.65,.45,.32),cladding=BRICK,windowWidth=1.4)
+  h=m.shell(wing,depth*.58,floors-1,x=x,z=z,y=h,bevel=.15,tint=tint,cladding=PAINT,windowWidth=1.4)
+  # Solid balcony screens, privacy partitions and metal handrails read as
+  # small separate flats rather than a continuous glass office facade.
+  front=z+depth*.29
+  for floor in range(1,floors):
+   y=floor*3.2+.10
+   for bay in range(max(2,int(wing/4))):
+    span=wing/max(2,int(wing/4));bx=x-wing/2+(bay+.5)*span
+    m.box(bx,y,front+.7,span-.35,.14,1.4,CONCRETE,(.82,.82,.75))
+    m.box(bx,y+.14,front+1.34,span-.35,.72,.10,PAINT,tint)
+    m.detail=True
+    m.box(bx,y+1.05,front+1.34,span-.35,.045,.045,FRAME)
+    for side in [-1,1]:
+     m.box(bx+side*(span-.35)/2,y+.14,front+.7,.07,1.15,1.4,PAINT,tint)
+     m.box(bx+side*(span-.35)/2,y+.86,front+1.34,.045,.19,.045,FRAME)
+    m.detail=False
+  m.roofwork(x,h,z,3.2,2.2)
+ # Projecting stair/elevator core and roof access make a legible silhouette.
+ m.shell(4.2,5,floors+1,x=0,z=-depth*.23,bevel=.1,tint=(.64,.67,.65),cladding=PAINT,windowWidth=.9)
+ m.entrance(depth*.47,offset)
+ m.plant(-width*.32,0,depth*.45,3.2,1.2)
+ m.box(-width*.17,.42,depth*.45,2.2,.16,.55,CONCRETE)
+ m.finish()
+lowrent_block('lowrent-staggered-slab',26,18,6,(.78,.79,.69))
+lowrent_block('lowrent-court-block',40,28,8,(.74,.79,.81))
+
 m=Model('linear-balcony-apartments','residential',6);h=m.shell(21,11,6,balconies=True);m.roofwork(0,h,0,4,2);m.entrance(6);m.finish()
 m=Model('small-courtyard-apartments','residential',4);m.shell(7,15,4,x=-5);m.shell(7,10,3,x=4,z=-2);m.plant(2,0,5,3,3);m.entrance(8,-5);m.finish()
 # Compact street buildings fit 16-metre frontages at authored scale. Distinct

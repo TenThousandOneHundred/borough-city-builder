@@ -30,7 +30,7 @@ test('a shorter replacement only reconnects lots along its actual frontage and k
 
 test('low-rent blocks combine many roadside cells and preserve resident homes through save reload',()=>{
  const w=world();utilities(w);paint(w,'residential_lowrent');grow(w,120);
- const lots=Object.values(w.development.parcels);assert.ok(lots.length>1);
+ const lots=Object.values(w.development.parcels);assert.ok(lots.length>1);assert.ok(new Set(lots.map(p=>p.width+'x'+p.depth)).size>=3,'low-rent districts need varied multi-cell sites');
  assert.ok(lots.every(p=>p.cells.length>=16&&p.width>=4&&p.depth>=4&&p.occupant.building==='lowrent'));
  assert.ok(lots.some(p=>p.occupant.people>24));
  const traffic=new Traffic(w,E),residents=new Residents(w,traffic);assert.ok(residents.state.residents.length>0);

@@ -478,3 +478,10 @@ The three newly compressed files transfer 21,025,526 bytes instead of 23,838,036
 Low-rent apartments join detached homes, row houses, medium apartments, mixed-use housing and towers. Low-rent development reserves 4×4 through 6×6 roadside cells per building, selects existing detailed balcony/perimeter apartment assets, and supports up to 40 residents per block in the simplified simulation. This category does not yet simulate household income or actual rent payments. Housing palette descriptions explain the lot sizes. Saved plots, residents and independent traffic simulation remain intact. No new model downloads or per-frame geometry work were added.
 
 Reference: Paradox's [Zones & Signature Buildings](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/zones-signature-buildings), and AgoAgo Game's [building zone sizes demonstration](https://www.youtube.com/watch?v=hRlGRd-80vk).
+
+## Edition 77 — purpose-built apartment blocks
+Two original low-rent buildings replace reuse of general apartment models: a six-floor staggered slab and an eight-floor wider block, each with a taller stair core. Smaller individual windows, brick ground floors, opaque balcony panels, privacy screens, roof equipment and shared entrances distinguish these from glass towers. Sites at least five cells wide and deep select the wider block; smaller sites retain the compact one. New low-rent growth varies its multi-cell lot dimensions; existing saved footprints and residents are retained.
+
+The catalogue now contains 73 buildings (52 modern). The new full and distant assets add 168,934 compressed bytes, use at most ten material batches per model, and share geometry through the existing instancing pipeline. The raw modern-library budget is 13.5 MiB; its compressed transfer remains below 3 MiB. This is an architecture addition, not a measured frame-rate improvement.
+
+The two new models contain 5,382 and 10,676 triangles. Their distant versions retain the window and wall openings using 2,786 and 5,184 triangles. Existing-model geometry budgets remain unchanged; the enlarged 52-model modern catalogue stays below 196,000 triangles.
