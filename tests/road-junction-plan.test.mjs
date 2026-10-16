@@ -128,3 +128,19 @@ test('lane-merge vehicles fit inside the rendered pavement taper in either direc
   for(const p of route){const width=p.x<2?transitionWidth(wide,tapers,p.x-wide.stations[0].x):E.ROADS.street.width;assert.ok(Math.abs(p.z-2)+.25<width/2,'body clears tapered pavement');}
  }
 });
+
+test('approach arrows follow incoming lanes, skip outgoing one-way arms and show terminal turns',async()=>{
+ const {approachMarkings}=await import('../dist/road-markings.js');const roads=cross(),junctions=planJunctions(roads).junctions,arrows=approachMarkings(roads,junctions);
+ assert.equal(arrows.length,4);assert.ok(arrows.every(a=>a.turns.join()==='straight'));
+ for(const a of arrows){const dx=a.junction.x-a.center.x,dz=a.junction.z-a.center.z;assert.ok(dx*a.tx+dz*a.tz>0);assert.ok(Math.hypot(dx,dz)>a.junction.radius+2);}
+ const t=[roads[0],road('b',[{x:0,z:-20},{x:0,z:0}])],ta=approachMarkings(t,planJunctions(t).junctions),terminal=ta.find(a=>a.roadId==='b');assert.deepEqual(terminal.turns,['left','right']);
+ const oneWay=Object.entries(E.ROADS).find(([,s])=>s.oneway&&s.sidewalk)[0],one=[road('a',[{x:-20,z:0},{x:20,z:0}],oneWay),roads[1]],oa=approachMarkings(one,planJunctions(one).junctions).filter(a=>a.roadId==='a');assert.ok(oa.length);assert.ok(oa.every(a=>a.center.x<0&&a.tx>0));
+});
+test('curved approach paint stays on its lane and out of adjacent crossings',async()=>{
+ const {approachMarkings}=await import('../dist/road-markings.js');const roads=[road('a',[{x:-20,z:0},{x:0,z:0},{x:10,z:5},{x:20,z:15}]),road('b',[{x:0,z:-20},{x:0,z:20}]),road('c',[{x:5,z:-20},{x:5,z:20}])],junctions=planJunctions(roads).junctions,arrows=approachMarkings(roads,junctions);
+ assert.ok(arrows.length);for(const a of arrows){assert.ok(Math.abs(Math.hypot(a.tx,a.tz)-1)<1e-8);assert.ok(junctions.every(j=>j===a.junction||Math.hypot(j.x-a.center.x,j.z-a.center.z)>j.radius+.5));}
+});
+test('approach paint uses bounded upward geometry and the existing shared marking material',()=>{
+ const r=new Roadworks(view()),roads=cross();r.roadDescriptors=roads;r.junctionPlan=planJunctions(roads);r.height=()=>2;r.buildApproachMarkings({});assert.equal(r.group.children.length,1);const m=r.group.children[0];assert.equal(m.material,r.v.mat('#dedbd0'));assert.ok(m.geometry.attributes.position.count<200);
+ const n=m.geometry.attributes.normal;for(let i=0;i<n.count;i++)assert.ok(n.getY(i)>.99);const p=m.geometry.attributes.position;for(let i=0;i<p.count;i++)assert.ok(Math.abs(p.getY(i)-2.107)<1e-6);
+});

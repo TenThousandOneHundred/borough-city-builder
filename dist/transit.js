@@ -1,7 +1,7 @@
-import './building-entities.js?v=78';
+import './building-entities.js?v=79';
 const Buildings=globalThis.BoroughBuildings;
-import {Walking,sidewalkPosition} from './walking.js?v=78';
-import {roadPoint} from './traffic.js?v=78';
+import {Walking,sidewalkPosition} from './walking.js?v=79';
+import {roadPoint} from './traffic.js?v=79';
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const nearby=(engine,i)=>engine.neighbors(i);
 export const stopPosition=sidewalkPosition;

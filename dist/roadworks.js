@@ -1,13 +1,14 @@
-import {roadFinishData,configureRoadFinish} from './road-finish.js?v=78';
-import {laneLayout} from './road-lanes.js?v=78';
-import {roadGeometry,transitionWidth,junctionCorners,junctionCuts,clearRanges,clearSections,signalPlacements} from './road-junction-plan.js?v=78';
-import {lotAccess} from './lot-access.js?v=78';
-import {streetStations,atDistance,distanceSection,streetSurface,pavementMaterial} from './street-geometry.js?v=78';
-import {signalPhase} from './junctions.js?v=78';
-import {outsidePortals} from './traffic.js?v=78';
-import {batchStatic} from './static-batch.js?v=78';
+import {approachMarkings,arrowPolygons} from './road-markings.js?v=79';
+import {roadFinishData,configureRoadFinish} from './road-finish.js?v=79';
+import {laneLayout} from './road-lanes.js?v=79';
+import {roadGeometry,transitionWidth,junctionCorners,junctionCuts,clearRanges,clearSections,signalPlacements} from './road-junction-plan.js?v=79';
+import {lotAccess} from './lot-access.js?v=79';
+import {streetStations,atDistance,distanceSection,streetSurface,pavementMaterial} from './street-geometry.js?v=79';
+import {signalPhase} from './junctions.js?v=79';
+import {outsidePortals} from './traffic.js?v=79';
+import {batchStatic} from './static-batch.js?v=79';
 import * as THREE from './vendor/three.module.js';
-import {floorHeight,groundHeight,wetness} from './landscape.js?v=78';
+import {floorHeight,groundHeight,wetness} from './landscape.js?v=79';
 export class Roadworks{
 constructor(v){this.v=v;this.group=new THREE.Group();v.scene.add(this.group);this.lamps=[];this.lampMaterial=new THREE.MeshStandardMaterial({color:'#e5e2ca',emissive:'#ffe2a0',emissiveIntensity:v.night?3:0,roughness:.3});this.walkMaterial=pavementMaterial();this.lightPoolMaterial=new THREE.MeshBasicMaterial({color:'#ffe0a0',transparent:true,opacity:.22,depthWrite:false,blending:THREE.AdditiveBlending});this.lightPoolMaterial.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 poolUV;').replace('#include <uv_vertex>','#include <uv_vertex>\npoolUV=uv;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 poolUV;').replace('#include <color_fragment>','#include <color_fragment>\ndiffuseColor.a*=pow(max(0.,1.-length(poolUV*2.-1.)),1.8);');};this.lightPoolMaterial.customProgramCacheKey=()=> 'street-light-pool-v1';this.signalGroup=new THREE.Group();v.scene.add(this.signalGroup);}
 clear(){this.group.traverse(o=>{if(o.geometry&&o.geometry!==this.v.unitBox)o.geometry.dispose()});this.group.clear();this.lamps=[];this.signalKey=null;}
@@ -38,7 +39,7 @@ if(i%5===0&&t.ground!=='water'&&!this.nearJunction(x,z,1.5)){let horizontal=dirs
 }
 for(const path of w.roadPaths||[])this.path(w,path,asphalt,walk,curb);
 for(const junction of this.junctionPlan.junctions)this.sharedJunction(w,junction,junction.arms.every(a=>a.spec===CityEngine.ROADS.gravel)?this.v.mat('#928875'):asphalt,walk,curb);
-for(const portal of outsidePortals(w))this.outside(w,portal,asphalt);this.batchStats=batchStatic(this.group,this.v.unitBox);this.night(this.v.night);}
+this.buildApproachMarkings(w);for(const portal of outsidePortals(w))this.outside(w,portal,asphalt);this.batchStats=batchStatic(this.group,this.v.unitBox);this.night(this.v.night);}
 buildAccess(world,buildings){
  if(!this.accessGroup){this.accessGroup=new THREE.Group();this.v.scene.add(this.accessGroup);}
  this.accessGroup.traverse(o=>o.geometry?.dispose());this.accessGroup.clear();
@@ -71,6 +72,19 @@ for(let distance=3;distance<stations.at(-1).distance-1;distance+=12){const p=atD
 }
 treeWell(w,p,width){const x=p.x+p.tz*(width/2+.25),z=p.z-p.tx*(width/2+.25),y=this.height(w,x,z);this.v.box(this.group,x,y+.16,z,.4,.04,.4,'#595d51');
  // Trees use the landscape vegetation batches and retain their full nearby models.
+}
+
+
+buildApproachMarkings(w){
+ const positions=[];
+ for(const arrow of approachMarkings(this.roadDescriptors,this.junctionPlan.junctions))for(const polygon of arrowPolygons(arrow.turns)){
+  const vertices=polygon.map(([x,z])=>{x*=arrow.width/.8;return{x:arrow.center.x-arrow.tz*x+arrow.tx*z,z:arrow.center.z+arrow.tx*x+arrow.tz*z};});
+  for(let i=1;i<vertices.length-1;i++){
+   const triangle=[vertices[0],vertices[i],vertices[i+1]],a=triangle[0],b=triangle[1],c=triangle[2];if((b.x-a.x)*(c.z-a.z)-(b.z-a.z)*(c.x-a.x)>0)triangle.reverse();
+   for(const p of triangle)positions.push(p.x,this.height(w,p.x,p.z)+.107,p.z);
+  }
+ }
+ if(!positions.length)return;const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.computeVertexNormals();const mesh=new THREE.Mesh(geometry,this.v.mat('#dedbd0'));mesh.receiveShadow=true;this.group.add(mesh);
 }
 
 sharedJunction(w,j,asphalt,walk,curb){
