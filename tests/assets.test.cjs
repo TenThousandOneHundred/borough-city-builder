@@ -8,6 +8,7 @@ for(const folder of ['architecture','pine','facade']){
  for(const m of model.meshes)for(const p of m.primitives){assert.ok(model.materials[p.material]);for(const accessor of Object.values(p.attributes))assert.ok(model.accessors[accessor])}
 }
 for(let i=0;i<4;i++){const b=fs.readFileSync(path.join(root,'assets/trees/broadleaf-'+i+'.png'));assert.equal(b.subarray(1,4).toString(),'PNG');assert.equal(b.readUInt32BE(16),640);assert.equal(b.readUInt32BE(20),768)}
+const atlas=fs.readFileSync(path.join(root,'assets/trees/broadleaf-elevations.png'));assert.equal(atlas.subarray(1,4).toString(),'PNG');assert.equal(atlas.readUInt32BE(16),512);assert.equal(atlas.readUInt32BE(20),2048);assert.equal(atlas[25],6,'tree atlas retains RGBA transparency');assert.ok(atlas.length<650*1024,'four canopy elevations share a bounded download');
 assert.ok(fs.readFileSync(path.join(root,'assets/daylight.hdr')).subarray(0,11).toString().includes('RADIANCE'));
 console.log('Model buffers, local texture dependencies, tree images and HDR environment verified');
 
