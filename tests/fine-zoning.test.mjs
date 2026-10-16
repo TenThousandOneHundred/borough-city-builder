@@ -46,3 +46,16 @@ test('developed fine lots render once at parcel size and retain their overlay af
  E.removeRoadPath(w,w.roadPaths[0].id);CityView.prototype.updateZones.call(view);assert.equal(drawn.filter(p=>p.frame===parcel.frame).length,1);
  view.zoning=false;CityView.prototype.updateZones.call(view);assert.equal(drawn.filter(p=>p.frame===parcel.frame).length,0);assert.ok(F.valid(state));
 });
+
+test('available zoning cache preserves cells and invalidates every blocking input while ignoring population',()=>{
+ const w=fixture();E.buildRoadPath(w,[{x:19,y:24},{x:34,y:12},{x:42,y:25}]);
+ const parity=()=>{const before=JSON.stringify(w),actual=E.fineZoningLayout(w);assert.deepEqual([...actual],[...E.fineZoningLayout(structuredClone(w))]);assert.equal(JSON.stringify(w),before);return actual;};
+ let cached=parity();w.day++;w.money++;w.tiles[0].people++;assert.equal(parity(),cached,'population and finances keep the geometry cache');
+ const p=[...cached.values()].find(p=>p.row===0&&w.tiles[p.index].type===null);assert.ok(p);
+ for(const [key,value]of [['zone','commercial_low'],['construction',1],['type','park'],['facilityOwner',0],['zoneOwner',0]]){const previous=w.tiles[p.index][key];w.tiles[p.index][key]=value;const blocked=parity();assert.notEqual(blocked,cached);assert.equal(blocked.has(p.id),false);if(previous===undefined)delete w.tiles[p.index][key];else w.tiles[p.index][key]=previous;cached=parity();assert.ok(cached.has(p.id));}
+ w.development=F.create();cached=parity();F.paint(w.development,cached,[...cached.keys()],'residential_low');assert.notEqual(parity(),cached);cached=parity();
+ const start=[...cached.values()].find(q=>q.row===0&&F.reserve(structuredClone(w.development),cached,q.id,2,3));assert.ok(start);const parcel=F.reserve(w.development,cached,start.id,2,3);parcel.occupant={type:'residential',building:'cottage',density:'low',level:1,people:4};assert.notEqual(parity(),cached);cached=parity();parcel.occupant.people++;assert.equal(parity(),cached);
+ F.release(w.development,parcel.id);assert.notEqual(parity(),cached);cached=parity();w.development=structuredClone(w.development);assert.notEqual(parity(),cached);
+ const road=w.roadPaths[0];cached=parity();E.removeRoadPath(w,road.id);assert.notEqual(parity(),cached);assert.ok([...parity().values()].every(q=>q.source!==road.id));
+ cached=parity();const bank=[...cached.values()][0];w.tiles[bank.index].ground='water';assert.notEqual(parity(),cached);assert.equal(parity().has(bank.id),false);
+});

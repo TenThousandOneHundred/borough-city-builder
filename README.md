@@ -501,3 +501,6 @@ Roadside zoning now rejects cells behind missing frontage at curves, junctions a
 
 ## Edition 81 — Attached terrace housing
 Oriented row-house lots use the terrace model with solid party walls, flush side roof edges and no side gutters. Repeated homes meet along their boundaries with uniform scaling and individually connected entrances and rear gardens. New row zoning varies between one-, two- and three-cell frontages; existing saved parcel boundaries stay intact. The revised asset removes 504 full-detail triangles, keeps the existing shared instance batches, and changes compressed catalogue transfer by about 1.2 KB. Traffic and resident simulation are unchanged.
+
+## Edition 82 — Zoning interaction cache
+Available roadside cells are reused while road geometry, tile blockers and parcel revisions stay unchanged. Population, money and camera movement do not rebuild availability. Regression checks compare cached results to a fresh world after zoning, reservation, demolition, service blockers, road removal, water changes and state replacement. A 6,210-cell / 510-parcel fixture measured 150 repeated queries at 1,193 ms before and 19 ms after (seven alternating measured runs, one warmup); this is query CPU time, not an FPS claim. All cell geometry and world data match the uncached baseline. Traffic and resident advancement remain independent of rendering.
