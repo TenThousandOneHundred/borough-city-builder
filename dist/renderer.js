@@ -1,24 +1,24 @@
-import './building-entities.js?v=72';
+import './building-entities.js?v=72.1';
 const Buildings=globalThis.BoroughBuildings;
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {trackAssetGroups} from './asset-transfer.js?v=72';
-import {buildFootpaths} from './footpaths.js?v=72';
-import {Transit,transitLeg,stopPosition} from './transit.js?v=72';
-import {SimulationClock} from './simulation-clock.js?v=72';
-import {Residents} from './residents.js?v=72';
-import {Traffic,carCapacity} from './traffic.js?v=72';
-import {Vehicles} from './vehicles.js?v=72';
-import {BuildingFactory} from './building-factory.js?v=72';
-import {StreetLife} from './street-life.js?v=72';
-import {visualParcels} from './parcels.js?v=72';
-import {Graphics} from './graphics.js?v=72';
-import {Vegetation} from './vegetation.js?v=72';
+import {trackAssetGroups} from './asset-transfer.js?v=72.1';
+import {buildFootpaths} from './footpaths.js?v=72.1';
+import {Transit,transitLeg,stopPosition} from './transit.js?v=72.1';
+import {SimulationClock} from './simulation-clock.js?v=72.1';
+import {Residents} from './residents.js?v=72.1';
+import {Traffic,carCapacity} from './traffic.js?v=72.1';
+import {Vehicles} from './vehicles.js?v=72.1';
+import {BuildingFactory} from './building-factory.js?v=72.1';
+import {StreetLife} from './street-life.js?v=72.1';
+import {visualParcels} from './parcels.js?v=72.1';
+import {Graphics} from './graphics.js?v=72.1';
+import {Vegetation} from './vegetation.js?v=72.1';
 import {RGBELoader} from './vendor/RGBELoader.js';
 import * as THREE from './vendor/three.module.js';
 import {OrbitControls} from './vendor/OrbitControls.js';
-import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=72';
-import {Architecture} from './architecture.js?v=72';
-import {Roadworks} from './roadworks.js?v=72';
+import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=72.1';
+import {Architecture} from './architecture.js?v=72.1';
+import {Roadworks} from './roadworks.js?v=72.1';
 const N=48,T=4,HALF=96,zoneColors={residential:'#54b663',commercial:'#5bb1d8',industrial:'#cdb268',office:'#aa87c9'};
 export class CityView{
 constructor(canvas){this.assetsReady=false;this.loadingElement=document.getElementById('sceneLoading');this.canvas=canvas;this.scene=new THREE.Scene();this.scene.background=new THREE.Color('#aebfca');this.scene.fog=new THREE.FogExp2('#b7c6cc',.00105);
@@ -95,7 +95,7 @@ showTerrainBrush(x,z,radius){this.clearLine();const points=[];for(let i=0;i<=64;
 setZoning(on){this.zoning=on;this.updateZones()}
 zonePlane(x,y,color,opacity=.3,frame=null){const geo=new THREE.PlaneGeometry((frame?.width||4)-.18,(frame?.depth||4)-.18,2,2);geo.rotateX(-Math.PI/2);const a=geo.attributes.position;for(let j=0;j<a.count;j++){const c=Math.cos(frame?.angle||0),s=Math.sin(frame?.angle||0),xx=(frame?.cx??((x+.5)*4-96))+a.getX(j)*c+a.getZ(j)*s,zz=(frame?.cz??((y+.5)*4-96))-a.getX(j)*s+a.getZ(j)*c;a.setXYZ(j,xx,floorHeight(this.world,xx,zz)+.12,zz)}geo.computeVertexNormals();return new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color,transparent:true,opacity,depthWrite:false,side:THREE.DoubleSide}))}
 updateZones(){this.zoneGroup.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose()});this.zoneGroup.clear();if(!this.world||this.menu)return;const access=CityEngine.zoneAccess(this.world),layout=CityEngine.zoningLayout(this.world);this.world.tiles.forEach((t,i)=>{const z=CityEngine.ZONES[t.zone];if(t.type==='road'||t.ground==='water')return;if(z&&(!t.type||this.zoning||this.overlay==='zones'))this.zoneGroup.add(this.zonePlane(i%48,Math.floor(i/48),z.color,this.zoning?.44:.28,layout.get(i))) });const fine=CityEngine.fineZoningLayout(this.world);for(const [id,p]of fine){const cell=this.world.development?.cells[id],zone=CityEngine.ZONES[cell?.zone];if(zone&&(!cell.owner||this.zoning||this.overlay==='zones'))this.zoneGroup.add(this.zonePlane(0,0,zone.color,this.zoning?.44:.28,p));else if(this.zoning&&!cell?.owner)this.zoneGroup.add(this.zonePlane(0,0,'#b1d3d7',.12,p));}this.batchZonePlanes(this.zoneGroup);}
-previewZones(cells,zone){this.clearLine();const layout=CityEngine.fineZoningLayout(this.world);for(const id of cells){const p=layout.get(id);if(!p)continue;const cell=this.world.development?.cells[id],parcel=this.world.development?.parcels[cell?.owner],allowed=!parcel?.occupant||!!parcel.occupant.construction;this.previewGroup.add(this.zonePlane(0,0,allowed?(CityEngine.ZONES[zone]?.color||'#f2d9b5'):'#d76350',.65,p));}this.batchZonePlanes(this.previewGroup);}
+previewZones(cells,zone){this.clearLine();const layout=CityEngine.fineZoningLayout(this.world);for(const id of cells){if(typeof id==='object'){const i=id.y*48+id.x,t=this.world.tiles[i],p=CityEngine.zoningLayout(this.world).get(i);if(t?.zone&&p)this.previewGroup.add(this.zonePlane(id.x,id.y,CityEngine.ZONES[zone]?.color||'#f2d9b5',.65,p));continue;}const p=layout.get(id);if(!p)continue;const cell=this.world.development?.cells[id],parcel=this.world.development?.parcels[cell?.owner],allowed=!parcel?.occupant||!!parcel.occupant.construction;this.previewGroup.add(this.zonePlane(0,0,allowed?(CityEngine.ZONES[zone]?.color||'#f2d9b5'):'#d76350',.65,p));}this.batchZonePlanes(this.previewGroup);}
 batchZonePlanes(group){const batches=new Map();for(const mesh of [...group.children]){const key=mesh.material.color.getHex()+':'+mesh.material.opacity;if(!batches.has(key))batches.set(key,[]);batches.get(key).push(mesh);}group.clear();for(const meshes of batches.values()){const geometry=mergeGeometries(meshes.map(m=>m.geometry),false),material=meshes[0].material;for(const mesh of meshes){mesh.geometry.dispose();if(mesh.material!==material)mesh.material.dispose();}group.add(new THREE.Mesh(geometry,material));}}
 updateOverlay(){const ground=this.landscape.ground;if(!ground)return;if(this.overlay==='none'&&this.landscape.baseColors?.length===ground.geometry.attributes.color.array.length){ground.geometry.attributes.color.array.set(this.landscape.baseColors);ground.geometry.attributes.color.needsUpdate=true;ground.material.color.set('#ffffff');return;}const colors=ground.geometry.attributes.color,pos=ground.geometry.attributes.position,w=this.world,stats=CityEngine.analyze(w);for(let i=0;i<pos.count;i++){let x=pos.getX(i),z=pos.getZ(i),tx=Math.max(0,Math.min(47,Math.floor((x+96)/4))),ty=Math.max(0,Math.min(47,Math.floor((z+96)/4))),t=w.tiles[ty*48+tx];let c;if(this.overlay==='none'){c=terrainColor(w,x,z)}else{c=new THREE.Color('#bcbfc1');if(this.overlay==='zones'&&(t.zone||zoneColors[t.type]))c.set(CityEngine.ZONES[t.zone]?.color||zoneColors[t.type]);if(this.overlay==='traffic'&&t.type==='road')c.set(stats.traffic>65?'#df7358':'#79bf85');if(this.overlay==='utilities'&&t.type)c.set(['power','water'].includes(t.type)?'#49c1ed':'#98afbc');if(this.overlay==='pollution'&&t.type==='industrial')c.set('#d2ac63')}colors.setXYZ(i,c.r,c.g,c.b)}colors.needsUpdate=true;ground.material.color.set(this.overlay==='none'?'#ffffff':'#dce0df')}
 ensureCarCapacity(){if(!this.traffic)return;const target=this.menu?32:carCapacity(this.world);let count=this.cars.filter(c=>c.agent.kind!=='bus').length,changed=false;while(count<target){const mesh=this.carModel(this.cars.length),agent=this.traffic.addAgent();mesh.scale.setScalar(0);this.cars.push({mesh,agent});count++;changed=true;}if(changed)this.vehicles.rebuildFleet(this.cars,this.carGroup);}
@@ -113,7 +113,7 @@ setOverlay(v){if(this.overlay===v)return;this.overlay=v;this.refresh(true);if(v=
 setNight(v){if(this.night===v)return;this.night=v;this.models.library?.setNight(v);this.scene.background=v?new THREE.Color('#162739'):(this.skyTexture||new THREE.Color('#aebfca'));this.scene.environmentIntensity=v?.12:.38;this.scene.fog.color.set(v?'#283d50':'#b7c6cc');this.sun.intensity=v?.18:3.0;this.ambient.intensity=v?.4:.55;this.renderer.toneMappingExposure=v?.75:.87;this.refresh(true);this.roadworks.night(v)}
 getRoadPoint(x,y){if(!this.getTile(x,y))return null;let p={x:Math.max(0,Math.min(47,(this.point.x+96)/4-.5)),y:Math.max(0,Math.min(47,(this.point.z+96)/4-.5))};const tile={x:Math.round(p.x),y:Math.round(p.y)};if(this.world.tiles[tile.y*48+tile.x].type==='road'&&Math.hypot(p.x-tile.x,p.y-tile.y)<.65)p=tile;for(const path of [...(this.world.roadPaths||[]),...(this.world.walkPaths||[])])for(const end of [path.controls[0],path.controls.at(-1)])if(Math.hypot(p.x-end.x,p.y-end.y)<.7)p={...end};return p}
 showRoadPreview(controls,type,valid){this.clearLine();const points=CityEngine.sampleRoad(controls).map(p=>({x:(p.x+.5)*4-96,z:(p.y+.5)*4-96}));const mat=new THREE.MeshBasicMaterial({color:valid?'#71d2ec':'#f08065',transparent:true,opacity:.62,side:THREE.DoubleSide});const mesh=this.roadworks.ribbon(this.world,points,type==='path'?.65:CityEngine.ROADS[type].width,0,mat,.28);this.roadworks.group.remove(mesh);this.previewGroup.add(mesh);}
-getZoneTile(x,y){if(!this.getTile(x,y))return null;const p=BoroughZoning.hit(CityEngine.fineZoningLayout(this.world),this.point.x,this.point.z);return p?{id:p.id,x:p.index%48,y:Math.floor(p.index/48)}:null}
+getZoneTile(x,y){if(!this.getTile(x,y))return null;const p=BoroughZoning.hit(CityEngine.fineZoningLayout(this.world),this.point.x,this.point.z);if(p)return {id:p.id,x:p.index%48,y:Math.floor(p.index/48)};const old=BoroughZoning.hit(CityEngine.zoningLayout(this.world),this.point.x,this.point.z);return old&&this.world.tiles[old.index].zone?{legacy:true,x:old.index%48,y:Math.floor(old.index/48)}:null}
 getBuildingTile(x,y){const tile=this.getTile(x,y);if(!tile)return null;const parcel=Buildings.at(this.world,this.point.x,this.point.z)[0];return parcel?{...tile,entityId:parcel.id}:tile}
 getTile(clientX,clientY){const r=this.canvas.getBoundingClientRect();this.ndc.set((clientX-r.left)/r.width*2-1,-(clientY-r.top)/r.height*2+1);this.ray.setFromCamera(this.ndc,this.camera);const targets=[this.landscape.ground,this.landscape.water].filter(Boolean),hit=this.ray.intersectObjects(targets,false)[0];if(hit)this.point.copy(hit.point);else if(!this.ray.ray.intersectPlane(this.plane,this.point))return null;const x=Math.floor((this.point.x+96)/4),y=Math.floor((this.point.z+96)/4);return x>=0&&y>=0&&x<48&&y<48?{x,y}:null}
 showFacilityPreview(q,remove=false){

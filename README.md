@@ -451,3 +451,5 @@ The inspector lists lot dimensions, residents and road access. Bulldozing one lo
 Residents, cars, walking and transit resolve both legacy tile addresses and independent lot addresses. Their simulation remains independent of render visibility. Building geometry and materials stay shared, population-only updates retain model roots, and exact parcel occupancy controls vegetation removal. Medium-density apartment selection includes several fitting full-detail models.
 
 The development collection serializes with the existing WorldStore save, import and export format. It does not change the storage key or replace existing worlds.
+
+Edition 72.1 also preserves selection, brush, fill and erasing for existing legacy zoning. New zoning continues to use independent cells.
