@@ -1,5 +1,6 @@
 // Conservative lane-corridor broad phase. Every active vehicle remains simulated.
 // Buckets are updated after each move, preserving the simulation's sequential order.
+const EMPTY=Object.freeze([]);
 export class TrafficSpatial {
  constructor(){this.x=new Map();this.z=new Map();this.cells=new WeakMap();this.candidates=[];this.active=[];this.size=4;this.u=new Map();this.v=new Map();this.diagonalReady=false;}
  reset(agents){
@@ -15,7 +16,8 @@ export class TrafficSpatial {
   if(!this.diagonalReady){for(const bins of [this.u,this.v])for(const bucket of bins.values())bucket.length=0;this.minU=this.minV=Infinity;this.maxU=this.maxV=-Infinity;for(const b of this.active){const c=this.cells.get(b);c.u=Math.floor((b.x+b.z)*Math.SQRT1_2/this.size);c.v=Math.floor((b.z-b.x)*Math.SQRT1_2/this.size);this.insert(this.u,c.u,b);this.insert(this.v,c.v,b);this.diagonalBounds(b);}this.diagonalReady=true;}
   const u=(a.x+a.z)*Math.SQRT1_2,v=(a.z-a.x)*Math.SQRT1_2,fu=(f.x+f.z)*Math.SQRT1_2,fv=(f.z-f.x)*Math.SQRT1_2,alongU=Math.abs(fu)>=Math.abs(fv),denom=alongU?fu:fv,slope=(alongU?fv:fu)/denom,margin=.650000001/Math.abs(denom),minor=alongU?v:u,major=alongU?u:v,lo=alongU?this.minU:this.minV,hi=alongU?this.maxU:this.maxV,p=minor+(lo-major)*slope,q=minor+(hi-major)*slope,first=Math.floor((Math.min(p,q)-margin)/this.size),last=Math.floor((Math.max(p,q)+margin)/this.size);
   if(last-first+1>Math.max(4,this.active.length/12))return this.active;
-  const result=this.candidates;result.length=0;const bins=alongU?this.v:this.u;for(let key=first;key<=last;key++){const bucket=bins.get(key);if(bucket)for(const b of bucket)result.push(b);}return result;
+  const bins=alongU?this.v:this.u;if(first===last)return bins.get(first)||EMPTY;
+  const result=this.candidates;result.length=0;for(let key=first;key<=last;key++){const bucket=bins.get(key);if(bucket)for(const b of bucket)result.push(b);}return result;
  }
  corridor(a,forward){
   if(this.active.length<48)return this.active;
@@ -26,7 +28,11 @@ export class TrafficSpatial {
   const first=Math.floor((Math.min(p,q)-margin)/this.size),last=Math.floor((Math.max(p,q)+margin)/this.size);
   // Oblique routes use lazily built 45-degree bins before falling back to a full scan.
   if(last-first+1>Math.max(4,this.active.length/12))return this.diagonal(a,forward);
-  const result=this.candidates;result.length=0;const bins=this[axis];
+  const bins=this[axis];
+  // A narrow lane commonly falls entirely within one bin. The caller scans
+  // it before moving any vehicle, so no intermediate candidate copy is needed.
+  if(first===last)return bins.get(first)||EMPTY;
+  const result=this.candidates;result.length=0;
   for(let key=first;key<=last;key++){const bucket=bins.get(key);if(bucket)for(const b of bucket)result.push(b);}
   return result;
  }

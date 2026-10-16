@@ -57,3 +57,12 @@ test('diagonal traffic preserves exact full-scan journeys through turns',()=>{
  for(let i=0;i<2400;i++){for(const t of pair)t.update(.05);if(i%80===0){assert.deepEqual(pair[0].agents,pair[1].agents);assert.deepEqual(pair[0].summary,pair[1].summary);}}
  assert.deepEqual(pair[0].agents,pair[1].agents);assert.equal(pair[0].completed,pair[1].completed);assert.ok(pair[0].completed>0);
 });
+
+test('single-bin straight and diagonal lanes avoid candidate copies and retain moving leaders',()=>{
+ for(const diagonal of [false,true]){
+  const agents=Array.from({length:128},(_,i)=>({active:true,x:diagonal?i*3:2,z:diagonal?i*3+2:i*3})),index=new TrafficSpatial(),forward=diagonal?{x:Math.SQRT1_2,z:Math.SQRT1_2}:{x:0,z:1};index.reset(agents);
+  const before=JSON.stringify(agents),result=index.corridor(agents[0],forward);
+  assert.equal(result.length,agents.length);assert.equal(index.candidates.length,0,'single-bin searches do not populate a second candidate array');assert.equal(JSON.stringify(agents),before);
+  const lead=agents[1];lead.x+=20;index.move(lead);assert.ok(!index.corridor(agents[0],forward).includes(lead));lead.x-=20;index.move(lead);assert.ok(index.corridor(agents[0],forward).includes(lead));
+ }
+});

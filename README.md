@@ -485,3 +485,8 @@ Two original low-rent buildings replace reuse of general apartment models: a six
 The catalogue now contains 73 buildings (52 modern). The new full and distant assets add 168,934 compressed bytes, use at most ten material batches per model, and share geometry through the existing instancing pipeline. The raw modern-library budget is 13.5 MiB; its compressed transfer remains below 3 MiB. This is an architecture addition, not a measured frame-rate improvement.
 
 The two new models contain 5,382 and 10,676 triangles. Their distant versions retain the window and wall openings using 2,786 and 5,184 triangles. Existing-model geometry budgets remain unchanged; the enlarged 52-model modern catalogue stays below 196,000 triangles.
+
+## Edition 78 — avoid copying single-lane traffic buckets
+Lane-neighbor queries now scan the existing spatial bucket directly when the complete conservative search corridor occupies one bin, including diagonal lanes. Multi-bin queries retain their existing path. Buckets still update after each vehicle move; every active vehicle continues to advance regardless of rendering. No building, terrain, traffic capacity or simulation frequency was reduced.
+
+A deterministic 512-vehicle benchmark over 60 simulated seconds measured median CPU time of 283.7 ms before and 200.8 ms after (six timed runs after warmup, alternating execution order). All vehicle states, queues and completed-trip counts matched the previous implementation exactly. This is simulation CPU time, not browser FPS. Reproduce with `node scripts/benchmark-traffic-corridor.mjs /path/to/previous-traffic-spatial.mjs`; the baseline is `dist/traffic-spatial.js` from commit `d18f4e1`.
