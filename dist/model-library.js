@@ -1,13 +1,14 @@
-import {bakeRoofFinish} from './roof-finishes.js?v=82';
-import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=82';
-import {loadBinary} from './asset-transfer.js?v=82';
-import {SiteDetails} from './site-details.js?v=82';
-import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=82';
+import {lotMaterials} from './lot-surfaces.js?v=83';
+import {bakeRoofFinish} from './roof-finishes.js?v=83';
+import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=83';
+import {loadBinary} from './asset-transfer.js?v=83';
+import {SiteDetails} from './site-details.js?v=83';
+import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=83';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {lotPlan} from './building-plan.js?v=82';
-import {floorHeight} from './landscape.js?v=82';
+import {lotPlan} from './building-plan.js?v=83';
+import {floorHeight} from './landscape.js?v=83';
 const IDENTITY=new THREE.Matrix4();
 const civicDefaults={hospital:'clinic',school:'elementary',police:'police',fire:'fire'};
 // Complete textured assets are loaded once, batched per material, and instanced.
@@ -100,29 +101,11 @@ export class ModelLibrary {
   model.position.set(centers[0],0,setback);
   if(p.low){const fronts=asset.streetFronts.filter(f=>f.kind==='entrance'&&f.normal[1]>.9),frontZ=Math.max(...fronts.map(f=>f.position[2]));p.entranceXs=centers.flatMap(x=>fronts.filter(f=>f.position[2]>=frontZ-.5).map(f=>x+(f.position[0]+asset.origin.x)*scale));if(row)p.rowEntrances=[...p.entranceXs].sort((a,b)=>a-b);}
   model.scale.setScalar(scale);root.add(model);for(const x of centers.slice(1)){const home=model.clone(true);home.position.x=x;root.add(home);}root.rotation.y=p.angle;
-  const lawn=category==='residential-low',surface=lawn?'grass':category==='industrial'?'asphalt':'paving';this.lotMaterials ||= {};
-  let lotMaterial=this.lotMaterials[surface];
-  if(!lotMaterial){lotMaterial=this.lotMaterials[surface]=this.view.landscape.material(lawn?'grass':'asphalt',lawn?2:3,lawn?'#9fb78c':surface==='paving'?'#93988e':'#a7aaa5');
-   if(surface==='paving'){
-    // World-space joints stay aligned across neighbouring, rotated building lots.
-    lotMaterial.onBeforeCompile=shader=>{shader.vertexShader='varying vec3 lotPoint;\n'+shader.vertexShader;shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
-     vec4 lotPosition=vec4(transformed,1.);
-     #ifdef USE_INSTANCING
-     lotPosition=instanceMatrix*lotPosition;
-     #endif
-     lotPoint=(modelMatrix*lotPosition).xyz;`);shader.fragmentShader='varying vec3 lotPoint;\n'+shader.fragmentShader;shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`
-     #ifdef USE_MAP
-     float grain=dot(texture2D(map,vMapUv).rgb,vec3(.3,.59,.11));
-     diffuseColor.rgb*=.55+grain*1.2;
-     #endif
-     vec2 tile=abs(fract(lotPoint.xz*5.)-.5);float edge=max(tile.x,tile.y);
-     float grout=smoothstep(.48-fwidth(edge),.495,edge);
-     diffuseColor.rgb*=mix(1.,.76,grout);`);};lotMaterial.customProgramCacheKey=()=> 'borough-paved-lots-21';
-   }
-  }
+  const lawn=category==='residential-low',surface=lawn?'grass':category==='industrial'?'asphalt':'paving';this.lotMaterials ||= lotMaterials(this.view.landscape);
+  const lotMaterial=this.lotMaterials[surface];
   const lot=new THREE.Mesh(this.lotGeometry,lotMaterial);lot.rotation.y=p.oriented?0:-p.angle;lot.scale.set((p.oriented?W:p.parcelWidth)-.12,1,(p.oriented?D:p.parcelDepth)-.12);lot.position.y=-.025;lot.receiveShadow=true;lot.userData.sharedAsset=true;root.add(lot);
   if(surface==='paving'&&!p.oriented){
-   const gardenMaterial=this.lotMaterials.grass ||= this.view.landscape.material('grass',2,'#9fb78c');
+   const gardenMaterial=this.lotMaterials.grass;
    const offsetX=Math.sin(p.angle)*setback,offsetZ=Math.cos(p.angle)*setback;
    const gardens=new THREE.Group();gardens.rotation.y=-p.angle;
    const patch=(x,z,w,d)=>{const mesh=new THREE.Mesh(this.lotGeometry,gardenMaterial);mesh.position.set(x,-.012,z);mesh.scale.set(w,1,d);mesh.receiveShadow=true;mesh.userData.sharedAsset=true;gardens.add(mesh);};

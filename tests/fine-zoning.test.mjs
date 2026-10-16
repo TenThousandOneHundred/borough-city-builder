@@ -44,7 +44,7 @@ test('developed fine lots render once at parcel size and retain their overlay af
  const drawn=[],view={world:w,menu:false,zoning:true,overlay:'none',zoneGroup:{traverse(){},clear(){drawn.length=0},add(mesh){drawn.push(mesh)}},zonePlane(x,y,color,opacity,frame){return {frame,opacity}},batchZonePlanes(){}};
  CityView.prototype.updateZones.call(view);assert.equal(drawn.filter(p=>p.frame===parcel.frame).length,1);assert.equal(drawn.filter(p=>parcel.cells.includes(p.frame?.id)).length,0);
  E.removeRoadPath(w,w.roadPaths[0].id);CityView.prototype.updateZones.call(view);assert.equal(drawn.filter(p=>p.frame===parcel.frame).length,1);
- view.zoning=false;CityView.prototype.updateZones.call(view);assert.equal(drawn.filter(p=>p.frame===parcel.frame).length,0);assert.ok(F.valid(state));
+ view.zoning=false;CityView.prototype.updateZones.call(view);assert.equal(drawn.length,0,'normal city view hides both vacant cells and developed lot overlays');view.overlay='zones';CityView.prototype.updateZones.call(view);assert.ok(drawn.length>1,'information view restores zoning');assert.equal(drawn.filter(p=>p.frame===parcel.frame).length,1);assert.ok(F.valid(state));
 });
 
 test('available zoning cache preserves cells and invalidates every blocking input while ignoring population',()=>{

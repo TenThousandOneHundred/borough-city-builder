@@ -1,24 +1,24 @@
-import './building-entities.js?v=82';
+import './building-entities.js?v=83';
 const Buildings=globalThis.BoroughBuildings;
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {trackAssetGroups} from './asset-transfer.js?v=82';
-import {buildFootpaths} from './footpaths.js?v=82';
-import {Transit,transitLeg,stopPosition} from './transit.js?v=82';
-import {SimulationClock} from './simulation-clock.js?v=82';
-import {Residents} from './residents.js?v=82';
-import {Traffic,carCapacity} from './traffic.js?v=82';
-import {Vehicles} from './vehicles.js?v=82';
-import {BuildingFactory} from './building-factory.js?v=82';
-import {StreetLife} from './street-life.js?v=82';
-import {visualParcels} from './parcels.js?v=82';
-import {Graphics} from './graphics.js?v=82';
-import {Vegetation} from './vegetation.js?v=82';
+import {trackAssetGroups} from './asset-transfer.js?v=83';
+import {buildFootpaths} from './footpaths.js?v=83';
+import {Transit,transitLeg,stopPosition} from './transit.js?v=83';
+import {SimulationClock} from './simulation-clock.js?v=83';
+import {Residents} from './residents.js?v=83';
+import {Traffic,carCapacity} from './traffic.js?v=83';
+import {Vehicles} from './vehicles.js?v=83';
+import {BuildingFactory} from './building-factory.js?v=83';
+import {StreetLife} from './street-life.js?v=83';
+import {visualParcels} from './parcels.js?v=83';
+import {Graphics} from './graphics.js?v=83';
+import {Vegetation} from './vegetation.js?v=83';
 import {RGBELoader} from './vendor/RGBELoader.js';
 import * as THREE from './vendor/three.module.js';
 import {OrbitControls} from './vendor/OrbitControls.js';
-import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=82';
-import {Architecture} from './architecture.js?v=82';
-import {Roadworks} from './roadworks.js?v=82';
+import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=83';
+import {Architecture} from './architecture.js?v=83';
+import {Roadworks} from './roadworks.js?v=83';
 const N=48,T=4,HALF=96,zoneColors={residential:'#54b663',commercial:'#5bb1d8',industrial:'#cdb268',office:'#aa87c9'};
 export class CityView{
 constructor(canvas){this.assetsReady=false;this.loadingElement=document.getElementById('sceneLoading');this.canvas=canvas;this.scene=new THREE.Scene();this.scene.background=new THREE.Color('#aebfca');this.scene.fog=new THREE.FogExp2('#b7c6cc',.00105);
@@ -95,7 +95,7 @@ showTerrainBrush(x,z,radius){this.clearLine();const points=[];for(let i=0;i<=64;
 setZoning(on){this.zoning=on;this.updateZones()}
 zonePlane(x,y,color,opacity=.3,frame=null){const geo=new THREE.PlaneGeometry((frame?.width||4)-.18,(frame?.depth||4)-.18,2,2);geo.rotateX(-Math.PI/2);const a=geo.attributes.position;for(let j=0;j<a.count;j++){const c=Math.cos(frame?.angle||0),s=Math.sin(frame?.angle||0),xx=(frame?.cx??((x+.5)*4-96))+a.getX(j)*c+a.getZ(j)*s,zz=(frame?.cz??((y+.5)*4-96))-a.getX(j)*s+a.getZ(j)*c;a.setXYZ(j,xx,floorHeight(this.world,xx,zz)+.12,zz)}geo.computeVertexNormals();return new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color,transparent:true,opacity,depthWrite:false,side:THREE.DoubleSide}))}
 updateZones(){
- this.zoneGroup.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose()});this.zoneGroup.clear();if(!this.world||this.menu)return;
+ this.zoneGroup.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose()});this.zoneGroup.clear();if(!this.world||this.menu||!this.zoning&&this.overlay!=='zones')return;
  const showLots=this.zoning||this.overlay==='zones',layout=CityEngine.zoningLayout(this.world);
  this.world.tiles.forEach((t,i)=>{const z=CityEngine.ZONES[t.zone];if(!z||t.type==='road'||t.ground==='water')return;
   if(t.zoneOwner!==undefined){if(t.zoneOwner===i&&showLots&&t.zoneSite)this.zoneGroup.add(this.zonePlane(0,0,z.color,.32,t.zoneSite.oriented));return;}

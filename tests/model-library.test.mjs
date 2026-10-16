@@ -325,3 +325,12 @@ test('low-rent zoning selects shared apartment blocks at metre scale rather than
  }
  assert.equal(names.size,2);
 });
+
+test('lot surfaces and garden paths share complete materials regardless of the first building category',async()=>{
+ const lib=await library(),world=E.createWorld('Surface order','plains',8),index=23*48+8;
+ for(const type of ['residential','industrial','office']){delete lib.lotMaterials;delete lib.siteDetails;world.tiles[index]={type,density:type==='residential'?'low':'high',level:1};lib.create(world,index,{width:2,depth:2});
+  assert.deepEqual(Object.keys(lib.lotMaterials).sort(),['asphalt','grass','paving']);
+  assert.equal(lib.siteDetails.materials.garden,lib.lotMaterials.grass);assert.equal(lib.siteDetails.materials.walk,lib.lotMaterials.paving);assert.equal(lib.siteDetails.materials.plaza,lib.lotMaterials.paving);assert.equal(lib.siteDetails.materials.drive,lib.lotMaterials.asphalt);
+  const materials={...lib.lotMaterials};lib.create(world,index,{width:3,depth:4});for(const key of Object.keys(materials))assert.equal(lib.lotMaterials[key],materials[key],'different lot sizes reuse materials');
+ }
+});
