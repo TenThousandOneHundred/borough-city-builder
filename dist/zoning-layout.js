@@ -26,7 +26,10 @@ function layout(w,roads,options={}){
  }
  for(const a of sources)for(const side of [-1,1])for(let row=0;row<rows;row++){const nx=-a.tz*side,nz=a.tx*side,d=a.offset+cellSize/2+row*cellSize,cx=a.x+nx*d,cz=a.z+nz*d,index=indexAt(cx,cz);if(index<0||!independent&&w.tiles[index].type==='road'||w.tiles[index].ground==='water')continue;const p={index,...(independent?{id:JSON.stringify([a.source,side,a.col,row]),width:cellSize,depth:cellSize}:{}),cx,cz,angle:Math.atan2(-nx,-nz),source:a.source,side,col:a.col,row,roadIndex:a.roadIndex,frontage:{x:a.x,z:a.z,roadIndex:a.roadIndex,...(!a.source.startsWith('legacy-')?{pathId:a.source}:{})}};if(corners(p).some(v=>{const j=indexAt(v.x*.999999,v.z*.999999);return j<0||w.tiles[j].ground==='water';}))continue;if(crossesRoad(p))continue;candidates.push(p);}
  candidates.sort((a,b)=>a.row-b.row||a.source.localeCompare(b.source)||a.side-b.side||a.col-b.col);
- const cells=new Map(),bins=new Map();for(const p of candidates){const cellKey=independent?p.id:p.index;if(cells.has(cellKey))continue;const x=Math.floor(p.cx/8),z=Math.floor(p.cz/8);let collision=false;for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++)for(const q of bins.get((x+dx)+','+(z+dz))||[])if(overlaps(p,q))collision=true;if(collision)continue;cells.set(cellKey,p);const key=x+','+z;if(!bins.has(key))bins.set(key,[]);bins.get(key).push(p);}
+ const cells=new Map(),bins=new Map();for(const p of candidates){const cellKey=independent?p.id:p.index;if(cells.has(cellKey))continue;
+ // Only retain an unbroken column from the sidewalk. A rejected frontage
+ // cell must not leave floating buildable cells behind a crossing or curve.
+ if(independent&&p.row>0&&!cells.has(JSON.stringify([p.source,p.side,p.col,p.row-1])))continue;const x=Math.floor(p.cx/8),z=Math.floor(p.cz/8);let collision=false;for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++)for(const q of bins.get((x+dx)+','+(z+dz))||[])if(overlaps(p,q))collision=true;if(collision)continue;cells.set(cellKey,p);const key=x+','+z;if(!bins.has(key))bins.set(key,[]);bins.get(key).push(p);}
  variants.set(variant,{signature,cells});cache.set(w,variants);return cells;
 }
 function hit(cells,x,z){for(const p of cells.values()){const dx=x-p.cx,dz=z-p.cz,c=Math.cos(p.angle),s=Math.sin(p.angle);if(Math.abs(dx*c-dz*s)<=(p.width||4)/2&&Math.abs(dx*s+dz*c)<=(p.depth||4)/2)return p;}return null;}

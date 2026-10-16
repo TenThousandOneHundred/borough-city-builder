@@ -147,7 +147,7 @@ function fineZoningLayout(w){
  for(const [id,p]of cells){const vertices=Zoning.corners(p),loX=Math.max(0,Math.floor((Math.min(...vertices.map(v=>v.x))+96)/4)),hiX=Math.min(47,Math.floor((Math.max(...vertices.map(v=>v.x))+96)/4)),loZ=Math.max(0,Math.floor((Math.min(...vertices.map(v=>v.z))+96)/4)),hiZ=Math.min(47,Math.floor((Math.max(...vertices.map(v=>v.z))+96)/4));let blocked=false;
   for(let z=loZ;z<=hiZ&&!blocked;z++)for(let x=loX;x<=hiX;x++){const t=w.tiles[z*48+x];if((t.zone||t.construction||t.type&&t.type!=='road'||t.facilityOwner!==undefined||t.zoneOwner!==undefined)&&Zoning.overlaps(p,{cx:(x+.5)*4-96,cz:(z+.5)*4-96,angle:0,width:4,depth:4})){blocked=true;break;}}
   if(!blocked&&Buildings.near(w,p.cx,p.cz,1.2).some(lot=>!lot.cells.includes(id)&&Zoning.overlaps(p,lot.frame)))blocked=true;
-  if(!blocked)available.set(id,p);
+  if(!blocked&&(p.row===0||available.has(JSON.stringify([p.source,p.side,p.col,p.row-1]))))available.set(id,p);
  }return available;
 }
 function fineZoneCells(w,ids,zone){if(zone!=='erase'&&!ZONES[zone])return {ok:false,changed:0,blocked:ids.length};w.development ||= FineZones.create();const layout=fineZoningLayout(w);for(const id of ids){if(!layout.has(id))continue;const cell=w.development.cells[id],p=w.development.parcels[cell?.owner];if(p&&(!p.occupant||p.occupant.construction)&&(zone==='erase'||cell.zone!==zone))FineZones.release(w.development,p.id);}const result=FineZones.paint(w.development,layout,ids,zone==='erase'?null:zone);return {...result,ok:result.changed>0,reason:result.changed?'':result.blocked?'Existing buildings are preserved. Paint free roadside cells.':'No zoning changed'};}

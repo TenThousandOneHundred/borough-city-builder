@@ -28,3 +28,21 @@ test('player rectangle, brush and fill use independent roadside cell IDs',()=>{
 test('player zoning tools can erase legacy zoning without creating new coarse cells or changing fine lots',()=>{
  const w=fixture(),old={x:5,y:23,legacy:true};assert.ok(E.zoneCells(w,[old,{x:6,y:23}],'residential_low').ok);const grid=E.fineZoningLayout(w),p=[...grid.values()].find(p=>p.row===0&&p.cx>-50&&p.cx<-40);assert.ok(p);assert.ok(E.playerZoneCells(w,[p.id],'commercial_low').ok);const state=JSON.stringify(w.development),selection=E.playerZoneBrush(w,old,4);assert.ok(selection.length);assert.ok(selection.every(p=>w.tiles[p.y*48+p.x].zone));assert.ok(E.playerZoneFill(w,old).length>=2);assert.ok(E.playerZoneStroke(w,old,{x:6,y:23,legacy:true},1).length>=2);assert.ok(E.playerZoneRectangle(w,old,{x:6,y:23,legacy:true}).length>=2);assert.ok(E.playerZoneCells(w,selection,'erase').ok);assert.equal(w.tiles[23*48+5].zone,undefined);assert.equal(w.tiles[23*48+6].zone,undefined);assert.equal(JSON.stringify(w.development),state);assert.equal(E.playerZoneCells(w,[{x:7,y:23}],'residential_low').changed,0);assert.ok(E.valid(w));
 });
+
+test('curves, crossings and service footprints leave no paintable cells behind missing frontage',()=>{
+ const w=fixture();E.buildRoadPath(w,[{x:19,y:24},{x:34,y:12},{x:42,y:25}]);E.buildRoadPath(w,[{x:30,y:8},{x:30,y:31}],'avenue');
+ for(const layout of [F.grid(w,E.ROADS),E.fineZoningLayout(w)]){assert.ok(layout.size>100);for(const p of layout.values())for(let row=0;row<p.row;row++)assert.ok(layout.has(JSON.stringify([p.source,p.side,p.col,row])),`${p.id} has continuous road frontage`);}
+ const candidate=[...E.fineZoningLayout(w).values()].find(p=>p.row===0&&p.index%48>3);assert.ok(candidate);w.tiles[candidate.index].type='park';
+ const layout=E.fineZoningLayout(w);assert.ok(!layout.has(candidate.id));for(const p of layout.values())if(p.row>0)assert.ok(layout.has(JSON.stringify([p.source,p.side,p.col,p.row-1])));
+});
+
+test('developed fine lots render once at parcel size and retain their overlay after road removal',async(t)=>{
+ const previous=globalThis.CityEngine;globalThis.CityEngine=E;t.after(()=>{if(previous===undefined)delete globalThis.CityEngine;else globalThis.CityEngine=previous;});
+ const {CityView}=await import('../dist/renderer.js'),w=fixture();E.buildRoadPath(w,[{x:19,y:24},{x:36,y:10}]);const {layout,state}=paintAll(w);w.development=state;
+ const start=[...layout.values()].find(p=>p.source===w.roadPaths[0].id&&p.row===0&&F.reserve(structuredClone(state),layout,p.id,2,3));assert.ok(start);
+ const parcel=F.reserve(state,layout,start.id,2,3);parcel.occupant={type:'residential',building:'cottage',density:'low',level:1,people:4};
+ const drawn=[],view={world:w,menu:false,zoning:true,overlay:'none',zoneGroup:{traverse(){},clear(){drawn.length=0},add(mesh){drawn.push(mesh)}},zonePlane(x,y,color,opacity,frame){return {frame,opacity}},batchZonePlanes(){}};
+ CityView.prototype.updateZones.call(view);assert.equal(drawn.filter(p=>p.frame===parcel.frame).length,1);assert.equal(drawn.filter(p=>parcel.cells.includes(p.frame?.id)).length,0);
+ E.removeRoadPath(w,w.roadPaths[0].id);CityView.prototype.updateZones.call(view);assert.equal(drawn.filter(p=>p.frame===parcel.frame).length,1);
+ view.zoning=false;CityView.prototype.updateZones.call(view);assert.equal(drawn.filter(p=>p.frame===parcel.frame).length,0);assert.ok(F.valid(state));
+});
