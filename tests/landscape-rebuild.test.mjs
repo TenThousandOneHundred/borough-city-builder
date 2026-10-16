@@ -27,15 +27,15 @@ test('eroded terrain is finite, reproducible, distinct by seed, and keeps the ed
  assert.ok(Math.max(...a.heights)>50);
 });
 
-test('new saved landforms create usable inland terraces while preserving legacy heights and the starter road',async()=>{
+test('version-one saved landforms create usable inland terraces while preserving legacy heights and the starter road',async()=>{
  const {default:E}=await import('../dist/engine.js');
  for(const terrain of ['river','islands','plains']){
-  const w=E.createWorld('New landform',terrain,427),legacy=structuredClone(w);delete legacy.landformVersion;let raised=0;
+  const w=E.createWorld('New landform',terrain,427);w.landformVersion=1;const legacy=structuredClone(w);delete legacy.landformVersion;let raised=0;
   for(let x=-90;x<=90;x+=6)for(let z=-90;z<=90;z+=6){const h=groundHeight(w,x,z),old=groundHeight(legacy,x,z);assert.ok(Number.isFinite(h));assert.ok(h>=old-1e-9);if(h>old+1)raised++;assert.ok(Math.abs(groundHeight(w,x+.001,z)-h)<.005);}
   assert.ok(raised>100,terrain+' contains real inland relief');
   for(let x=-94;x<-16;x+=4)assert.equal(groundHeight(w,x,2),groundHeight(legacy,x,2),'outside road remains unchanged');
   assert.equal(groundHeight(w,0,0),groundHeight(legacy,0,0),'starter valley stays flat');
-  const copy=JSON.parse(JSON.stringify(w));assert.equal(groundHeight(copy,-70,60),groundHeight(w,-70,60));assert.ok(E.valid(copy));copy.landformVersion=2;assert.equal(E.valid(copy),false);
+  const copy=JSON.parse(JSON.stringify(w));assert.equal(groundHeight(copy,-70,60),groundHeight(w,-70,60));assert.ok(E.valid(copy));copy.landformVersion=3;assert.equal(E.valid(copy),false);
  }
 });
 
@@ -75,4 +75,20 @@ test('sculpted shoreline refreshes the actual shader texture and water resources
  assert.notDeepEqual(near.image.data,previous);assert.ok(near.version>version);assert.equal(near.image.data[16]+near.image.data[17]/256-64,-3);
  let disposed=0;near.addEventListener('dispose',()=>disposed++);distant.addEventListener('dispose',()=>disposed++);water.getRenderTarget().addEventListener('dispose',()=>disposed++);water.userData.dispose();assert.equal(disposed,3);
  ground.dispose();far.dispose();water.geometry.dispose();water.material.dispose();
+});
+
+
+test('new terrace terrain preserves historical world heights and saves its own version',async()=>{
+ const {default:E}=await import('../dist/engine.js'),{readFile}=await import('node:fs/promises');
+ const samples=JSON.parse(await readFile(new URL('./fixtures/landform-legacy.json',import.meta.url),'utf8'));
+ for(const p of samples){const w=E.createWorld('Legacy terrain',p.terrain,427);if(p.version)w.landformVersion=p.version;else delete w.landformVersion;assert.ok(E.valid(w));assert.ok(Math.abs(groundHeight(w,p.x,p.z)-p.height)<1e-10,'old cities retain '+JSON.stringify(p));}
+ for(const terrain of ['river','islands']){const w=E.createWorld('Terraced terrain',terrain,427);assert.equal(w.landformVersion,2);const old={...w,landformVersion:1};let difference=0,buildable=0;for(let x=-90;x<=90;x+=3)for(let z=-90;z<=90;z+=3){const h=groundHeight(w,x,z);if(h>groundHeight(old,x,z)+2)difference++;const slope=Math.hypot(groundHeight(w,x+1,z)-h,groundHeight(w,x,z+1)-h);if(h>3&&slope<.12)buildable++;}assert.ok(difference>200,terrain+' gains distinct upper terraces');assert.ok(buildable>100,terrain+' retains broad gentle development shelves');const saved=JSON.parse(JSON.stringify(w));assert.ok(E.valid(saved));assert.equal(groundHeight(w,70,-70),groundHeight(saved,70,-70));}
+});
+
+test('coastal worlds have connected mainland access, offshore islands and consistent rendered water',async()=>{
+ const {default:E}=await import('../dist/engine.js');await import('../dist/coastline.js');const coast=globalThis.BoroughCoastline;
+ for(const seed of [8,427,777]){const w=E.createWorld('Coast','islands',seed),seen=new Set(),parts=[];
+  for(let i=0;i<w.tiles.length;i++){const x=(i%48+.5)*4-96,z=(Math.floor(i/48)+.5)*4-96,d=coast.distance(seed,x,z);if(w.tiles[i].type!=='road')assert.equal(w.tiles[i].ground,d<1.5?'water':'land');if(d<0)assert.ok(groundHeight(w,x,z)<0,'sea cells remain submerged');if(d>4)assert.ok(groundHeight(w,x,z)>0,'inland cells remain dry');if(seen.has(i)||w.tiles[i].ground==='water')continue;const q=[i];seen.add(i);for(let j=0;j<q.length;j++)for(const k of E.neighbors(q[j]))if(!seen.has(k)&&w.tiles[k].ground==='land'){seen.add(k);q.push(k);}parts.push(q);}
+  const significant=parts.filter(p=>p.length>40).sort((a,b)=>b.length-a.length);assert.equal(significant.length,3,'mainland and two offshore islands');assert.ok(significant[0].includes(24*48));assert.ok(significant[0].includes(24*48+19),'starter road stays on connected mainland');assert.ok(w.tiles.filter(t=>t.ground==='water').length>600);const copy=JSON.parse(JSON.stringify(w));assert.ok(E.valid(copy));assert.equal(groundHeight(w,70,-40),groundHeight(copy,70,-40));
+ }
 });

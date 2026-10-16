@@ -59,3 +59,11 @@ test('available zoning cache preserves cells and invalidates every blocking inpu
  const road=w.roadPaths[0];cached=parity();E.removeRoadPath(w,road.id);assert.notEqual(parity(),cached);assert.ok([...parity().values()].every(q=>q.source!==road.id));
  cached=parity();const bank=[...cached.values()][0];w.tiles[bank.index].ground='water';assert.notEqual(parity(),cached);assert.equal(parity().has(bank.id),false);
 });
+
+ test('dragging a zone along a curved street selects its road coordinates rather than a world rectangle',()=>{
+ const w=fixture();const built=E.buildRoadPath(w,[{x:19,y:24},{x:34,y:12},{x:42,y:25}]);assert.ok(built.ok);
+ const grid=E.fineZoningLayout(w),side=[...grid.values()].filter(p=>p.source===built.path.id&&p.side===1);
+ const a=side.find(p=>p.row===0),b=side.filter(p=>p.row===3&&p.col>a.col+12).at(-1);assert.ok(a&&b);
+ const selected=E.playerZoneRectangle(w,a,b),expected=side.filter(p=>p.col>=a.col&&p.col<=b.col&&p.row<=3);
+ assert.deepEqual(new Set(selected),new Set(expected.map(p=>p.id)));assert.ok(new Set(expected.map(p=>p.angle.toFixed(2))).size>2);
+ });

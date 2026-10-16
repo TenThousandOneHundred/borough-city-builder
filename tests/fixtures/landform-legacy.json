@@ -1,0 +1,380 @@
+[
+  {
+    "terrain": "river",
+    "version": 0,
+    "x": -94,
+    "z": 2,
+    "height": 1.471854093213089
+  },
+  {
+    "terrain": "river",
+    "version": 0,
+    "x": -70,
+    "z": 60,
+    "height": 1.393837541395256
+  },
+  {
+    "terrain": "river",
+    "version": 0,
+    "x": -40,
+    "z": -60,
+    "height": 1.5484133246378422
+  },
+  {
+    "terrain": "river",
+    "version": 0,
+    "x": 0,
+    "z": 0,
+    "height": 1.7610025276222736
+  },
+  {
+    "terrain": "river",
+    "version": 0,
+    "x": 34,
+    "z": 55,
+    "height": -1.525436423948992
+  },
+  {
+    "terrain": "river",
+    "version": 0,
+    "x": 70,
+    "z": -70,
+    "height": 1.8057872833996749
+  },
+  {
+    "terrain": "river",
+    "version": 0,
+    "x": 90,
+    "z": 90,
+    "height": 1.7612897729806427
+  },
+  {
+    "terrain": "river",
+    "version": 0,
+    "x": 140,
+    "z": -100,
+    "height": 5.071223971344324
+  },
+  {
+    "terrain": "river",
+    "version": 0,
+    "x": 300,
+    "z": 250,
+    "height": 28.015086582869927
+  },
+  {
+    "terrain": "river",
+    "version": 1,
+    "x": -94,
+    "z": 2,
+    "height": 1.471854093213089
+  },
+  {
+    "terrain": "river",
+    "version": 1,
+    "x": -70,
+    "z": 60,
+    "height": 9.596961896097882
+  },
+  {
+    "terrain": "river",
+    "version": 1,
+    "x": -40,
+    "z": -60,
+    "height": 8.324661958350195
+  },
+  {
+    "terrain": "river",
+    "version": 1,
+    "x": 0,
+    "z": 0,
+    "height": 1.7610025276222736
+  },
+  {
+    "terrain": "river",
+    "version": 1,
+    "x": 34,
+    "z": 55,
+    "height": -1.525436423948992
+  },
+  {
+    "terrain": "river",
+    "version": 1,
+    "x": 70,
+    "z": -70,
+    "height": 4.673005957813358
+  },
+  {
+    "terrain": "river",
+    "version": 1,
+    "x": 90,
+    "z": 90,
+    "height": 8.315793988806309
+  },
+  {
+    "terrain": "river",
+    "version": 1,
+    "x": 140,
+    "z": -100,
+    "height": 11.214765215608022
+  },
+  {
+    "terrain": "river",
+    "version": 1,
+    "x": 300,
+    "z": 250,
+    "height": 28.015086582869927
+  },
+  {
+    "terrain": "islands",
+    "version": 0,
+    "x": -94,
+    "z": 2,
+    "height": 1.471854093213089
+  },
+  {
+    "terrain": "islands",
+    "version": 0,
+    "x": -70,
+    "z": 60,
+    "height": 1.393837541395256
+  },
+  {
+    "terrain": "islands",
+    "version": 0,
+    "x": -40,
+    "z": -60,
+    "height": -1.6
+  },
+  {
+    "terrain": "islands",
+    "version": 0,
+    "x": 0,
+    "z": 0,
+    "height": 1.7610025276222736
+  },
+  {
+    "terrain": "islands",
+    "version": 0,
+    "x": 34,
+    "z": 55,
+    "height": 1.8436936435405153
+  },
+  {
+    "terrain": "islands",
+    "version": 0,
+    "x": 70,
+    "z": -70,
+    "height": 1.8057872833996749
+  },
+  {
+    "terrain": "islands",
+    "version": 0,
+    "x": 90,
+    "z": 90,
+    "height": 1.7612897729806427
+  },
+  {
+    "terrain": "islands",
+    "version": 0,
+    "x": 140,
+    "z": -100,
+    "height": -1.6
+  },
+  {
+    "terrain": "islands",
+    "version": 0,
+    "x": 300,
+    "z": 250,
+    "height": -1.6
+  },
+  {
+    "terrain": "islands",
+    "version": 1,
+    "x": -94,
+    "z": 2,
+    "height": 1.471854093213089
+  },
+  {
+    "terrain": "islands",
+    "version": 1,
+    "x": -70,
+    "z": 60,
+    "height": 4.191297765900914
+  },
+  {
+    "terrain": "islands",
+    "version": 1,
+    "x": -40,
+    "z": -60,
+    "height": -1.6
+  },
+  {
+    "terrain": "islands",
+    "version": 1,
+    "x": 0,
+    "z": 0,
+    "height": 1.7610025276222736
+  },
+  {
+    "terrain": "islands",
+    "version": 1,
+    "x": 34,
+    "z": 55,
+    "height": 4.460185062388215
+  },
+  {
+    "terrain": "islands",
+    "version": 1,
+    "x": 70,
+    "z": -70,
+    "height": 4.609833428824304
+  },
+  {
+    "terrain": "islands",
+    "version": 1,
+    "x": 90,
+    "z": 90,
+    "height": 2.5749386790404936
+  },
+  {
+    "terrain": "islands",
+    "version": 1,
+    "x": 140,
+    "z": -100,
+    "height": -1.6
+  },
+  {
+    "terrain": "islands",
+    "version": 1,
+    "x": 300,
+    "z": 250,
+    "height": -1.6
+  },
+  {
+    "terrain": "plains",
+    "version": 0,
+    "x": -94,
+    "z": 2,
+    "height": 1.471854093213089
+  },
+  {
+    "terrain": "plains",
+    "version": 0,
+    "x": -70,
+    "z": 60,
+    "height": 1.393837541395256
+  },
+  {
+    "terrain": "plains",
+    "version": 0,
+    "x": -40,
+    "z": -60,
+    "height": 1.5484133246378422
+  },
+  {
+    "terrain": "plains",
+    "version": 0,
+    "x": 0,
+    "z": 0,
+    "height": 1.7610025276222736
+  },
+  {
+    "terrain": "plains",
+    "version": 0,
+    "x": 34,
+    "z": 55,
+    "height": 1.8436936435405153
+  },
+  {
+    "terrain": "plains",
+    "version": 0,
+    "x": 70,
+    "z": -70,
+    "height": 1.8057872833996749
+  },
+  {
+    "terrain": "plains",
+    "version": 0,
+    "x": 90,
+    "z": 90,
+    "height": 1.7612897729806427
+  },
+  {
+    "terrain": "plains",
+    "version": 0,
+    "x": 140,
+    "z": -100,
+    "height": 5.071223971344324
+  },
+  {
+    "terrain": "plains",
+    "version": 0,
+    "x": 300,
+    "z": 250,
+    "height": 28.015086582869927
+  },
+  {
+    "terrain": "plains",
+    "version": 1,
+    "x": -94,
+    "z": 2,
+    "height": 1.471854093213089
+  },
+  {
+    "terrain": "plains",
+    "version": 1,
+    "x": -70,
+    "z": 60,
+    "height": 2.9969618960978845
+  },
+  {
+    "terrain": "plains",
+    "version": 1,
+    "x": -40,
+    "z": -60,
+    "height": 2.07261153040429
+  },
+  {
+    "terrain": "plains",
+    "version": 1,
+    "x": 0,
+    "z": 0,
+    "height": 1.7610025276222736
+  },
+  {
+    "terrain": "plains",
+    "version": 1,
+    "x": 34,
+    "z": 55,
+    "height": 2.7914555147377005
+  },
+  {
+    "terrain": "plains",
+    "version": 1,
+    "x": 70,
+    "z": -70,
+    "height": 3.5073852621010135
+  },
+  {
+    "terrain": "plains",
+    "version": 1,
+    "x": 90,
+    "z": 90,
+    "height": 3.5511860759575127
+  },
+  {
+    "terrain": "plains",
+    "version": 1,
+    "x": 140,
+    "z": -100,
+    "height": 6.325876326719133
+  },
+  {
+    "terrain": "plains",
+    "version": 1,
+    "x": 300,
+    "z": 250,
+    "height": 28.015086582869927
+  }
+]

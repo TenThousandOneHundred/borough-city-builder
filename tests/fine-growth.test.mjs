@@ -38,3 +38,14 @@ test('low-rent blocks combine many roadside cells and preserve resident homes th
  const resumed=new Residents(copy,new Traffic(copy,E));assert.deepEqual(resumed.state.residents.map(r=>r.home),residents.state.residents.map(r=>r.home));
  assert.ok(resumed.state.residents.every(r=>copy.development.parcels[r.home]?.occupant.building==='lowrent'));
 });
+
+ test('detached neighborhoods grow varied multi-cell plots while single cells stay undeveloped',()=>{
+ const a=world(),b=world();for(const w of [a,b]){utilities(w);paint(w);grow(w,100);}
+ assert.deepEqual(a.development,b.development);
+ const lots=Object.values(a.development.parcels),shapes=new Set(lots.map(p=>p.width+'x'+p.depth));
+ assert.ok(shapes.size>=4);assert.ok(lots.some(p=>p.width>=3));assert.ok(lots.some(p=>p.cells.length>=9));
+ assert.ok(lots.every(p=>p.width>=2&&p.depth>=2&&p.occupant.building==='cottage'));
+ const saved=JSON.parse(JSON.stringify(a));assert.ok(E.valid(saved));assert.deepEqual(saved.development,a.development);
+ const single=world();utilities(single);const first=[...E.fineZoningLayout(single).values()].find(p=>p.row===0&&p.cx>-60);
+ E.fineZoneCells(single,[first.id],'residential_low');grow(single,100);assert.equal(Object.keys(single.development.parcels).length,0);
+ });
