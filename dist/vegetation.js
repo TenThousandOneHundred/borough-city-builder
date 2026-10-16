@@ -1,4 +1,4 @@
-import {TreeSelection} from './tree-selection.js?v=72.1';
+import {TreeSelection} from './tree-selection.js?v=73';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 export class Vegetation{

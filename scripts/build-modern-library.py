@@ -288,6 +288,13 @@ m=Model('split-wing-residences','residential',10);h=m.shell(10,20,7,x=-6,balconi
 m=Model('courtyard-concrete-residences','residential',6);m.shell(8,24,6,x=-8);m.shell(8,24,5,x=8);h=m.shell(8,8,4,z=-8);m.roofwork(0,h,-8,3,2);m.plant(0,0,0,5,8);m.entrance(12,-8);m.finish()
 m=Model('linear-balcony-apartments','residential',6);h=m.shell(21,11,6,balconies=True);m.roofwork(0,h,0,4,2);m.entrance(6);m.finish()
 m=Model('small-courtyard-apartments','residential',4);m.shell(7,15,4,x=-5);m.shell(7,10,3,x=4,z=-2);m.plant(2,0,5,3,3);m.entrance(8,-5);m.finish()
+# Compact street buildings fit 16-metre frontages at authored scale. Distinct
+# materials and rooflines avoid reusing the courtyard block on every small lot.
+m=Model('brick-neighborhood-walkup','residential',3);h=m.shell(12,11,3,bevel=.18,tint=(.72,.43,.29),cladding=BRICK)
+m.box(0,h-.25,0,12.4,.28,11.4,CONCRETE,(.78,.72,.60));m.box(0,h,0,11.6,.16,10.6,ROOF)
+m.roofwork(-2,h,-2,2.5,1.5);m.entrance(5.7);m.finish()
+m=Model('narrow-balcony-apartments','residential',5);h=m.shell(10,23,4,bevel=.3,balconies=True,tint=(.70,.77,.73),cladding=PAINT)
+h=m.shell(8,17,1,z=-2,y=h,bevel=.3,tint=(.68,.58,.44),cladding=BRICK);m.roofwork(0,h,-3,2.8,1.8);m.plant(0,12.95,8.5,6,1.5);m.entrance(12);m.finish()
 m=Model('stepped-midrise-apartments','residential',8);h=m.shell(18,14,5,balconies=True);h=m.shell(12,11,3,x=-2,y=h,balconies=True);m.plant(6,16.3,3,2,4);m.roofwork(-2,h,0,3,2);m.entrance(8);m.finish()
 m=Model('corner-retail-gallery','commercial',3);h=m.shell(24,18,2,curtain=True);h=m.shell(14,12,1,x=-4,z=-2,y=h,curtain=True);m.plant(8,6.7,3,3,5);m.roofwork(-4,h,-2,4,2);m.entrance(10);m.finish()
 m=Model('neighborhood-mixed-use','commercial',5);h=m.shell(18,12,1,curtain=True);h=m.shell(17,11,4,y=h,balconies=True);m.roofwork(0,h,0,4,2);m.entrance(7);m.finish()

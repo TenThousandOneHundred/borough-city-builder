@@ -455,3 +455,9 @@ The development collection serializes with the existing WorldStore save, import 
 Edition 72.1 also preserves selection, brush, fill and erasing for existing legacy zoning. New zoning continues to use independent cells.
 
 Edition 72.2 replaces whole-grid scans for each independent lot reservation with direct road/side/cell lookups (at most 36 cells). It keeps the same saved parcels and does not change model geometry or simulation advancement. `scripts/benchmark-fine-lots.mjs` compares the prior module against the current implementation: a 5,400-cell fixture produced identical 154 parcels over 3,898 attempts, with median reservation CPU time of 755.8 ms before and 6.6 ms after on the development machine. This is a focused CPU benchmark, not a browser FPS claim.
+
+## Edition 73: apartment streets with varied footprints
+
+Medium-density apartment growth now tries 16 road-aligned lot shapes, from compact 2×2 cells to narrow 2×6 sites and wider 6×6 parcels, with deterministic preferences per frontage. Existing occupied parcels keep their saved geometry. Two original full-detail models add a three-storey brick walk-up and a five-storey narrow balcony apartment with a set-back top floor. Both retain shared material/geometry batching, detailed window openings and distant geometry. The catalogue now contains 71 buildings. Modern model compressed transfer grows by approximately 32 KB; distant data grows by approximately 2 KB compressed.
+
+Verification covers deterministic growth, independent residents, save/reload stability and un-stretched model fitting for all supported apartment footprints. The 12.25 MiB raw modern asset ceiling accounts for the two additional models; geometry precision and per-building triangle limits are retained.

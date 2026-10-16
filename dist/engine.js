@@ -164,6 +164,13 @@ function playerZoneFill(w,p){return p.legacy?fillZoneCells(w,p):fineZoneFill(w,p
 function playerZoneStroke(w,a,b,size=1){if(!a.legacy&&!b.legacy)return fineZoneStroke(w,a,b,size);const out=new Map();for(const p of lineTiles(a,b))for(const q of playerZoneBrush(w,{...p,legacy:true},size))out.set(q.y*48+q.x,q);return [...out.values()];}
 function finePopulationCapacity(parcel,t){if(t.building==='townhouse')return Math.min(40,Math.max(6,parcel.width*6));if(t.density==='low')return 6;return Math.min(40,t.level*8,parcel.width*parcel.depth*4);}
 function fineBuilding(zone,seed){const choices=zone.type==='residential'?(zone.form==='mixed'?['mixeduse']:zone.form==='row'?['townhouse']:zone.density==='low'?['cottage']:zone.density==='medium'?['apartments']:['tower']):zone.type==='commercial'?(zone.density==='low'?['shops','market']:['hotel','shops']):zone.type==='office'?['business','glass']:['factory','warehouse'];return choices[seed%choices.length];}
+const apartmentLots=[[2,2],[3,2],[2,3],[3,3],[4,3],[2,4],[3,4],[4,4],[4,5],[5,5],[6,5],[2,6],[3,6],[4,6],[5,6],[6,6]];
+function apartmentShapes(seed){
+ // Each frontage has a stable preference, so broad districts contain a mix
+ // of narrow/deep slabs, compact apartments and wider courtyard sites.
+ const rank=([width,depth])=>{let h=(seed^Math.imul(width*7+depth,0x45d9f3b))>>>0;h=Math.imul(h^(h>>>16),0x21f0aaad);return (h^(h>>>15))>>>0;};
+ return apartmentLots.slice().sort((a,b)=>rank(a)-rank(b));
+}
 function developFineZones(w,a,budget){
  const state=w.development;if(!state)return;let power=budget?.power??a.power-a.utilityNeed,water=budget?.water??a.water-a.utilityNeed;const random=rng(w.seed+w.simStep*1297+771),connected=p=>Buildings.frontage(w,p.id,a.roads).length>0;let changed=false;
  // Existing construction retains its parcel and pauses when essential access fails.
@@ -176,7 +183,7 @@ function developFineZones(w,a,budget){
  for(const p of layout.values()){
   if(starts>=6||power<8||water<8)break;const cell=state.cells[p.id],zone=ZONES[cell?.zone];if(!zone||cell.owner||p.row!==0||!a.roads.has(p.roadIndex))continue;
   const demand=zone.form==='mixed'?Math.min(a.demand[0],a.demand[1]):a.demand[zone.type==='residential'?0:zone.type==='commercial'?1:2];if(demand<15||random()>demand/500)continue;
-  const seed=Buildings.seed(p.id)^w.seed,shapes=zone.form==='row'?[[1,3],[2,3],[1,2]]:zone.type==='residential'&&zone.density==='low'?(seed%2?[[2,3],[2,2],[3,3]]:[[2,2],[2,3],[3,2]]):zone.density==='high'?[[6,6],[5,5],[4,4],[3,4]]:zone.type==='residential'?[[4,4],[3,4],[3,3]]:[[4,3],[3,3],[2,3],[2,2]];
+  const seed=Buildings.seed(p.id)^w.seed,shapes=zone.form==='row'?[[1,3],[2,3],[1,2]]:zone.type==='residential'&&zone.density==='low'?(seed%2?[[2,3],[2,2],[3,3]]:[[2,2],[2,3],[3,2]]):zone.density==='high'?[[6,6],[5,5],[4,4],[3,4]]:zone.type==='residential'?(zone.form==='mixed'?[[4,4],[3,4],[3,3]]:apartmentShapes(seed)):[[4,3],[3,3],[2,3],[2,2]];
   let parcel;for(const [width,depth]of shapes){parcel=FineZones.reserve(state,layout,p.id,width,depth);if(parcel)break;}if(!parcel)continue;
   parcel.occupant={type:zone.type,building:fineBuilding(zone,seed>>>0),density:zone.density,level:1,people:0,variant:(seed>>>0)%4,construction:1};power-=8;water-=8;starts++;
  }
