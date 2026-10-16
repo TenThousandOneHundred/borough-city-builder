@@ -473,3 +473,8 @@ To reproduce the atlas, serve the repository root and open `scripts/bake-tree-at
 All three complete building catalogues and the detailed broadleaf model now use the existing bounded-inactivity, lossless gzip loader. Previously only the modern catalogue and distant indices used it. Raw files remain available as a compatibility and corrupt/missing-compressed-file fallback. No models, texture resolution, geometry, materials, simulation agents or save data are removed.
 
 The three newly compressed files transfer 21,025,526 bytes instead of 23,838,036 bytes, a reduction of 2,812,510 bytes (11.8%). Their embedded JPEG textures already compress well, so the gain is smaller than for the modern geometry. `node scripts/compress-assets.mjs --check` verifies every decoded asset byte and file-specific transfer budgets. This is a download-size reduction, not a measured FPS improvement.
+
+## Edition 76 — six residential zoning categories
+Low-rent apartments join detached homes, row houses, medium apartments, mixed-use housing and towers. Low-rent development reserves 4×4 through 6×6 roadside cells per building, selects existing detailed balcony/perimeter apartment assets, and supports up to 40 residents per block in the simplified simulation. This category does not yet simulate household income or actual rent payments. Housing palette descriptions explain the lot sizes. Saved plots, residents and independent traffic simulation remain intact. No new model downloads or per-frame geometry work were added.
+
+Reference: Paradox's [Zones & Signature Buildings](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/zones-signature-buildings), and AgoAgo Game's [building zone sizes demonstration](https://www.youtube.com/watch?v=hRlGRd-80vk).

@@ -1,13 +1,13 @@
-import {bakeRoofFinish} from './roof-finishes.js?v=75';
-import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=75';
-import {loadBinary} from './asset-transfer.js?v=75';
-import {SiteDetails} from './site-details.js?v=75';
-import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=75';
+import {bakeRoofFinish} from './roof-finishes.js?v=76';
+import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=76';
+import {loadBinary} from './asset-transfer.js?v=76';
+import {SiteDetails} from './site-details.js?v=76';
+import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=76';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {lotPlan} from './building-plan.js?v=75';
-import {floorHeight} from './landscape.js?v=75';
+import {lotPlan} from './building-plan.js?v=76';
+import {floorHeight} from './landscape.js?v=76';
 const IDENTITY=new THREE.Matrix4();
 const civicDefaults={hospital:'clinic',school:'elementary',police:'police',fire:'fire'};
 // Complete textured assets are loaded once, batched per material, and instanced.
@@ -62,8 +62,9 @@ export class ModelLibrary {
  create(world,index,parcel){
   if(!this.models.length)return null;const p=lotPlan(world,index,parcel),definition=parcel?.definition||world.tiles[index],mixed=definition.building==='mixeduse',category=mixed?'commercial':p.low?'residential-low':p.type;
   const civic=civicDefaults[p.type],id=definition.building||civic;let candidates=this.models.filter(a=>a.category===category&&(!mixed||a.name.includes('mixed-use'))&&(!civic||a.building===id&&a.site===p.facility));if(!candidates.length)return null;
+  if(id==='lowrent'){const slabs=candidates.filter(a=>['linear-balcony-apartments','perimeter-garden-apartments'].includes(a.name));if(slabs.length)candidates=slabs;}
   if(p.low){const homes=candidates.filter(a=>a.houseForm);if(homes.length)candidates=homes;const forms=candidates.filter(a=>id==='townhouse'?['semi','terrace'].includes(a.houseForm):a.houseForm==='detached');if(forms.length)candidates=forms;}
-  const densityFit=candidates.filter(a=>!a.floors||(p.type==='residential'&&!p.low?(p.density==='medium'?a.floors<=9:a.floors>=9):p.type==='commercial'?(p.density==='low'?a.floors<=3:a.floors>=4):true));if(densityFit.length)candidates=densityFit;
+  const densityFit=candidates.filter(a=>id==='lowrent'||!a.floors||(p.type==='residential'&&!p.low?(p.density==='medium'?a.floors<=9:a.floors>=9):p.type==='commercial'?(p.density==='low'?a.floors<=3:a.floors>=4):true));if(densityFit.length)candidates=densityFit;
   const W=p.lotWidth,D=p.lotDepth,row=p.oriented&&id==='townhouse';
   // One saved row-house parcel can contain several homes, at their authored
   // metre scale. Repeat shared assets rather than stretching a single house.

@@ -314,3 +314,12 @@ test('narrow and deep apartment parcels keep full-scale architecture inside thei
   root.rotation.y=0;root.position.set(0,0,0);root.updateMatrixWorld(true);const bounds=new THREE.Box3().setFromObject(model);assert.ok(bounds.min.x>=-p.oriented.width/2&&bounds.max.x<=p.oriented.width/2);assert.ok(bounds.min.z>=-p.oriented.depth/2&&bounds.max.z<=p.oriented.depth/2);
  }
 });
+
+test('low-rent zoning selects shared apartment blocks at metre scale rather than luxury towers',async()=>{
+ const lib=await library(),world=E.createWorld('Low-rent models','plains',8),names=new Set();
+ for(let seed=1;seed<=20;seed++)for(const [width,depth]of [[4,4],[5,4],[4,5],[6,4],[5,5],[6,6]]){
+  const p={entityId:'parcel-'+seed,entitySeed:seed,definition:{type:'residential',density:'high',building:'lowrent',level:1},width,depth,oriented:{cx:0,cz:0,angle:.4,width:width*1.6-.04,depth:depth*1.6-.04,frontage:{x:0,z:8,roadIndex:1176}}};
+  const root=lib.create(world,1176,p);names.add(root.userData.model);assert.ok(['linear-balcony-apartments','perimeter-garden-apartments'].includes(root.userData.model));assert.ok(root.children[0].scale.x>=.17);assert.equal(root.children[0].scale.x,root.children[0].scale.y);
+ }
+ assert.equal(names.size,2);
+});
