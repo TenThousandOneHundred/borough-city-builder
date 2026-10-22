@@ -303,6 +303,97 @@ def dormer(m,x,z,y):
  for dx in [-.56,.56]:m.box(x+dx,y+.33,z+1.15,.08,.98,.10,PAINT)
  m.box(x,y+1.26,z+1.15,1.19,.08,.1,PAINT);pitched_roof(m,x,z,1.8,2.2,y+1.45,.65,gutters=False)
 
+def suburban_roof(m,w,d,y,gambrel=False):
+ # Cross-section runs from the street eave to the rear eave. A gambrel's
+ # steep lower planes and shallow upper planes remain real geometry in LOD.
+ W=w+.5;D=d+.6;tint=(1,.63,.40)
+ profile=([(D/2,0),(D*.335,2.7),(0,3.65),(-D*.335,2.7),(-D/2,0)] if gambrel else [(D/2,0),(0,2.05),(-D/2,0)])
+ def roof_y(z):
+  for (a,ha),(b,hb) in zip(profile,profile[1:]):
+   if b-1e-8<=z<=a+1e-8:return y+ha+(hb-ha)*(a-z)/(a-b)
+  raise ValueError('roof coordinate outside profile')
+ front=D*.43 if gambrel else D*.36;back=D*.34 if gambrel else D*.11
+ left,right=(-1.7,1.7) if gambrel else (-1.5,1.5)
+ # Cut the roof beneath the dormer instead of hiding an intersecting plane
+ # inside its window. Each remaining rectangle keeps physical texture UVs.
+ def patch(l,r,a,b):
+  ya,yb=roof_y(a),roof_y(b);m.quad((l,ya,a),(r,ya,a),(r,yb,b),(l,yb,b),ROOF,tint,uvs=[(l/2,a/2),(r/2,a/2),(r/2,b/2),(l/2,b/2)])
+ for (a,_),(b,_) in zip(profile,profile[1:]):
+  edges=sorted(set([a,b]+[z for z in [front,back] if b<z<a]),reverse=True)
+  for za,zb in zip(edges,edges[1:]):
+   if back<(za+zb)/2<front:patch(-W/2,left,za,zb);patch(right,W/2,za,zb)
+   else:patch(-W/2,W/2,za,zb)
+ # Brick gable ends underneath the two/four roof planes, with white verge.
+ for side in [-1,1]:
+  x=side*w/2
+  def p(u,v,out=0):return(x+side*out,v,side*u)
+  l,r=-.65,.65;lo=y+(1.10 if gambrel else .35);hi=y+(2.30 if gambrel else 1.20)
+  edges=sorted(set([z for z,_ in profile]+[l,r]))
+  def wall(a,b,low,topA,topB):
+   corners=([(a,low),(b,topB),(b,low),(a,low)] if abs(topA-low)<1e-8 else [(b,low),(a,low),(a,topA),(b,topB)])
+   m.quad(*[p(u,v) for u,v in corners],BRICK,(.88,.66,.49),uvs=[(-u/2,v/2) for u,v in corners])
+  for a,b in zip(edges,edges[1:]):
+   if l<(a+b)/2<r:wall(a,b,y,lo,lo);wall(a,b,hi,roof_y(a),roof_y(b))
+   else:wall(a,b,y,roof_y(a),roof_y(b))
+  m.quad(p(r,lo,-.16),p(l,lo,-.16),p(l,hi,-.16),p(r,hi,-.16),OCCUPIED,(.78,.83,.84))
+  m.window_frame(p,l,r,lo,hi)
+  for u in [l,r]:m.quad(p(u,lo,0),p(u,lo,-.16),p(u,hi,-.16),p(u,hi,0),PAINT)
+  for (a,ha),(b,hb) in zip(profile,profile[1:]):
+   # Thin planar verge strips follow the broken slope without extra objects.
+   q=[(side*(W/2+.015),y+ha+.045,a),(side*(W/2+.015),y+hb+.045,b),(side*(W/2+.015),y+hb-.10,b),(side*(W/2+.015),y+ha-.10,a)]
+   m.quad(*(q[::-1] if side>0 else q),PAINT,(.85,.86,.80))
+ for z in [-D/2,D/2]:m.box(0,y-.10,z,W,.16,.12,PAINT)
+ m.box(0,y+max(h for _,h in profile)-.025,0,W,.10,.16,ROOF,tint)
+ # Projecting dormer cheeks sit on the roof; the front has a real opening.
+ base=roof_y(front);top=roof_y(back)+.32;lo=base+.20;hi=top-.20
+ def face(l,r,a,b,out=0,mat=PAINT,color=(.84,.86,.81)):
+  m.quad((l,a,front+out),(r,a,front+out),(r,b,front+out),(l,b,front+out),mat,color)
+ face(left,right,base,lo);face(left,right,hi,top)
+ face(left,left+.18,lo,hi);face(right-.18,right,lo,hi)
+ face(left+.18,right-.18,lo,hi,-.12,OCCUPIED,(.79,.84,.85))
+ for x in [left+.18,0,right-.18]:face(x-.045,x+.045,lo-.04,hi+.04,.035)
+ for h in [lo,hi]:face(left+.13,right-.13,h-.045,h+.045,.04)
+ for side,x in [(-1,left),(1,right)]:
+  q=[(x,base,front),(x,roof_y(back),back),(x,top,back),(x,top,front)]
+  m.quad(*(q if side>0 else q[::-1]),PAINT,(.75,.78,.73))
+ # Opaque inner back sits behind the glazing, preserving night room depth.
+ m.quad((right,roof_y(back),back),(left,roof_y(back),back),(left,top,back),(right,top,back),RECESS)
+ m.box(0,top,(front+back)/2,right-left+.18,.12,front-back+.18,FRAME)
+ # Tile laps and rainwater goods are omitted only in distant topology.
+ m.detail=True
+ for (a,_),(b,_) in zip(profile,profile[1:]):
+  count=max(3,round(math.hypot(a-b,roof_y(a)-roof_y(b))/.28))
+  for k in range(1,count):
+   z=a+(b-a)*k/count;z2=z-.045;spans=[(-W/2,left),(right,W/2)] if back<=z<=front or back<=z2<=front else [(-W/2,W/2)]
+   for l,r in spans:m.quad((l,roof_y(z)+.018,z),(r,roof_y(z)+.018,z),(r,roof_y(z2)+.018,z2),(l,roof_y(z2)+.018,z2),ROOF,tuple(v*.72 for v in tint))
+ for z in [-D/2,D/2]:
+  m.box(0,y-.04,z+.07*(1 if z>0 else -1),W,.10,.12,FRAME)
+  m.cylinder(-w/2+.16,.08,z,.04,y-.12,FRAME,6)
+ m.detail=False
+ return roof_y
+
+def compact_suburban_home(name,gambrel=False):
+ w,d=(7.6,10.2) if gambrel else (6.4,9.2);floors=1 if gambrel else 2
+ m=Model(name,'residential-low',2);m.houseForm='detached';m.roofForm='gambrel' if gambrel else 'cross-ridge-gable'
+ domestic_block(m,w,d,floors,tint=(.92,.72,.54),brick=True)
+ roof_y=suburban_roof(m,w,d,floors*2.85,gambrel)
+ # Shallow entry canopy uses the authored door position, not the lot centre.
+ entry=m.streetFronts[0]['position'][0]
+ m.box(entry,2.40,d/2+.38,1.48,.12,.95,FRAME)
+ m.box(entry,.015,d/2+.22,1.35,.12,.58,CONCRETE)
+ m.box(entry,.015,d/2+.62,1.52,.06,.27,CONCRETE)
+ # Rear roof-mounted solar panels use non-emissive existing metal material.
+ for x in [-1.25,.10]:
+  a,b=-.65,-2.25
+  m.quad((x,roof_y(a)+.06,a),(x+1.10,roof_y(a)+.06,a),(x+1.10,roof_y(b)+.06,b),(x,roof_y(b)+.06,b),FRAME,(.37,.54,.69))
+  for z in [a,(a+b)/2,b]:m.quad((x,roof_y(z)+.07,z),(x+1.1,roof_y(z)+.07,z),(x+1.1,roof_y(z-.025)+.07,z-.025),(x,roof_y(z-.025)+.07,z-.025),PAINT,(.44,.50,.51))
+ m.box(w*.3,roof_y(-2.9)-.12,-2.9,.48,.85,.55,BRICK)
+ m.box(w*.3,roof_y(-2.9)+.73,-2.9,.62,.09,.69,CONCRETE)
+ m.finish()
+
+compact_suburban_home('compact-brick-dormer-home')
+compact_suburban_home('gambrel-garden-home',gambrel=True)
+
 m=dwelling('gabled-garden-cottage',8.4,10.4,1,tint=(.72,.81,.80),siding=True);m.finish()
 m=dwelling('hipped-brick-bungalow',11,10,1,roof='hip',tint=(.90,.74,.60),brick=True);m.finish()
 m=dwelling('dormer-detached-home',8.5,11,2,tint=(.90,.85,.72),siding=True);dormer(m,-2.2,1,6.6);m.finish()

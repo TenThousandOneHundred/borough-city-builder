@@ -14,7 +14,7 @@ loader.register(()=>({name:'test-images',loadTexture:()=>Promise.resolve(new THR
 async function library(){const lib=Object.create(ModelLibrary.prototype);lib.models=[];lib.materials=new Set();lib.lotGeometry=new THREE.PlaneGeometry(1,1);lib.lotGeometry.rotateX(-Math.PI/2);lib.view={renderer:{capabilities:{getMaxAnisotropy:()=>8}},landscape:{material:()=>new THREE.MeshStandardMaterial()}};
  for(const file of ['urban','industry','modern']){const data=fs.readFileSync(new URL('../dist/assets/buildings/'+file+'.glb',import.meta.url));const result=await loader.parseAsync(data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength),'');lib.ingest(result.scene);}return lib;}
 test('all complete building assets decode with finite UV-mapped geometry and valid categories',async()=>{
- const lib=await library();assert.equal(lib.models.length,74);assert.deepEqual([...new Set(lib.models.map(m=>m.category))].sort(),['commercial','fire','hospital','industrial','office','police','residential','residential-low','school']);
+ const lib=await library();assert.equal(lib.models.length,76);assert.deepEqual([...new Set(lib.models.map(m=>m.category))].sort(),['commercial','fire','hospital','industrial','office','police','residential','residential-low','school']);
  for(const model of lib.models){assert.ok(model.size.x>0&&model.size.y>0&&model.size.z>0);assert.ok(model.root.children.length<=(model.category==='commercial'?13:model.site?11:10));for(const mesh of model.root.children){if(mesh.material.map)assert.ok(mesh.geometry.attributes.uv);assert.ok([...mesh.geometry.attributes.position.array].every(Number.isFinite));}}
 });
 test('model placement fits saved lots uniformly and instancing survives demolition without disposing shared models',async()=>{
@@ -39,7 +39,7 @@ test('loaded models follow angled roads without stretching or overlapping neighb
 });
 
 test('modern library retains facade detail with shared materials and a bounded geometry cost',async()=>{
- const lib=await library(),modern=lib.models.filter(m=>m.family==='modern');assert.equal(modern.length,53);
+ const lib=await library(),modern=lib.models.filter(m=>m.family==='modern');assert.equal(modern.length,55);
  const materials=new Set();let triangles=0,hasWindowVariation=false;
  for(const model of modern){let count=0;for(const mesh of model.root.children){materials.add(mesh.material);count+=mesh.geometry.index.count/3;const color=mesh.geometry.attributes.color;assert.ok(color,'baked facade variation is retained');assert.ok([...color.array].every(Number.isFinite));if(new Set(color.array).size>3)hasWindowVariation=true;}assert.ok(count<(model.name.startsWith('perimeter-')?17000:model.building==='lowrent'?11000:model.site?8000:6600),model.name+' triangle budget');triangles+=count;}
  assert.ok(materials.size<=13,'materials are reused across modern buildings');assert.ok(triangles<196000);assert.ok(hasWindowVariation);
@@ -80,8 +80,8 @@ test('street setbacks remain inside owned parcels at every road angle',async()=>
 });
 
 test('brick facades retain metre-scale UVs, PBR textures and accurate packed normals',async()=>{
- const lib=await library(),bricks=lib.models.flatMap(m=>m.root.children).filter(m=>m.material.name==='modern-brick');assert.equal(bricks.length,29);
- for(const mesh of bricks){assert.ok(mesh.material.map);assert.ok(mesh.material.normalMap);assert.ok(mesh.material.roughnessMap);const uv=mesh.geometry.attributes.uv;const p=mesh.geometry.attributes.position;for(let i=0;i<p.count;i+=4){const metres=Math.hypot(p.getX(i+1)-p.getX(i),p.getY(i+1)-p.getY(i),p.getZ(i+1)-p.getZ(i));assert.ok(Math.abs(uv.getX(i+1)-uv.getX(i)-metres/2)<1e-5,'brick texture maintains two-metre repeat scale');}}
+ const lib=await library(),bricks=lib.models.flatMap(m=>m.root.children).filter(m=>m.material.name==='modern-brick');assert.equal(bricks.length,31);
+ for(const mesh of bricks){assert.ok(mesh.material.map);assert.ok(mesh.material.normalMap);assert.ok(mesh.material.roughnessMap);const uv=mesh.geometry.attributes.uv;const p=mesh.geometry.attributes.position;for(let i=0;i<p.count;i+=4){const metres=Math.hypot(p.getX(i+1)-p.getX(i),p.getY(i+1)-p.getY(i),p.getZ(i+1)-p.getZ(i));assert.ok(Math.abs(Math.hypot(uv.getX(i+1)-uv.getX(i),uv.getY(i+1)-uv.getY(i))-metres/2)<1e-5,'brick texture maintains two-metre repeat scale');}}
  for(const model of lib.models.filter(m=>m.family==='modern'))for(const mesh of model.root.children){const n=mesh.geometry.attributes.normal;assert.ok(n.normalized);assert.ok(n.array instanceof Int8Array);for(let i=0;i<n.count;i++){const length=Math.hypot(n.getX(i),n.getY(i),n.getZ(i));assert.ok(Math.abs(length-1)<.012,'lighting normals retain unit length');}}
 });
 
@@ -176,7 +176,7 @@ test('new civic sites select full-sized models with human-scale entrances inside
 test('pitched neighborhood houses retain roof silhouettes and windows in distant geometry',async()=>{
  const lib=await library(),homes=lib.models.filter(m=>m.houseForm),bytes=fs.readFileSync(new URL('../dist/assets/buildings/lod.bin',import.meta.url));
  lib.ingestLod(JSON.parse(fs.readFileSync(new URL('../dist/assets/buildings/lod.json',import.meta.url))),bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.length));
- assert.equal(homes.length,8);assert.equal(homes.filter(m=>m.houseForm==='detached').length,6);
+ assert.equal(homes.length,10);assert.equal(homes.filter(m=>m.houseForm==='detached').length,8);
  for(const home of homes){
   assert.ok(home.size.y>5&&home.size.y<11);assert.ok(home.streetFronts.some(f=>f.kind==='entrance'&&f.normal[1]>.9));
   const roof=home.root.children.find(m=>m.material.name==='modern-roof');assert.ok(roof,home.name);
@@ -370,4 +370,35 @@ test('framed apartment windows keep recessed glass and sash profiles at full and
   for(const mesh of model.root.children){assert.equal(mesh.geometry.userData.lod.attributes.position,mesh.geometry.attributes.position);mesh.geometry=mesh.geometry.userData.lod;}
   assert.ok(check(),name+' retains its window profile in distant geometry');railing();
  }
+});
+
+test('suburban roof forms have open dormers, recessed attic windows and unlit solar panels at both distances',async()=>{
+ const lib=await library(),bytes=fs.readFileSync(new URL('../dist/assets/buildings/lod.bin',import.meta.url));lib.ingestLod(JSON.parse(fs.readFileSync(new URL('../dist/assets/buildings/lod.json',import.meta.url))),bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.length));
+ for(const [name,gambrel,w,d,y]of [['compact-brick-dormer-home',false,6.4,9.2,5.7],['gambrel-garden-home',true,7.6,10.2,2.85]]){
+  const model=lib.models.find(m=>m.name===name);assert.ok(model);assert.equal(model.houseForm,'detached');assert.equal(model.roofForm,gambrel?'gambrel':'cross-ridge-gable');model.root.updateMatrixWorld(true);
+  const D=d+.6,front=D*(gambrel?.43:.36),back=D*(gambrel?.34:.11),z=(front+back)/2;
+  const ray=(x,h,z,direction,root=model.root)=>new THREE.Raycaster(new THREE.Vector3(x+model.origin.x,h+model.origin.y,z+model.origin.z),direction).intersectObject(root,true);
+  const down=(x,z,root=model.root)=>ray(x,50,z,new THREE.Vector3(0,-1,0),root);
+  const check=()=>{
+   const roof=model.root.children.find(m=>m.material.name==='modern-roof');
+   assert.equal(down(.5,z,roof).length,0,name+' roof is cut away underneath the dormer');assert.ok(down(2.4,z,roof).length,name+' roof remains alongside the dormer');
+   const glass=model.root.children.find(m=>m.material.name==='modern-glass-occupied'),p=glass.geometry.attributes.position,n=glass.geometry.attributes.normal;let high=-Infinity,low=0;
+   for(let i=0;i<p.count;i+=4)if(n.getZ(i)>.99&&p.getY(i+2)>high){low=p.getY(i)-model.origin.y;high=p.getY(i+2)-model.origin.y;}
+   const face=ray(.5,(low+high)/2,20,new THREE.Vector3(0,0,-1))[0];assert.equal(face.object.material.name,'modern-glass-occupied');assert.ok(Math.abs(face.point.z-model.origin.z-(front-.12))<1e-5,'dormer glass is visible and recessed');
+   const atticY=y+(gambrel?1.45:.58),attic=ray(20,atticY,.3,new THREE.Vector3(-1,0,0))[0];assert.equal(attic.object.material.name,'modern-glass-occupied');assert.ok(Math.abs(attic.point.x-model.origin.x-(w/2-.16))<1e-5,'brick gable has a real window opening');
+   const solar=down(-.7,-1.25)[0];assert.equal(solar.object.material.name,'modern-frame');assert.ok(!solar.object.material.userData.roomLighting,'solar panels never use glowing window materials');
+   if(gambrel){const lower=down(2.6,4.8,roof)[0],upper=down(2.6,1.5,roof)[0];assert.ok(upper.face.normal.y-lower.face.normal.y>.3,'gambrel keeps a steep lower pitch and shallow upper pitch');}
+  };
+  check();for(const mesh of model.root.children)mesh.geometry=mesh.geometry.userData.lod;check();
+ }
+});
+
+test('both new suburban houses occur in normal zoning at full scale and survive save round trips',async()=>{
+ const lib=await library(),w=E.createWorld('Suburban variety','plains',431),wanted=new Set(['compact-brick-dormer-home','gambrel-garden-home']),found=new Set();w.tiles.forEach(t=>Object.assign(t,{type:null,level:0}));
+ for(let k=0;k<160;k++){
+  const index=(10+Math.floor(k/20))*48+8+k%20;Object.assign(w.tiles[index],{type:'residential',density:'low',building:'cottage',level:k%3+1});const root=lib.create(w,index),asset=lib.models.find(m=>m.name===root.userData.model);if(!wanted.has(asset.name))continue;found.add(asset.name);
+  assert.ok(root.children[0].scale.x>=.17);assert.equal(root.userData.homeCopies,1);assert.ok(root.userData.plan.entranceXs.length>0);
+  const saved=JSON.stringify(w),restored=JSON.parse(saved);assert.ok(E.valid(restored));const again=lib.create(restored,index);assert.equal(again.userData.model,asset.name);assert.equal(JSON.stringify(w),saved);
+ }
+ assert.deepEqual(found,wanted);
 });
