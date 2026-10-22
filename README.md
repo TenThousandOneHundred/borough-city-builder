@@ -550,3 +550,17 @@ The 5,956-cell CPU fixture decreased from 89.79 ms to 16.24 ms median per warm o
 In the local browser fixture with 5,956 cells and 26 developed lots, median overlay redraw time decreased from 61 to 20.5 ms and full-area fill-preview time from 61.7 to 17.6 ms. Each measurement used nine redraws after a warmup. These short samples measure the redraw operation, not overall game frame rate or all devices.
 
 Building models, terrain assets, traffic, walking, simulation clocks and save data are unchanged. Run `node scripts/benchmark-zoning-render.mjs /path/to/previous-renderer.mjs` to compare against a prior renderer with its imports resolved. This is the dedicated optimization pass after Editions 88–90; the feature-update counter resets to zero.
+
+## Edition 92 — Roadside strips and complete-depth building lots
+
+The default zoning mode is now **Along road**: choose a depth of two to six 8-metre cells, then drag along the frontage. The selection stays on the street side where the drag began, including curved roads and drags that move beyond the cell grid. Rectangle, brush and block fill remain available. Housing has six illustrated choices under Residential; commercial, industrial and office zoning have their own tabs.
+
+New lot planning varies building frontage while consuming the available painted depth. It respects changes in the painted depth along a street, rather than randomly choosing shallow lots that leave inaccessible rear cells. Detached houses can own two to four cells of frontage and two to six cells of depth; apartments support larger multi-cell sites. A single zoning cell still cannot develop by itself. Existing occupied parcels keep their saved boundaries, buildings and resident homes.
+
+Reference: the zoning and housing excerpts of the official [Zones & Signature Buildings feature video](https://www.youtube.com/watch?v=PBwwZ4XnW34) and its [developer diary](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/zones-signature-buildings). No game assets are copied or included.
+
+Validation includes roadside selections on both sides of curves, full painted-depth coverage, isolated multi-cell lots through actual growth, all residential types, and existing-parcel save compatibility. The local browser mouse test painted 52 cells into four outlined lots; those zones survived manual save and reload. The responsive menu keeps the tool instructions above the panel as its controls wrap.
+
+A deterministic 5,956-cell benchmark planned 5,952 cells into lots, up from 3,084. Median full replanning CPU time was 14.55 ms versus 9.56 ms for the older, partial-coverage planner; cached queries remained approximately 0.13 ms and roadside selection averaged 0.21 ms. This is operation timing, not an FPS guarantee. The existing geometry, assets, batching and independent simulation scheduling are retained. Run `node scripts/benchmark-roadside-zoning.mjs /path/to/previous-engine.cjs` to repeat the comparison.
+
+This is the first feature update after the Edition 91 optimization; the next dedicated optimization pass follows three feature updates.

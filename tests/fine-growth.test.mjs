@@ -2,9 +2,17 @@ import {test} from 'node:test';import assert from 'node:assert/strict';import E 
 function world(){const w=E.createWorld('Fine development','plains',8);return w;}
 function utilities(w){E.place(w,1,23,'power');E.place(w,2,23,'water');}
 function paint(w,zone='residential_low'){const cells=[...E.fineZoningLayout(w).values()].filter(p=>p.cx>-74&&p.cx<-28&&p.side===-1);assert.ok(E.fineZoneCells(w,cells.map(p=>p.id),zone).ok);return cells;}
+// Explicitly varied painted depths: a deep band should keep its back cells,
+// not obtain shape variety by leaving inaccessible land behind each lot.
+function paintVaried(w,zone='residential_low',minimum=2){
+ const cells=[...E.fineZoningLayout(w).values()].filter(p=>p.cx>-74&&p.cx<-28&&p.side===-1),first=Math.min(...cells.map(p=>p.col)),step=minimum===4?7:5;
+ const selected=cells.filter(p=>p.row<minimum+Math.floor((p.col-first)/step)%(7-minimum));
+ if(zone==='residential_medium')selected.push(...[...E.fineZoningLayout(w).values()].filter(p=>p.side===1&&p.col>=first&&p.col<first+2&&p.row<5));
+ assert.ok(E.fineZoneCells(w,selected.map(p=>p.id),zone).ok);return selected;
+}
 function grow(w,n=80){for(let i=0;i<n;i++)E.tick(w);}
 test('apartment districts grow narrow, deep and courtyard lots reproducibly and retain them after reload',()=>{
- const a=world(),b=world();for(const w of [a,b]){utilities(w);paint(w,'residential_medium');grow(w,100);}
+ const a=world(),b=world();for(const w of [a,b]){utilities(w);paintVaried(w,'residential_medium');grow(w,100);}
  assert.deepEqual(a.development,b.development);const lots=Object.values(a.development.parcels),shapes=new Set(lots.map(p=>p.width+'x'+p.depth));
  assert.ok(shapes.size>=5);assert.ok(lots.some(p=>p.width===2&&p.depth>=4));assert.ok(lots.some(p=>p.width>=4&&p.depth>=5));assert.ok(lots.some(p=>p.depth===2));
  assert.ok(lots.every(p=>p.occupant.building==='apartments'&&p.cells.length===p.width*p.depth));
@@ -29,7 +37,7 @@ test('a shorter replacement only reconnects lots along its actual frontage and k
 });
 
 test('low-rent blocks combine many roadside cells and preserve resident homes through save reload',()=>{
- const w=world();utilities(w);paint(w,'residential_lowrent');grow(w,120);
+ const w=world();utilities(w);paintVaried(w,'residential_lowrent',4);grow(w,120);
  const lots=Object.values(w.development.parcels);assert.ok(lots.length>1);assert.ok(new Set(lots.map(p=>p.width+'x'+p.depth)).size>=3,'low-rent districts need varied multi-cell sites');
  assert.ok(lots.every(p=>p.cells.length>=16&&p.width>=4&&p.depth>=4&&p.occupant.building==='lowrent'));
  assert.ok(lots.some(p=>p.occupant.people>24));
@@ -40,7 +48,7 @@ test('low-rent blocks combine many roadside cells and preserve resident homes th
 });
 
  test('detached neighborhoods grow varied multi-cell plots while single cells stay undeveloped',()=>{
- const a=world(),b=world();for(const w of [a,b]){utilities(w);paint(w);grow(w,100);}
+ const a=world(),b=world();for(const w of [a,b]){utilities(w);paintVaried(w);grow(w,100);}
  assert.deepEqual(a.development,b.development);
  const lots=Object.values(a.development.parcels),shapes=new Set(lots.map(p=>p.width+'x'+p.depth));
  assert.ok(shapes.size>=4);assert.ok(lots.some(p=>p.width>=3));assert.ok(lots.some(p=>p.cells.length>=9));
