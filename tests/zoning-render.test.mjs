@@ -57,3 +57,9 @@ test('direct drag previews keep completed lots red and construction lots editabl
  }
  view.previewZones([],'commercial_low');assert.equal(view.previewGroup.children.length,0);
 });
+
+test('live drag shows one boundary per multi-cell lot and amber cells that cannot form a building',()=>{
+ const world=E.createWorld('Live lot preview','plains',8),layout=E.fineZoningLayout(world),first=[...layout.values()].find(p=>p.row===0&&p.side===-1&&p.cx>-60),cell=(col,row)=>JSON.stringify([first.source,first.side,first.col+col,row]),ids=[cell(0,0),cell(1,0),cell(0,1),cell(1,1),cell(5,0)],proposal=E.fineZonePreview(world,ids,'residential_low'),view=zoningView(CityView,world),saved=JSON.stringify(world);
+ view.previewZones(ids,'residential_low',proposal);const outlines=view.previewGroup.children.filter(o=>o.isLineSegments);assert.equal(outlines.length,1);assert.equal(outlines[0].userData.zoningLots,1);assert.ok(view.previewGroup.children.some(o=>o.material.color.getHexString()==='e8b862'));assert.equal(view.previewGroup.children.length,3);assert.equal(JSON.stringify(world),saved);
+ let disposed=0;view.previewGroup.traverse(o=>o.geometry?.addEventListener('dispose',()=>disposed++));view.previewZones([],'residential_low',E.fineZonePreview(world,[],'residential_low'));assert.equal(disposed,3);assert.equal(view.previewGroup.children.length,0);
+});

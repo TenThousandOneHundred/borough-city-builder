@@ -1,14 +1,14 @@
-import {lotMaterials} from './lot-surfaces.js?v=93';
-import {bakeRoofFinish} from './roof-finishes.js?v=93';
-import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=93';
-import {loadBinary} from './asset-transfer.js?v=93';
-import {SiteDetails} from './site-details.js?v=93';
-import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=93';
+import {lotMaterials} from './lot-surfaces.js?v=94.1';
+import {bakeRoofFinish} from './roof-finishes.js?v=94.1';
+import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=94.1';
+import {loadBinary} from './asset-transfer.js?v=94.1';
+import {SiteDetails} from './site-details.js?v=94.1';
+import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=94.1';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {lotPlan} from './building-plan.js?v=93';
-import {floorHeight} from './landscape.js?v=93';
+import {lotPlan} from './building-plan.js?v=94.1';
+import {floorHeight} from './landscape.js?v=94.1';
 const IDENTITY=new THREE.Matrix4();
 const civicDefaults={hospital:'clinic',school:'elementary',police:'police',fire:'fire'};
 // Complete textured assets are loaded once, batched per material, and instanced.
@@ -99,9 +99,9 @@ export class ModelLibrary {
   const clearanceX=Math.max(0,(p.parcelWidth-occupiedX)/2-.18),clearanceZ=Math.max(0,(p.parcelDepth-occupiedZ)/2-.18);
   const frontageSpace=Math.max(0,(D-asset.size.z*scale)/2-.25);const setback=p.frontage&&!p.facility?Math.min(!p.oriented&&s>1e-6?clearanceX/s:Infinity,!p.oriented&&c>1e-6?clearanceZ/c:Infinity,frontageSpace)*(p.type==='industrial'||p.type==='commercial'&&p.density==='low'?-1:row?1:p.low?.2+p.variation*.45:1):0;
   model.position.set(centers[0],0,setback);
-  if(p.low){const fronts=asset.streetFronts.filter(f=>f.kind==='entrance'&&f.normal[1]>.9),frontZ=Math.max(...fronts.map(f=>f.position[2]));p.entranceXs=centers.flatMap(x=>fronts.filter(f=>f.position[2]>=frontZ-.5).map(f=>x+(f.position[0]+asset.origin.x)*scale));if(row)p.rowEntrances=[...p.entranceXs].sort((a,b)=>a-b);}
+  if(!p.facility){const fronts=asset.streetFronts.filter(f=>f.kind==='entrance'&&f.normal[1]>.9),frontZ=Math.max(...fronts.map(f=>f.position[2]));p.entranceXs=centers.flatMap(x=>fronts.filter(f=>f.position[2]>=frontZ-.5).map(f=>x+(f.position[0]+asset.origin.x)*scale));if(row)p.rowEntrances=[...p.entranceXs].sort((a,b)=>a-b);}
   model.scale.setScalar(scale);root.add(model);for(const x of centers.slice(1)){const home=model.clone(true);home.position.x=x;root.add(home);}root.rotation.y=p.angle;
-  const lawn=category==='residential-low',surface=lawn?'grass':category==='industrial'?'asphalt':'paving';this.lotMaterials ||= lotMaterials(this.view.landscape);
+  const lawn=['residential','office'].includes(p.type)||p.type==='commercial'&&p.density==='low',surface=lawn?'grass':category==='industrial'?'asphalt':'paving';this.lotMaterials ||= lotMaterials(this.view.landscape);
   const lotMaterial=this.lotMaterials[surface];
   const lot=new THREE.Mesh(this.lotGeometry,lotMaterial);lot.rotation.y=p.oriented?0:-p.angle;lot.scale.set((p.oriented?W:p.parcelWidth)-.12,1,(p.oriented?D:p.parcelDepth)-.12);lot.position.y=-.025;lot.receiveShadow=true;lot.userData.sharedAsset=true;root.add(lot);
   if(surface==='paving'&&!p.oriented){
@@ -119,7 +119,7 @@ export class ModelLibrary {
   }
 
   this.siteDetails ||= new SiteDetails(this.view,this.lotMaterials);const grounds=this.siteDetails.build(p,{minX:-buildingWidth/2,maxX:buildingWidth/2,minZ:setback-asset.size.z*scale/2,maxZ:setback+asset.size.z*scale/2});root.add(grounds);
-  if(p.low)p.accessPoints=grounds.userData.sitePlan.filter(a=>['walk','drive'].includes(a.kind)&&a.z+a.d/2>=p.lotDepth/2-.091).map(a=>({x:a.x,width:a.w,kind:a.kind}));
+  if(p.low||['office','residential'].includes(p.type))p.accessPoints=grounds.userData.sitePlan.filter(a=>['walk','drive'].includes(a.kind)&&a.z+a.d/2>=p.lotDepth/2-.091).map(a=>({x:a.x,width:a.w,kind:a.kind}));
   root.add(this.siteDetails.buildGardens(asset.gardens,asset.origin,scale,setback));
   const footprintX=buildingWidth/2,footprintZ=asset.size.z*scale/2;let base=floorHeight(world,p.cx,p.cz);
   for(const x of [-footprintX,footprintX])for(const z of [-footprintZ,footprintZ])base=Math.max(base,floorHeight(world,p.cx+x*Math.cos(p.angle)+(z+setback)*Math.sin(p.angle),p.cz-x*Math.sin(p.angle)+(z+setback)*Math.cos(p.angle)));

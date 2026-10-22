@@ -203,9 +203,9 @@ function fineLotShapes(zone,seed){
  // next lot. Random shallow lots strand rear cells with no street access.
  return apartmentShapes(seed,widths.map(width=>[width,0])).flatMap(([width])=>Array.from({length:7-minimumDepth},(_,n)=>[width,6-n]));
 }
-function fineZonePlan(w){
- const state=w.development;if(!state)return [];
- const layout=fineZoningLayout(w),cached=finePlanCache.get(w),revision=state.revision||0;
+function fineZonePlan(w,preview){
+ const state=preview?.state||w.development;if(!state)return [];
+ const layout=preview?.layout||fineZoningLayout(w),cached=preview?null:finePlanCache.get(w),revision=state.revision||0;
  if(cached&&cached.layout===layout&&cached.state===state&&cached.revision===revision&&cached.seed===w.seed)return cached.lots;
  const lots=[],claimed=new Set(),depths=new Map();
  for(const p of layout.values()){
@@ -232,7 +232,23 @@ function fineZonePlan(w){
   for(const id of candidate.cells)claimed.add(id);
   lots.push({...candidate,startId:p.id,roadIndex:p.roadIndex,seed});
  }
- finePlanCache.set(w,{layout,state,revision,seed:w.seed,lots});return lots;
+ if(!preview)finePlanCache.set(w,{layout,state,revision,seed:w.seed,lots});return lots;
+}
+const finePreviewCache=new WeakMap();
+function fineZonePreview(w,ids,zone){
+ const layout=fineZoningLayout(w),original=w.development,revision=original?.revision||0,selected=[...new Set(ids.filter(id=>typeof id==='string'&&layout.has(id)))],cached=finePreviewCache.get(w);
+ if(cached&&cached.layout===layout&&cached.state===original&&cached.revision===revision&&cached.seed===w.seed&&cached.zone===zone&&cached.selected.length===selected.length&&selected.every((id,i)=>id===cached.selected[i]))return cached.result;
+ const state={...(original||FineZones.create()),cells:{...original?.cells},parcels:{...original?.parcels}},affected=new Set();
+ // Copy only cells whose construction reservation must be released. Preview
+ // painting must never change a save, building owner or resident's home.
+ for(const id of selected){const p=state.parcels[state.cells[id]?.owner];if(p&&(!p.occupant||p.occupant.construction)&&(zone==='erase'||state.cells[id].zone!==zone)){
+  for(const cell of p.cells)state.cells[cell]={...state.cells[cell]};FineZones.release(state,p.id);
+ }}
+ FineZones.paint(state,layout,selected,zone==='erase'?null:zone);
+ for(const id of selected){const p=layout.get(id);affected.add(JSON.stringify([p.source,p.side]));}
+ const local=new Map([...layout].filter(([,p])=>affected.has(JSON.stringify([p.source,p.side])))),selection=new Set(selected),all=zone==='erase'||!ZONES[zone]?[]:fineZonePlan(w,{layout:local,state}),covered=new Set(all.flatMap(p=>p.cells));
+ const lots=all.filter(p=>p.cells.some(id=>selection.has(id))),blocked=selected.filter(id=>state.cells[id]?.owner),unbuildable=zone==='erase'?[]:selected.filter(id=>!state.cells[id]?.owner&&state.cells[id]?.zone===zone&&!covered.has(id));
+ const result={lots,blocked,unbuildable};finePreviewCache.set(w,{layout,state:original,revision,seed:w.seed,zone,selected,result});return result;
 }
 function developFineZones(w,a,budget){
  const state=w.development;if(!state)return;let power=budget?.power??a.power-a.utilityNeed,water=budget?.water??a.water-a.utilityNeed;const random=rng(w.seed+w.simStep*1297+771),connected=p=>Buildings.frontage(w,p.id,a.roads).length>0;let changed=false;
@@ -254,5 +270,5 @@ function developFineZones(w,a,budget){
 }
 function validZoneSites(w){if(!Array.isArray(w.tiles))return false;return w.tiles.every((t,i)=>{if(!t)return false;if(t.zoneOwner===undefined)return t.zoneSite===undefined;const owner=t.zoneOwner;if(!Number.isInteger(owner)||owner<0||owner>=2304)return false;const site=w.tiles[owner]?.zoneSite;if(!site||site.owner!==owner||!Array.isArray(site.members)||site.members.length<2||site.members.length>16||site.width*site.depth!==site.members.length||new Set(site.members).size!==site.members.length||!site.members.includes(i)||!site.members.includes(owner))return false;if(owner!==i)return t.zoneSite===undefined&&t.people===0&&t.level===0&&t.type===w.tiles[owner].type;const p=site.oriented;return site.members.every(j=>Number.isInteger(j)&&j>=0&&j<2304&&w.tiles[j].zoneOwner===owner&&w.tiles[j].ground==='land')&&[site.width,site.depth].every(n=>Number.isInteger(n)&&n>0&&n<=4)&&p&&['cx','cz','angle','width','depth'].every(k=>Number.isFinite(p[k]))&&Math.abs(p.cx)<=96&&Math.abs(p.cz)<=96&&p.width>0&&p.width<=16&&p.depth>0&&p.depth<=16&&p.frontage&&[p.frontage.x,p.frontage.z].every(n=>Number.isFinite(n)&&Math.abs(n)<=100)&&(p.frontage.pathId===undefined||typeof p.frontage.pathId==='string')&&Number.isInteger(p.frontage.roadIndex)&&p.frontage.roadIndex>=0&&p.frontage.roadIndex<2304;});}
 
-const api={fineLotMinimumDepth,fineZoneStrip,fineZonePlan,playerZoneCells,playerZoneRectangle,playerZoneBrush,playerZoneFill,playerZoneStroke,fineZoneRectangle,fineZoneBrush,fineZoneStroke,fineZoneFill,demolishFineParcel,fineZoningLayout,fineZoneCells,jobCapacity,hasShops,zoningLayout,zoneRectangle,FACILITY_SITES,FACILITY_DEFAULTS,facilityOwner,facilityCells,facilityQuote,walkQuote,buildWalkPath,removeWalkPath,ZONES,zoneAccess,zoneCells,rectangleCells,fillZoneCells,migrateZones,developmentStatus,ROADS,BUILDINGS,building,sampleRoad,roadQuote,buildRoadPath,removeRoadPath,lineTiles,buildRoad,GameSession,SIZE,AUTOSAVE_MS,KEY,TOOLS,createWorld,neighbors,analyze,place,tick,valid,WorldStore};if(typeof module!=='undefined')module.exports=api;else root.CityEngine=api;
+const api={fineZonePreview,fineLotMinimumDepth,fineZoneStrip,fineZonePlan,playerZoneCells,playerZoneRectangle,playerZoneBrush,playerZoneFill,playerZoneStroke,fineZoneRectangle,fineZoneBrush,fineZoneStroke,fineZoneFill,demolishFineParcel,fineZoningLayout,fineZoneCells,jobCapacity,hasShops,zoningLayout,zoneRectangle,FACILITY_SITES,FACILITY_DEFAULTS,facilityOwner,facilityCells,facilityQuote,walkQuote,buildWalkPath,removeWalkPath,ZONES,zoneAccess,zoneCells,rectangleCells,fillZoneCells,migrateZones,developmentStatus,ROADS,BUILDINGS,building,sampleRoad,roadQuote,buildRoadPath,removeRoadPath,lineTiles,buildRoad,GameSession,SIZE,AUTOSAVE_MS,KEY,TOOLS,createWorld,neighbors,analyze,place,tick,valid,WorldStore};if(typeof module!=='undefined')module.exports=api;else root.CityEngine=api;
 })(globalThis);

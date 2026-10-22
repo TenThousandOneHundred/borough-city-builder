@@ -1,11 +1,11 @@
-import './building-entities.js?v=93';
+import './building-entities.js?v=94.1';
 const Buildings=globalThis.BoroughBuildings;
 import * as THREE from './vendor/three.module.js';
 
 // Connect an owned parcel edge to its actual street sidewalk. This only builds
 // render geometry; occupancy, pedestrian routing and save data remain untouched.
 export function lotAccess(world,plan,base,engine,height,roadHeight){
- const points=plan.low&&Array.isArray(plan.accessPoints)?plan.accessPoints:[{x:0}];
+ const points=Array.isArray(plan.accessPoints)?plan.accessPoints:[{x:0}];
  const parts=points.map(p=>accessStrip(world,plan,base,engine,height,roadHeight,p.x,p.width)).filter(Boolean);
  if(!parts.length)return null;if(parts.length===1)return parts[0];
  const positions=[],uv=[],indices=[];for(const part of parts){const offset=positions.length/3;positions.push(...part.attributes.position.array);uv.push(...part.attributes.uv.array);indices.push(...Array.from(part.index.array,i=>i+offset));part.dispose();}
@@ -25,7 +25,7 @@ function accessStrip(world,plan,base,engine,height,roadHeight,centre=0,requested
  const startAt=offset=>plan.oriented?plan.lotDepth/2-.07:Math.min(Math.abs(dx)>1e-8?(Math.sign(dx)*halfWidth-tx*offset)/dx:Infinity,Math.abs(dz)>1e-8?(Math.sign(dz)*halfDepth-tz*offset)/dz:Infinity)-.035;
  const centreStart=startAt(centre),gap=reach-centreStart;
  if(gap<.04||gap>6)return null;
- const desired=plan.low?(requestedWidth||.48):plan.type==='industrial'?.9:Math.min(2.8,plan.lotWidth*.7);
+ const desired=requestedWidth||(plan.low?.48:plan.type==='industrial'?.9:Math.min(2.8,plan.lotWidth*.7));
  const owned=(x,z)=>Math.abs(x-plan.cx)<=plan.parcelWidth/2+.01&&Math.abs(z-plan.cz)<=plan.parcelDepth/2+.01;
  const allowed=(x,z)=>{
   const gx=Math.floor((x+96)/4),gy=Math.floor((z+96)/4);if(gx<0||gy<0||gx>=48||gy>=48)return false;

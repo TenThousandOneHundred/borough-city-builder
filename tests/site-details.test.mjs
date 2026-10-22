@@ -56,17 +56,40 @@ test('paired entrances and driveways have separate clear routes through front pl
 
 test('urban courtyard planting leaves continuous side and rear access without crossing model bounds',()=>{
  for(const size of [4,8,12]){
-  const b={minX:-size*.25,maxX:size*.25,minZ:-size*.25,maxZ:size*.25},plan={...house,low:false,type:'office',lotWidth:size,lotDepth:size},items=sitePlan(plan,b);
+  const b={minX:-size*.25,maxX:size*.25,minZ:-size*.25,maxZ:size*.25},plan={...house,low:false,type:'office',density:'high',lotWidth:size,lotDepth:size},items=sitePlan(plan,b);
   for(const a of items){
    assert.ok(a.x-a.w/2>=-size/2&&a.x+a.w/2<=size/2);
    assert.ok(a.z-a.d/2>=-size/2&&a.z+a.d/2<=size/2);
    assert.ok(a.x+a.w/2<=b.minX||a.x-a.w/2>=b.maxX||a.z+a.d/2<=b.minZ||a.z-a.d/2>=b.maxZ,a.kind);
   }
   const beds=items.filter(a=>a.kind==='garden');
-  for(const a of beds)if(a.z+a.d/2<b.minZ)assert.ok(a.x+a.w/2<=-.3+1e-8||a.x-a.w/2>=.3-1e-8,'rear entrance remains clear');
+  for(const a of beds)for(const walk of items.filter(a=>['walk','plaza'].includes(a.kind))){const x=Math.min(a.x+a.w/2,walk.x+walk.w/2)-Math.max(a.x-a.w/2,walk.x-walk.w/2),z=Math.min(a.z+a.d/2,walk.z+walk.d/2)-Math.max(a.z-a.d/2,walk.z-walk.d/2);assert.ok(x<=1e-8||z<=1e-8,'lawn leaves all courtyard routes clear');}
   const root=new SiteDetails({}).build(plan,b);let triangles=0;const geometries=new Set(),materials=new Set();
   root.traverse(o=>{if(o.isMesh){triangles+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3;geometries.add(o.geometry);materials.add(o.material);}});
   assert.ok(triangles<1000,'courtyard hardscape remains under 1000 triangles per lot');
   assert.ok(geometries.size<=3&&materials.size<=5,'courtyard uses shared existing batches');
  }
+});
+
+test('small office rear parking has full sized bays, manoeuvring space and a street connection',()=>{
+ const plan={...house,low:false,type:'office',density:'low',lotWidth:6.36,lotDepth:9.56,variation:.8},b={minX:-1.8,maxX:1.8,minZ:2,maxZ:4.5},items=sitePlan(plan,b),bays=items.filter(a=>a.kind==='parking'),drive=items.find(a=>a.kind==='drive'),yard=items.find(a=>a.kind==='yard');
+ assert.ok(bays.length>=6);assert.ok(drive&&yard);assert.ok(Math.abs(drive.w-.72)<1e-8);assert.ok(Math.abs(drive.z+drive.d/2-(plan.lotDepth/2-.09))<1e-8);
+ for(const bay of bays){assert.equal(bay.d,1);assert.equal(bay.w,.5);assert.equal(bay.aisleDepth,1.2);assert.ok(yard.z+yard.d/2-(bay.z+bay.d/2)>=1.2-1e-8);}
+ assert.ok(drive.z-drive.d/2<=yard.z+yard.d/2&&drive.x+drive.w/2>=yard.x-yard.w/2);
+ assert.ok(items.some(a=>a.kind==='curb'));assert.ok(items.filter(a=>a.kind==='tree').length<=6);
+ for(const a of items){assert.ok(Math.abs(a.x)+a.w/2<=plan.lotWidth/2);assert.ok(Math.abs(a.z)+a.d/2<=plan.lotDepth/2);assert.ok(a.x+a.w/2<=b.minX||a.x-a.w/2>=b.maxX||a.z+a.d/2<=b.minZ||a.z-a.d/2>=b.maxZ,a.kind);}
+ assert.ok(!sitePlan({...plan,lotWidth:4},b).some(a=>a.kind==='parking'),'a rear garden without a drive does not become disconnected parking');
+ assert.deepEqual(sitePlan(plan,b),items,'same city creates the same grounds after reload');
+ const root=new SiteDetails({}).build(plan,b),geometries=new Set(),materials=new Set();let triangles=0;root.traverse(o=>{if(o.isMesh){geometries.add(o.geometry);materials.add(o.material);triangles+=o.geometry.index.count/3;}});assert.ok(geometries.size<=3&&materials.size<=7);assert.ok(triangles<1000);
+});
+test('short shop forecourts never draw parking without room for an aisle',()=>{
+ const p={...house,low:false,type:'commercial',lotWidth:8,lotDepth:8};
+ assert.ok(!sitePlan(p,{minX:-2,maxX:2,minZ:-3,maxZ:2.4}).some(a=>a.kind==='parking'));
+ assert.ok(sitePlan(p,{minX:-2,maxX:2,minZ:-3,maxZ:1}).some(a=>a.kind==='parking'));
+});
+
+test('offset office entrances keep seating and bicycle racks out of walking routes',()=>{
+ const items=sitePlan({...house,low:false,type:'office',density:'high',lotWidth:8,lotDepth:8,entranceXs:[.85,2.1]},{minX:-2.5,maxX:2.5,minZ:-2,maxZ:2}),routes=items.filter(a=>a.kind==='walk');
+ assert.ok(routes.some(a=>a.x===.85));
+ for(const a of items.filter(a=>['bench','rack'].includes(a.kind)))for(const path of routes)assert.ok(Math.abs(a.x-path.x)>=(a.w+path.w)/2||Math.abs(a.z-path.z)>=(a.d+path.d)/2);
 });
