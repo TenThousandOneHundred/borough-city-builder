@@ -41,10 +41,13 @@ test('developed fine lots render once at parcel size and retain their overlay af
  const {CityView}=await import('../dist/renderer.js'),w=fixture();E.buildRoadPath(w,[{x:19,y:24},{x:36,y:10}]);const {layout,state}=paintAll(w);w.development=state;
  const start=[...layout.values()].find(p=>p.source===w.roadPaths[0].id&&p.row===0&&F.reserve(structuredClone(state),layout,p.id,2,3));assert.ok(start);
  const parcel=F.reserve(state,layout,start.id,2,3);parcel.occupant={type:'residential',building:'cottage',density:'low',level:1,people:4};
- const drawn=[],view={world:w,menu:false,zoning:true,overlay:'none',zoneGroup:{traverse(){},clear(){drawn.length=0},add(mesh){drawn.push(mesh)}},zonePlane(x,y,color,opacity,frame){return {frame,opacity}},batchZonePlanes(){},zoneLotOutlines(){}};
- CityView.prototype.updateZones.call(view);assert.equal(drawn.filter(p=>p.frame===parcel.frame).length,1);assert.equal(drawn.filter(p=>parcel.cells.includes(p.frame?.id)).length,0);
- E.removeRoadPath(w,w.roadPaths[0].id);CityView.prototype.updateZones.call(view);assert.equal(drawn.filter(p=>p.frame===parcel.frame).length,1);
- view.zoning=false;CityView.prototype.updateZones.call(view);assert.equal(drawn.length,0,'normal city view hides both vacant cells and developed lot overlays');view.overlay='zones';CityView.prototype.updateZones.call(view);assert.ok(drawn.length>1,'information view restores zoning');assert.equal(drawn.filter(p=>p.frame===parcel.frame).length,1);assert.ok(F.valid(state));
+ const THREE=await import('../dist/vendor/three.module.js'),view=Object.create(CityView.prototype);Object.assign(view,{world:w,menu:false,zoning:true,overlay:'none',zoneGroup:new THREE.Group()});
+ // Inspect the actual rendered vertices instead of intercepting temporary
+ // cell meshes: the optimized renderer writes directly into final batches.
+ const occurrences=frame=>{const plane=view.zonePlane(0,0,'#fff',.3,frame),expected=plane.geometry.attributes.position.array;let count=0;for(const mesh of view.zoneGroup.children){if(!mesh.isMesh)continue;const positions=mesh.geometry.attributes.position.array;for(let i=0;i<positions.length;i+=27)if(expected.every((value,j)=>value===positions[i+j]))count++;}plane.geometry.dispose();plane.material.dispose();return count;};
+ view.updateZones();assert.equal(occurrences(parcel.frame),1);assert.ok(parcel.cells.every(id=>occurrences(layout.get(id))===0));
+ E.removeRoadPath(w,w.roadPaths[0].id);view.updateZones();assert.equal(occurrences(parcel.frame),1);
+ view.zoning=false;view.updateZones();assert.equal(view.zoneGroup.children.length,0,'normal city view hides both vacant cells and developed lot overlays');view.overlay='zones';view.updateZones();assert.ok(view.zoneGroup.children.length>1,'information view restores zoning');assert.equal(occurrences(parcel.frame),1);assert.ok(F.valid(state));
 });
 
 test('available zoning cache preserves cells and invalidates every blocking input while ignoring population',()=>{

@@ -1,24 +1,25 @@
-import './building-entities.js?v=90';
+import './building-entities.js?v=91';
 const Buildings=globalThis.BoroughBuildings;
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {trackAssetGroups} from './asset-transfer.js?v=90';
-import {buildFootpaths} from './footpaths.js?v=90';
-import {Transit,transitLeg,stopPosition} from './transit.js?v=90';
-import {SimulationClock} from './simulation-clock.js?v=90';
-import {Residents} from './residents.js?v=90';
-import {Traffic,carCapacity} from './traffic.js?v=90';
-import {Vehicles} from './vehicles.js?v=90';
-import {BuildingFactory} from './building-factory.js?v=90';
-import {StreetLife} from './street-life.js?v=90';
-import {visualParcels} from './parcels.js?v=90';
-import {Graphics} from './graphics.js?v=90';
-import {Vegetation} from './vegetation.js?v=90';
+import {ZonePlaneBatch} from './zoning-render-batch.js?v=91';
+import {trackAssetGroups} from './asset-transfer.js?v=91';
+import {buildFootpaths} from './footpaths.js?v=91';
+import {Transit,transitLeg,stopPosition} from './transit.js?v=91';
+import {SimulationClock} from './simulation-clock.js?v=91';
+import {Residents} from './residents.js?v=91';
+import {Traffic,carCapacity} from './traffic.js?v=91';
+import {Vehicles} from './vehicles.js?v=91';
+import {BuildingFactory} from './building-factory.js?v=91';
+import {StreetLife} from './street-life.js?v=91';
+import {visualParcels} from './parcels.js?v=91';
+import {Graphics} from './graphics.js?v=91';
+import {Vegetation} from './vegetation.js?v=91';
 import {RGBELoader} from './vendor/RGBELoader.js';
 import * as THREE from './vendor/three.module.js';
 import {OrbitControls} from './vendor/OrbitControls.js';
-import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=90';
-import {Architecture} from './architecture.js?v=90';
-import {Roadworks} from './roadworks.js?v=90';
+import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=91';
+import {Architecture} from './architecture.js?v=91';
+import {Roadworks} from './roadworks.js?v=91';
 const N=48,T=4,HALF=96,zoneColors={residential:'#54b663',commercial:'#5bb1d8',industrial:'#cdb268',office:'#aa87c9'};
 export class CityView{
 constructor(canvas){this.assetsReady=false;this.loadingElement=document.getElementById('sceneLoading');this.canvas=canvas;this.scene=new THREE.Scene();this.scene.background=new THREE.Color('#aebfca');this.scene.fog=new THREE.FogExp2('#b7c6cc',.00105);
@@ -96,19 +97,19 @@ setZoning(on){this.zoning=on;this.updateZones()}
 zonePlane(x,y,color,opacity=.3,frame=null){const geo=new THREE.PlaneGeometry((frame?.width||4)-.18,(frame?.depth||4)-.18,2,2);geo.rotateX(-Math.PI/2);const a=geo.attributes.position;for(let j=0;j<a.count;j++){const c=Math.cos(frame?.angle||0),s=Math.sin(frame?.angle||0),xx=(frame?.cx??((x+.5)*4-96))+a.getX(j)*c+a.getZ(j)*s,zz=(frame?.cz??((y+.5)*4-96))-a.getX(j)*s+a.getZ(j)*c;a.setXYZ(j,xx,floorHeight(this.world,xx,zz)+.12,zz)}geo.computeVertexNormals();return new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color,transparent:true,opacity,depthWrite:false,side:THREE.DoubleSide}))}
 updateZones(){
  this.zoneGroup.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose()});this.zoneGroup.clear();if(!this.world||this.menu||!this.zoning&&this.overlay!=='zones')return;
- const showLots=this.zoning||this.overlay==='zones',layout=CityEngine.zoningLayout(this.world);
+ const showLots=this.zoning||this.overlay==='zones',layout=CityEngine.zoningLayout(this.world),batch=new ZonePlaneBatch(this.world,floorHeight);
  this.world.tiles.forEach((t,i)=>{const z=CityEngine.ZONES[t.zone];if(!z||t.type==='road'||t.ground==='water')return;
-  if(t.zoneOwner!==undefined){if(t.zoneOwner===i&&showLots&&t.zoneSite)this.zoneGroup.add(this.zonePlane(0,0,z.color,.32,t.zoneSite.oriented));return;}
-  if(!t.type||showLots)this.zoneGroup.add(this.zonePlane(i%48,Math.floor(i/48),z.color,this.zoning?.44:.28,layout.get(i)));
+  if(t.zoneOwner!==undefined){if(t.zoneOwner===i&&showLots&&t.zoneSite)batch.add(0,0,z.color,.32,t.zoneSite.oriented);return;}
+  if(!t.type||showLots)batch.add(i%48,Math.floor(i/48),z.color,this.zoning?.44:.28,layout.get(i));
  });
  const fine=CityEngine.fineZoningLayout(this.world);
  for(const [id,p]of fine){const cell=this.world.development?.cells[id],zone=CityEngine.ZONES[cell?.zone];if(cell?.owner)continue;
-  if(zone)this.zoneGroup.add(this.zonePlane(0,0,zone.color,this.zoning?.44:.28,p));else if(this.zoning)this.zoneGroup.add(this.zonePlane(0,0,'#b1d3d7',.12,p));
+  if(zone)batch.add(0,0,zone.color,this.zoning?.44:.28,p);else if(this.zoning)batch.add(0,0,'#b1d3d7',.12,p);
  }
  // A developed building is one lot, not a checkerboard of tiny houses.
  // Use saved parcel geometry even if its original road has been removed.
- if(showLots)for(const p of Object.values(this.world.development?.parcels||{})){const zone=CityEngine.ZONES[p.zone];if(zone)this.zoneGroup.add(this.zonePlane(0,0,zone.color,.32,p.frame));}
- this.batchZonePlanes(this.zoneGroup);
+ if(showLots)for(const p of Object.values(this.world.development?.parcels||{})){const zone=CityEngine.ZONES[p.zone];if(zone)batch.add(0,0,zone.color,.32,p.frame);}
+ batch.finish(this.zoneGroup);
  this.zoneLotOutlines([...CityEngine.fineZonePlan(this.world),...Object.values(this.world.development?.parcels||{})].map(p=>p.frame));
 }
 zoneLotOutlines(frames){
@@ -122,7 +123,7 @@ zoneLotOutlines(frames){
  // One terrain-following line batch for every lot, independent of cell count.
  const lines=new THREE.LineSegments(geometry,new THREE.LineBasicMaterial({color:'#e3efcd',transparent:true,opacity:.8,depthWrite:false}));lines.userData.zoningLots=frames.length;this.zoneGroup.add(lines);
 }
-previewZones(cells,zone){this.clearLine();const layout=CityEngine.fineZoningLayout(this.world);for(const id of cells){if(typeof id==='object'){const i=id.y*48+id.x,t=this.world.tiles[i],p=CityEngine.zoningLayout(this.world).get(i);if(t?.zone&&p)this.previewGroup.add(this.zonePlane(id.x,id.y,CityEngine.ZONES[zone]?.color||'#f2d9b5',.65,p));continue;}const p=layout.get(id);if(!p)continue;const cell=this.world.development?.cells[id],parcel=this.world.development?.parcels[cell?.owner],allowed=!parcel?.occupant||!!parcel.occupant.construction;this.previewGroup.add(this.zonePlane(0,0,allowed?(CityEngine.ZONES[zone]?.color||'#f2d9b5'):'#d76350',.65,p));}this.batchZonePlanes(this.previewGroup);}
+previewZones(cells,zone){this.clearLine();const layout=CityEngine.fineZoningLayout(this.world),batch=new ZonePlaneBatch(this.world,floorHeight);for(const id of cells){if(typeof id==='object'){const i=id.y*48+id.x,t=this.world.tiles[i],p=CityEngine.zoningLayout(this.world).get(i);if(t?.zone&&p)batch.add(id.x,id.y,CityEngine.ZONES[zone]?.color||'#f2d9b5',.65,p);continue;}const p=layout.get(id);if(!p)continue;const cell=this.world.development?.cells[id],parcel=this.world.development?.parcels[cell?.owner],allowed=!parcel?.occupant||!!parcel.occupant.construction;batch.add(0,0,allowed?(CityEngine.ZONES[zone]?.color||'#f2d9b5'):'#d76350',.65,p);}batch.finish(this.previewGroup);}
 batchZonePlanes(group){const batches=new Map();for(const mesh of [...group.children]){const key=mesh.material.color.getHex()+':'+mesh.material.opacity;if(!batches.has(key))batches.set(key,[]);batches.get(key).push(mesh);}group.clear();for(const meshes of batches.values()){const geometry=mergeGeometries(meshes.map(m=>m.geometry),false),material=meshes[0].material;for(const mesh of meshes){mesh.geometry.dispose();if(mesh.material!==material)mesh.material.dispose();}group.add(new THREE.Mesh(geometry,material));}}
 updateOverlay(){const ground=this.landscape.ground;if(!ground)return;if(this.overlay==='none'&&this.landscape.baseColors?.length===ground.geometry.attributes.color.array.length){ground.geometry.attributes.color.array.set(this.landscape.baseColors);ground.geometry.attributes.color.needsUpdate=true;ground.material.color.set('#ffffff');return;}const colors=ground.geometry.attributes.color,pos=ground.geometry.attributes.position,w=this.world,stats=CityEngine.analyze(w);for(let i=0;i<pos.count;i++){let x=pos.getX(i),z=pos.getZ(i),tx=Math.max(0,Math.min(47,Math.floor((x+96)/4))),ty=Math.max(0,Math.min(47,Math.floor((z+96)/4))),t=w.tiles[ty*48+tx];let c;if(this.overlay==='none'){c=terrainColor(w,x,z)}else{c=new THREE.Color('#bcbfc1');if(this.overlay==='zones'&&(t.zone||zoneColors[t.type]))c.set(CityEngine.ZONES[t.zone]?.color||zoneColors[t.type]);if(this.overlay==='traffic'&&t.type==='road')c.set(stats.traffic>65?'#df7358':'#79bf85');if(this.overlay==='utilities'&&t.type)c.set(['power','water'].includes(t.type)?'#49c1ed':'#98afbc');if(this.overlay==='pollution'&&t.type==='industrial')c.set('#d2ac63')}colors.setXYZ(i,c.r,c.g,c.b)}colors.needsUpdate=true;ground.material.color.set(this.overlay==='none'?'#ffffff':'#dce0df')}
 ensureCarCapacity(){if(!this.traffic)return;const target=this.menu?32:carCapacity(this.world);let count=this.cars.filter(c=>c.agent.kind!=='bus').length,changed=false;while(count<target){const mesh=this.carModel(this.cars.length),agent=this.traffic.addAgent();mesh.scale.setScalar(0);this.cars.push({mesh,agent});count++;changed=true;}if(changed)this.vehicles.rebuildFleet(this.cars,this.carGroup);}

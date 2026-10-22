@@ -540,3 +540,13 @@ Low-density zoning can now develop two additional original detached houses: a co
 The low-residential pictures in the [official Netherlands Region Pack diary](https://www.paradoxinteractive.com/games/cities-skylines-ii/modding/dev-diary-netherlands-region-pack) guided roof profiles, dormer proportions and brickwork. Roof geometry is cut around the dormers so it cannot cover their windows. Gable brick UVs use physical horizontal/vertical distances, including triangular ends. Solar panels use non-emissive metal, while individual windows retain night lighting. Distant topology keeps the roof silhouettes, dormers, every window and the solar panels.
 
 The two models share existing materials and add 1,596 triangles and 2,939 compressed bytes across the model and distant-index downloads. The 55-model modern library remains within its unchanged 196,000-triangle, 13.5 MiB raw and 3 MiB compressed budgets. All 53 previous modern models retain identical geometry and attributes. No save or simulation behavior changes. This is the third feature update since Edition 87; the next update must be a dedicated optimization pass before adding more features.
+
+## Edition 91 — Direct zoning overlay batches
+
+Zoning overlays and drag previews now write their terrain-following vertices directly into the final color/opacity batches. A large redraw previously created thousands of small meshes, geometries and materials, then merged and disposed them. The new path allocates only the final batches. Standalone hovered-cell highlights keep their existing path.
+
+The 5,956-cell CPU fixture decreased from 89.79 ms to 16.24 ms median per warm overlay redraw across seven measured runs. These are CPU redraw timings, not an FPS guarantee. The comparison verifies byte-identical position, normal, UV and index buffers, matching material colors/opacity, the same five draws and 59,500 vertices including terrain-following lot outlines. Additional tests cover 32-bit indices for large batches, occupied/construction preview colors and release of replaced buffers.
+
+In the local browser fixture with 5,956 cells and 26 developed lots, median overlay redraw time decreased from 61 to 20.5 ms and full-area fill-preview time from 61.7 to 17.6 ms. Each measurement used nine redraws after a warmup. These short samples measure the redraw operation, not overall game frame rate or all devices.
+
+Building models, terrain assets, traffic, walking, simulation clocks and save data are unchanged. Run `node scripts/benchmark-zoning-render.mjs /path/to/previous-renderer.mjs` to compare against a prior renderer with its imports resolved. This is the dedicated optimization pass after Editions 88–90; the feature-update counter resets to zero.
