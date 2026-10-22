@@ -48,24 +48,33 @@ class Model:
  def band(self,points,y,h,mat=CONCRETE,color=(1,1,1)):
   for a,b in zip(points,points[1:]+points[:1]):self.quad((b[0],y,b[1]),(a[0],y,a[1]),(a[0],y+h,a[1]),(b[0],y+h,b[1]),mat,color)
   self.surface(points,y+h,mat,color)
- def shell(self,w,d,floors,x=0,z=0,y=0,bevel=.7,balconies=False,curtain=False,oval=False,tint=(1,1,1),cladding=CONCRETE,windowWidth=None):
+ def shell(self,w,d,floors,x=0,z=0,y=0,bevel=.7,balconies=False,curtain=False,oval=False,tint=(1,1,1),cladding=CONCRETE,windowWidth=None,framed=False,balconySides=None,openRail=False):
   points=([(x+w/2*math.cos(j*math.tau/32),z+d/2*math.sin(j*math.tau/32)) for j in range(32)] if oval else self.ring(w,d,bevel,x,z))
   fh=3.2;top=y+floors*fh
   # Recessed dark walls sit behind individual panes and facade structure.
   for side,(a,b) in enumerate(zip(points,points[1:]+points[:1])):
    dx,dz=b[0]-a[0],b[1]-a[1];length=math.hypot(dx,dz);tx,tz=dx/length,dz/length;nx,nz=tz,-tx
    def p(u,v,out=0):return (a[0]+tx*u+nx*out,v,a[1]+tz*u+nz*out)
-   if windowWidth and length<.5:
+   if (windowWidth or framed) and length<.5:
     self.quad(p(length,y),p(0,y),p(0,top),p(length,top),cladding,tint);continue
    front=nz>.9 and length>3 and y==0
    shop=front and self.category=='commercial'
    # Ground-floor shop windows have shallow rooms behind real glazing.
    # Upper windows retain their existing opaque/reflected glazing and detail.
-   if not shop or floors>1:self.quad(p(length,y+fh if shop else y,-.1),p(0,y+fh if shop else y,-.1),p(0,top,-.1),p(length,top,-.1),RECESS)
+   recess=-.25 if framed else -.1;glazing=-.16 if framed else -.035
+   if not shop or floors>1:self.quad(p(length,y+fh if shop else y,recess),p(0,y+fh if shop else y,recess),p(0,top,recess),p(length,top,recess),RECESS)
    bays=max(1,round(length/(1.6 if curtain else 3.4 if windowWidth else 2.6)));bay=length/bays
+   # Adjacent flat wall strips above and below a floor boundary share one
+   # coplanar panel. The facade envelope and every opening stay unchanged.
+   bands=[]
    for f in range(floors):
     level=y+f*fh;retail=shop and f==0;bottom=.12 if retail else .32 if curtain else .75;upper=.55 if retail else .13 if curtain else .38
-    for lo,hi in [(level,level+bottom),(level+fh-upper,level+fh)]:self.quad(p(length,lo,.025),p(0,lo,.025),p(0,hi,.025),p(length,hi,.025),FRAME if curtain else cladding,(1,1,1) if curtain else tint)
+    for lo,hi in [(level,level+bottom),(level+fh-upper,level+fh)]:
+     if bands and abs(bands[-1][1]-lo)<1e-8:bands[-1]=(bands[-1][0],hi)
+     else:bands.append((lo,hi))
+   for lo,hi in bands:self.quad(p(length,lo,.025),p(0,lo,.025),p(0,hi,.025),p(length,hi,.025),FRAME if curtain else cladding,(1,1,1) if curtain else tint)
+   for f in range(floors):
+    level=y+f*fh;retail=shop and f==0;bottom=.12 if retail else .32 if curtain else .75;upper=.55 if retail else .13 if curtain else .38
     for j in range(bays):
      margin=.045 if curtain else max(.24,(bay-windowWidth)/2) if windowWidth else .24;l=j*bay+margin;r=(j+1)*bay-margin;shade=.74+((j*17+f*31+side*11)%19)/65
      door=front and f==0 and (j%3==1 if retail else j==bays//2)
@@ -75,7 +84,7 @@ class Model:
       material=SHOP_GLASS
      else:material=OCCUPIED if (j*17+f*31+side*11)%4==1 else GLASS
      # A door overlays the low sill band so the opening reaches its threshold.
-     self.quad(p(r,level+sill,.035 if door else -.035),p(l,level+sill,.035 if door else -.035),p(l,level+fh-upper,.035 if door else -.035),p(r,level+fh-upper,.035 if door else -.035),material,(shade,shade,min(1,shade+.04)))
+     self.quad(p(r,level+sill,.035 if door else glazing),p(l,level+sill,.035 if door else glazing),p(l,level+fh-upper,.035 if door else glazing),p(r,level+fh-upper,.035 if door else glazing),material,(shade,shade,min(1,shade+.04)))
      if door:
       centre=(l+r)/2
       self.streetFronts.append({'kind':'shop' if retail else 'entrance','position':list(p(centre,level+.08,.08)),'normal':[nx,nz],'width':r-l})
@@ -92,23 +101,36 @@ class Model:
       self.quad(p(sr,level+2.73,.86),p(sl,level+2.73,.86),p(sl,level+3.08,.86),p(sr,level+3.08,.86),SIGN,uvs=[(0,v1),(1,v1),(1,v0),(0,v0)])
      if (j*17+f*31+side*11)%9<2 and f>0:
       blindtop=level+fh-upper;blindbottom=blindtop-(fh-bottom-upper)*.36
-      self.quad(p(r,blindbottom,-.026),p(l,blindbottom,-.026),p(l,blindtop,-.026),p(r,blindtop,-.026),BLIND,(shade,shade,shade))
+      self.quad(p(r,blindbottom,glazing+.009),p(l,blindbottom,glazing+.009),p(l,blindtop,glazing+.009),p(r,blindtop,glazing+.009),BLIND,(shade,shade,shade))
      # Shallow recess returns make window openings read in direct sunlight.
      if not curtain and not door:
+      returnDepth=glazing-.035 if framed else -.07
+      if framed:self.window_frame(p,l,r,level+bottom,level+fh-upper)
       self.detail=True
-      self.quad(p(l,level+bottom-.07,.14),p(r,level+bottom-.07,.14),p(r,level+bottom,-.07),p(l,level+bottom,-.07),CONCRETE,tint)
-      self.quad(p(r,level+fh-upper,.03),p(l,level+fh-upper,.03),p(l,level+fh-upper,-.07),p(r,level+fh-upper,-.07),CONCRETE,tint)
+      self.quad(p(l,level+bottom-.07,.14),p(r,level+bottom-.07,.14),p(r,level+bottom,returnDepth),p(l,level+bottom,returnDepth),CONCRETE,tint)
+      self.quad(p(r,level+fh-upper,.03),p(l,level+fh-upper,.03),p(l,level+fh-upper,returnDepth),p(r,level+fh-upper,returnDepth),CONCRETE,tint)
       self.detail=False
-      for u,sign in [(l,-1),(r,1)]:self.quad(p(u,level+bottom,.03),p(u,level+bottom,-.07),p(u,level+fh-upper,-.07),p(u,level+fh-upper,.03),CONCRETE,(.78,.79,.76))
-    if balconies and length>5 and f>0 and side%2==0:
+      for u,sign in [(l,-1),(r,1)]:self.quad(p(u,level+bottom,.03),p(u,level+bottom,returnDepth),p(u,level+fh-upper,returnDepth),p(u,level+fh-upper,.03),CONCRETE,(.78,.79,.76))
+    if balconies and length>5 and f>0 and (side in balconySides if balconySides is not None else side%2==0):
      # Slabs and framed balcony panels project from selected faces, not all faces.
      l=.45;r=length-.45;out=1.05;h=level+.12
      self.quad(p(l,h,.02),p(r,h,.02),p(r,h,out),p(l,h,out),CONCRETE)
      self.quad(p(r,h,out),p(l,h,out),p(l,h+.12,out),p(r,h+.12,out),CONCRETE)
-     self.quad(p(r,h+.15,out-.04),p(l,h+.15,out-.04),p(l,h+1.0,out-.04),p(r,h+1.0,out-.04),GLASS,(.72,.77,.78))
+     if openRail:
+      # Open metal balustrades let the recess behind the railing remain visible.
+      # Posts and the continuous handrail are retained at distance.
+      count=max(2,math.ceil((r-l)/.9))
+      for k in range(count+1):
+       u=l+(r-l)*k/count;self.quad(p(u+.025,h+.12,out),p(u-.025,h+.12,out),p(u-.025,h+1.0,out),p(u+.025,h+1.0,out),FRAME)
+      self.quad(p(r,h+.18,out),p(l,h+.18,out),p(l,h+.23,out),p(r,h+.23,out),FRAME)
+     else:self.quad(p(r,h+.15,out-.04),p(l,h+.15,out-.04),p(l,h+1.0,out-.04),p(r,h+1.0,out-.04),GLASS,(.72,.77,.78))
      self.quad(p(r,h+1.0,out),p(l,h+1.0,out),p(l,h+1.07,out),p(r,h+1.07,out),FRAME)
      self.detail=True
-     for edge in [l,r]:self.quad(p(edge,h+.15,.06),p(edge,h+.15,out),p(edge,h+1,out),p(edge,h+1,.06),GLASS)
+     for edge in [l,r]:
+      if openRail:
+       for depth in [.06,.55,out]:self.quad(p(edge,h+.15,depth-.025),p(edge,h+.15,depth+.025),p(edge,h+1.05,depth+.025),p(edge,h+1.05,depth-.025),FRAME)
+       self.quad(p(edge,h+1.0,.06),p(edge,h+1.0,out),p(edge,h+1.07,out),p(edge,h+1.07,.06),FRAME)
+      else:self.quad(p(edge,h+.15,.06),p(edge,h+.15,out),p(edge,h+1,out),p(edge,h+1,.06),GLASS)
      for j in range(1,bays):
       u=j*bay;self.quad(p(u,h+.12,.04),p(u,h+.12,out),p(u,h+1.55,out),p(u,h+1.55,.04),FRAME,(.72,.75,.73))
      self.detail=False
@@ -127,6 +149,14 @@ class Model:
    self.quad((c[0],top,c[1]),(e[0],top,e[1]),(e[0],top+.65,e[1]),(c[0],top+.65,c[1]),CONCRETE,tint)
    self.quad((a[0],top+.65,a[1]),(c[0],top+.65,c[1]),(e[0],top+.65,e[1]),(b[0],top+.65,b[1]),CONCRETE,tint)
   return top
+ def window_frame(self,p,l,r,lo,hi):
+  # Painted timber/aluminium sash sits ahead of a recessed pane.
+  # Keep its silhouette in distant topology and share the existing paint draw.
+  color=(.82,.83,.77);edge=.065;centre=(l+r)/2;cross=lo+(hi-lo)*.62
+  for a,b in [(l-edge,l+edge),(r-edge,r+edge)]:self.quad(p(b,lo-edge,.06),p(a,lo-edge,.06),p(a,hi+edge,.06),p(b,hi+edge,.06),PAINT,color)
+  for a,b in [(lo-edge,lo+edge),(hi-edge,hi+edge)]:self.quad(p(r-edge,a,.06),p(l+edge,a,.06),p(l+edge,b,.06),p(r-edge,b,.06),PAINT,color)
+  self.quad(p(centre+.028,lo,-.08),p(centre-.028,lo,-.08),p(centre-.028,hi,-.08),p(centre+.028,hi,-.08),PAINT,color)
+  self.quad(p(r,cross-.03,-.07),p(l,cross-.03,-.07),p(l,cross+.03,-.07),p(r,cross+.03,-.07),PAINT,color)
  def shop_room(self,p,l,r,y,top,variant,door=False):
   # An opaque room back survives in distant topology; small furniture can drop.
   warm=[(.68,.64,.53),(.57,.63,.59),(.64,.59,.53),(.52,.60,.65)][variant%4]
@@ -329,8 +359,8 @@ m=Model('linear-balcony-apartments','residential',6);h=m.shell(21,11,6,balconies
 # A compact brick courtyard walk-up: two pitched wings enclose a usable
 # garden rather than repeating the flat-roof balcony slab silhouette.
 m=Model('small-courtyard-apartments','residential',4)
-h=m.shell(7,17,4,x=-4.5,bevel=.12,tint=(.70,.48,.34),cladding=BRICK,windowWidth=1.35)
-back=m.shell(9,7,3,x=3.5,z=-5,bevel=.12,tint=(.84,.74,.58),cladding=PAINT,windowWidth=1.3)
+h=m.shell(7,17,4,x=-4.5,bevel=.12,tint=(.70,.48,.34),cladding=BRICK,windowWidth=1.35,framed=True)
+back=m.shell(9,7,3,x=3.5,z=-5,bevel=.12,tint=(.84,.74,.58),cladding=PAINT,windowWidth=1.3,framed=True)
 pitched_roof(m,-4.5,0,7,17,h,2.6,hip=2,tint=(.53,.56,.59))
 pitched_roof(m,3.5,-5,9,7,back,2.1,hip=1.4,tint=(.56,.58,.60))
 # Chimneys and the roof silhouette remain in the distant model.
@@ -356,13 +386,13 @@ for key in ['i','far']:paint[key]+=[i+offset for i in blind[key]]
 m.finish()
 # Compact street buildings fit 16-metre frontages at authored scale. Distinct
 # materials and rooflines avoid reusing the courtyard block on every small lot.
-m=Model('brick-neighborhood-walkup','residential',3);h=m.shell(12,11,3,bevel=.18,tint=(.72,.43,.29),cladding=BRICK)
+m=Model('brick-neighborhood-walkup','residential',3);h=m.shell(12,11,3,bevel=.18,tint=(.72,.43,.29),cladding=BRICK,framed=True)
 m.box(0,h-.25,0,12.4,.28,11.4,CONCRETE,(.78,.72,.60));m.box(0,h,0,11.6,.16,10.6,ROOF)
 m.roofwork(-2,h,-2,2.5,1.5);m.entrance(5.7);m.finish()
 # A second human-scale apartment type for 16 m square sites. Its pitched
 # attic and projecting entrance contrast with the compact brick walk-up.
 m=Model('compact-hipped-apartments','residential',4)
-h=m.shell(11,10,3,bevel=.18,tint=(.84,.79,.67),cladding=PAINT,windowWidth=1.45)
+h=m.shell(11,10,3,bevel=.18,tint=(.84,.79,.67),cladding=PAINT,windowWidth=1.45,framed=True)
 pitched_roof(m,0,0,11,10,h,2.5,hip=1.4,tint=(.54,.58,.61))
 dormer(m,0,3.5,h+1.2)
 m.box(-3,h+1.1,-2,.7,1.8,.8,CONCRETE,(.72,.67,.57))
@@ -371,8 +401,8 @@ m.entrance(5.3)
 for x in [-1,1]:m.box(x,0,5.65,.22,2.6,.22,CONCRETE,(.84,.81,.73))
 m.box(0,2.6,5.6,2.6,.2,1.6,CONCRETE,(.84,.81,.73))
 m.finish()
-m=Model('narrow-balcony-apartments','residential',5);h=m.shell(10,23,4,bevel=.3,balconies=True,tint=(.70,.77,.73),cladding=PAINT)
-h=m.shell(8,17,1,z=-2,y=h,bevel=.3,tint=(.68,.58,.44),cladding=BRICK);m.roofwork(0,h,-3,2.8,1.8);m.plant(0,12.95,8.5,6,1.5);m.entrance(12);m.finish()
+m=Model('narrow-balcony-apartments','residential',5);h=m.shell(10,23,4,bevel=.3,balconies=True,tint=(.70,.77,.73),cladding=PAINT,framed=True,balconySides=(0,4),openRail=True)
+h=m.shell(8,17,1,z=-2,y=h,bevel=.3,tint=(.68,.58,.44),cladding=BRICK,framed=True);m.roofwork(0,h,-3,2.8,1.8);m.plant(0,12.95,8.5,6,1.5);m.entrance(12);m.finish()
 m=Model('stepped-midrise-apartments','residential',8);h=m.shell(18,14,5,balconies=True);h=m.shell(12,11,3,x=-2,y=h,balconies=True);m.plant(6,16.3,3,2,4);m.roofwork(-2,h,0,3,2);m.entrance(8);m.finish()
 m=Model('corner-retail-gallery','commercial',3);h=m.shell(24,18,2,curtain=True);h=m.shell(14,12,1,x=-4,z=-2,y=h,curtain=True);m.plant(8,6.7,3,3,5);m.roofwork(-4,h,-2,4,2);m.entrance(10);m.finish()
 m=Model('neighborhood-mixed-use','commercial',5);h=m.shell(18,12,1,curtain=True);h=m.shell(17,11,4,y=h,balconies=True);m.roofwork(0,h,0,4,2);m.entrance(7);m.finish()

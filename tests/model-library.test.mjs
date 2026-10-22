@@ -353,3 +353,21 @@ test('smallest apartment lots select different full-scale forms while retaining 
  }
  assert.ok(counts.get('brick-neighborhood-walkup')>=15);assert.ok(counts.get('compact-hipped-apartments')>=15);
 });
+
+test('framed apartment windows keep recessed glass and sash profiles at full and distant detail',async()=>{
+ const lib=await library(),bytes=fs.readFileSync(new URL('../dist/assets/buildings/lod.bin',import.meta.url));lib.ingestLod(JSON.parse(fs.readFileSync(new URL('../dist/assets/buildings/lod.json',import.meta.url))),bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.length));
+ for(const name of ['compact-hipped-apartments','brick-neighborhood-walkup','small-courtyard-apartments','narrow-balcony-apartments']){
+  const model=lib.models.find(m=>m.name===name),panes=[];
+  for(const mesh of model.root.children.filter(m=>m.material.name==='modern-glass'||m.material.name==='modern-glass-occupied')){
+   const pos=mesh.geometry.attributes.position,normal=mesh.geometry.attributes.normal;
+   for(let i=0;i<pos.count;i+=4){if(normal.getZ(i)<.99)continue;const xs=[0,1,2,3].map(j=>pos.getX(i+j)),ys=[0,1,2,3].map(j=>pos.getY(i+j)),lo=Math.min(...ys),hi=Math.max(...ys),left=Math.min(...xs),right=Math.max(...xs);if(lo>3.5&&hi-lo>1.8&&right-left>1)panes.push({lo,hi,left,right,z:pos.getZ(i)});}
+  }
+  assert.ok(panes.length,name+' has upper-floor windows');model.root.updateMatrixWorld(true);
+  const hit=(x,y)=>new THREE.Raycaster(new THREE.Vector3(x,y,100),new THREE.Vector3(0,0,-1)).intersectObject(model.root,true)[0];
+  const check=()=>panes.some(p=>{const x=(p.left+p.right)/2,y=p.lo+(p.hi-p.lo)*.3,glass=hit(x+(p.right-p.left)*.25,y),frame=hit(p.left,y),sash=hit(x,y);return glass?.object.material.name.startsWith('modern-glass')&&Math.abs(glass.point.z-p.z)<.002&&frame?.object.material.name==='modern-painted'&&sash?.object.material.name==='modern-painted'&&frame.point.z-glass.point.z>.20&&sash.point.z-glass.point.z>.07;});
+  const railing=()=>{if(name!=='narrow-balcony-apartments')return;const post=hit(2.55+model.origin.x,3.65+model.origin.y),gap=hit(2.125+model.origin.x,3.65+model.origin.y);assert.equal(post?.object.material.name,'modern-frame');assert.equal(gap?.object.material.name,'modern-painted');assert.ok(post.point.z-gap.point.z>.9,'open railing gaps expose the wall behind the balcony');};
+  assert.ok(check(),name+' has actual frame and glass depth, not a painted rectangle');railing();
+  for(const mesh of model.root.children){assert.equal(mesh.geometry.userData.lod.attributes.position,mesh.geometry.attributes.position);mesh.geometry=mesh.geometry.userData.lod;}
+  assert.ok(check(),name+' retains its window profile in distant geometry');railing();
+ }
+});
