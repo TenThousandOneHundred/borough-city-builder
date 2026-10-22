@@ -41,7 +41,7 @@ test('developed fine lots render once at parcel size and retain their overlay af
  const {CityView}=await import('../dist/renderer.js'),w=fixture();E.buildRoadPath(w,[{x:19,y:24},{x:36,y:10}]);const {layout,state}=paintAll(w);w.development=state;
  const start=[...layout.values()].find(p=>p.source===w.roadPaths[0].id&&p.row===0&&F.reserve(structuredClone(state),layout,p.id,2,3));assert.ok(start);
  const parcel=F.reserve(state,layout,start.id,2,3);parcel.occupant={type:'residential',building:'cottage',density:'low',level:1,people:4};
- const drawn=[],view={world:w,menu:false,zoning:true,overlay:'none',zoneGroup:{traverse(){},clear(){drawn.length=0},add(mesh){drawn.push(mesh)}},zonePlane(x,y,color,opacity,frame){return {frame,opacity}},batchZonePlanes(){}};
+ const drawn=[],view={world:w,menu:false,zoning:true,overlay:'none',zoneGroup:{traverse(){},clear(){drawn.length=0},add(mesh){drawn.push(mesh)}},zonePlane(x,y,color,opacity,frame){return {frame,opacity}},batchZonePlanes(){},zoneLotOutlines(){}};
  CityView.prototype.updateZones.call(view);assert.equal(drawn.filter(p=>p.frame===parcel.frame).length,1);assert.equal(drawn.filter(p=>parcel.cells.includes(p.frame?.id)).length,0);
  E.removeRoadPath(w,w.roadPaths[0].id);CityView.prototype.updateZones.call(view);assert.equal(drawn.filter(p=>p.frame===parcel.frame).length,1);
  view.zoning=false;CityView.prototype.updateZones.call(view);assert.equal(drawn.length,0,'normal city view hides both vacant cells and developed lot overlays');view.overlay='zones';CityView.prototype.updateZones.call(view);assert.ok(drawn.length>1,'information view restores zoning');assert.equal(drawn.filter(p=>p.frame===parcel.frame).length,1);assert.ok(F.valid(state));
@@ -67,3 +67,38 @@ test('available zoning cache preserves cells and invalidates every blocking inpu
  const selected=E.playerZoneRectangle(w,a,b),expected=side.filter(p=>p.col>=a.col&&p.col<=b.col&&p.row<=3);
  assert.deepEqual(new Set(selected),new Set(expected.map(p=>p.id)));assert.ok(new Set(expected.map(p=>p.angle.toFixed(2))).size>2);
  });
+
+
+test('brush strokes follow a curved road in both directions without cutting across its inside',()=>{
+ const w=fixture(),built=E.buildRoadPath(w,[{x:19,y:24},{x:34,y:12},{x:42,y:25}]);assert.ok(built.ok);
+ const layout=E.fineZoningLayout(w);
+ for(const side of [-1,1]){
+  const cells=[...layout.values()].filter(p=>p.source===built.path.id&&p.side===side&&p.row===0),a=cells[0],b=cells.at(-1);
+  assert.ok(b.col-a.col>25);
+  for(const size of [1,2,4]){
+   const forward=E.fineZoneStroke(w,a,b,size),reverse=E.fineZoneStroke(w,b,a,size),expected=new Set();
+   for(const p of cells)for(const id of E.fineZoneBrush(w,p,size))expected.add(id);
+   assert.deepEqual(new Set(forward),expected);assert.deepEqual(new Set(reverse),expected);
+   assert.ok(forward.every(id=>layout.get(id).side===side));
+  }
+ }
+});
+
+test('lot proposals are read only and planning caches invalidate after zoning, roads and reservation',()=>{
+ const w=fixture(),layout=E.fineZoningLayout(w);E.fineZoneCells(w,[...layout.keys()],'residential_low');
+ const saved=JSON.stringify(w),plans=E.fineZonePlan(w);assert.ok(plans.length>10);assert.equal(JSON.stringify(w),saved);assert.equal(E.fineZonePlan(w),plans);
+ const p=plans[0],proposal=F.proposal(w.development,layout,p.startId,p.width,p.depth);assert.deepEqual(proposal.cells,p.cells);assert.equal(JSON.stringify(w),saved);
+ w.day++;w.money++;assert.equal(E.fineZonePlan(w),plans);
+ const parcel=F.reserve(w.development,layout,p.startId,p.width,p.depth);assert.ok(parcel);const after=E.fineZonePlan(w);assert.notEqual(after,plans);assert.ok(after.every(q=>q.cells.every(id=>!parcel.cells.includes(id))));
+ assert.ok(E.fineZoneCells(w,[after[0].startId],'erase').ok);const erased=E.fineZonePlan(w);assert.notEqual(erased,after);
+ E.buildRoadPath(w,[{x:19,y:24},{x:34,y:12},{x:42,y:25}]);assert.notEqual(E.fineZonePlan(w),erased);
+ assert.deepEqual(E.fineZonePlan(JSON.parse(JSON.stringify(w))),E.fineZonePlan(w));assert.ok(E.valid(w));
+});
+
+test('all building lot outlines share one terrain-following draw batch',async()=>{
+ const THREE=await import('../dist/vendor/three.module.js'),{CityView}=await import('../dist/renderer.js'),w=fixture(),group=new THREE.Group();
+ const frames=Array.from({length:80},(_,i)=>({cx:(i%10)*5-60,cz:Math.floor(i/10)*5-45,width:3.16,depth:4.76,angle:.15}));
+ CityView.prototype.zoneLotOutlines.call({world:w,zoneGroup:group},frames);
+ assert.equal(group.children.length,1);const lines=group.children[0];assert.ok(lines.isLineSegments);assert.equal(lines.userData.zoningLots,80);assert.ok([...lines.geometry.attributes.position.array].every(Number.isFinite));
+ assert.ok(lines.geometry.attributes.position.count<=80*32,'line detail is bounded by lot perimeter');lines.geometry.dispose();lines.material.dispose();
+});

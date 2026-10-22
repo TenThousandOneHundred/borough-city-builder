@@ -17,7 +17,7 @@ function paint(state,layout,ids,zone){
  if(changed)state.revision=(state.revision||0)+1;return {changed,blocked};
 }
 function inside(p,x,z){const dx=x-p.cx,dz=z-p.cz,c=Math.cos(p.angle),s=Math.sin(p.angle);return Math.abs(dx*c-dz*s)<=CELL/2+.025&&Math.abs(dx*s+dz*c)<=CELL/2+.025;}
-function reserve(state,layout,startId,width,depth){
+function proposal(state,layout,startId,width,depth){
  const start=layout.get(startId),zone=state.cells[startId]?.zone;
  if(!start||start.row!==0||!zone||![width,depth].every(n=>Number.isInteger(n)&&n>0&&n<=MAX_SIDE)||width*depth<2)return null;
  // Cell IDs already encode the road, side and grid coordinates. A lot needs
@@ -34,8 +34,12 @@ function reserve(state,layout,startId,width,depth){
  // Reject any rectangular envelope overlapping a previously reserved parcel,
  // including a parcel whose road was removed since it was first developed.
  if(Object.values(state.parcels).some(p=>Z.overlaps(frame,p.frame)))return null;
- const id='parcel-'+state.nextParcel++,parcel={id,zone,width,depth,cells:chosen.map(p=>p.id),frame};
- state.revision=(state.revision||0)+1;state.parcels[id]=parcel;for(const p of chosen)state.cells[p.id].owner=id;return parcel;
+ return {zone,width,depth,cells:chosen.map(p=>p.id),frame};
+}
+function reserve(state,layout,startId,width,depth){
+ const candidate=proposal(state,layout,startId,width,depth);if(!candidate)return null;
+ const id='parcel-'+state.nextParcel++,parcel={id,...candidate};
+ state.revision=(state.revision||0)+1;state.parcels[id]=parcel;for(const cell of parcel.cells)state.cells[cell].owner=id;return parcel;
 }
 function release(state,id){const parcel=state.parcels[id];if(!parcel)return false;for(const cell of parcel.cells)if(state.cells[cell]?.owner===id)delete state.cells[cell].owner;delete state.parcels[id];state.revision=(state.revision||0)+1;return true;}
 function terrainOccupancy(state){
@@ -72,5 +76,5 @@ function valid(state){
  }
  return true;
 }
-const api={create,grid,paint,reserve,release,terrainOccupancy,valid};if(typeof module!=='undefined')module.exports=api;else root.BoroughFineZones=api;
+const api={create,grid,paint,proposal,reserve,release,terrainOccupancy,valid};if(typeof module!=='undefined')module.exports=api;else root.BoroughFineZones=api;
 })(globalThis);

@@ -161,7 +161,16 @@ function fineZoneCells(w,ids,zone){if(zone!=='erase'&&!ZONES[zone])return {ok:fa
 function fineZoneRectangle(w,a,b){const layout=fineZoningLayout(w),pa=layout.get(a.id),pb=layout.get(b.id);if(!pa||!pb)return [];return [...layout.values()].filter(p=>pa.source===pb.source&&pa.side===pb.side?p.source===pa.source&&p.side===pa.side&&p.col>=Math.min(pa.col,pb.col)&&p.col<=Math.max(pa.col,pb.col)&&p.row>=Math.min(pa.row,pb.row)&&p.row<=Math.max(pa.row,pb.row):p.cx>=Math.min(pa.cx,pb.cx)-.01&&p.cx<=Math.max(pa.cx,pb.cx)+.01&&p.cz>=Math.min(pa.cz,pb.cz)-.01&&p.cz<=Math.max(pa.cz,pb.cz)+.01).map(p=>p.id);}
 function fineZoneBrush(w,start,size=1){return fineBrushCells(fineZoningLayout(w),start,size);}
 function fineBrushCells(layout,start,size){const first=layout.get(start.id);if(!first)return [];size=Math.max(1,Math.min(6,Math.floor(size)||1));return [...layout.values()].filter(p=>p.source===first.source&&p.side===first.side&&p.col>=first.col&&p.col<first.col+size&&p.row>=first.row&&p.row<first.row+size).map(p=>p.id);}
-function fineZoneStroke(w,a,b,size=1){const layout=fineZoningLayout(w),pa=layout.get(a.id),pb=layout.get(b.id);if(!pa||!pb)return [];const steps=Math.max(1,Math.ceil(Math.hypot(pb.cx-pa.cx,pb.cz-pa.cz)/.6)),ids=new Set();for(let n=0;n<=steps;n++){const p=Zoning.hit(layout,pa.cx+(pb.cx-pa.cx)*n/steps,pa.cz+(pb.cz-pa.cz)*n/steps);if(p)for(const id of fineBrushCells(layout,p,size))ids.add(id);}return [...ids];}
+function fineZoneStroke(w,a,b,size=1){
+ const layout=fineZoningLayout(w),pa=layout.get(a.id),pb=layout.get(b.id);if(!pa||!pb)return [];
+ const aligned=pa.source===pb.source&&pa.side===pb.side,steps=Math.max(1,aligned?Math.max(Math.abs(pb.col-pa.col),Math.abs(pb.row-pa.row)):Math.ceil(Math.hypot(pb.cx-pa.cx,pb.cz-pa.cz)/.6)),ids=new Set();
+ for(let n=0;n<=steps;n++){
+  // Stay in the street's own coordinates around bends. World interpolation
+  // cuts across the inside of the curve and silently skips frontage cells.
+  const p=aligned?layout.get(JSON.stringify([pa.source,pa.side,Math.round(pa.col+(pb.col-pa.col)*n/steps),Math.round(pa.row+(pb.row-pa.row)*n/steps)])):Zoning.hit(layout,pa.cx+(pb.cx-pa.cx)*n/steps,pa.cz+(pb.cz-pa.cz)*n/steps);
+  if(p)for(const id of fineBrushCells(layout,p,size))ids.add(id);
+ }return [...ids];
+}
 function fineZoneFill(w,start){const layout=fineZoningLayout(w),first=layout.get(start.id);if(!first)return [];const state=w.development,zone=state?.cells[first.id]?.zone;if(state?.cells[first.id]?.owner)return [];const lookup=new Map([...layout.values()].filter(p=>p.source===first.source&&p.side===first.side&&!state?.cells[p.id]?.owner&&state?.cells[p.id]?.zone===zone).map(p=>[p.col+','+p.row,p])),queue=[first],seen=new Set([first.id]);for(let n=0;n<queue.length;n++){const p=queue[n];for(const [x,y]of [[1,0],[-1,0],[0,1],[0,-1]]){const q=lookup.get((p.col+x)+','+(p.row+y));if(q&&!seen.has(q.id)){seen.add(q.id);queue.push(q);}}}return [...seen];}
 function demolishFineParcel(w,id){const p=Buildings.parcel(w,id);if(!p?.occupant)return {ok:false,reason:'Nothing to remove'};if(w.money<10)return {ok:false,reason:'Not enough funds'};w.money-=10;FineZones.release(w.development,id);return {ok:true,cost:10};}
 function playerZoneCells(w,cells,zone){const fine=cells.filter(c=>typeof c==='string'),legacy=cells.filter(c=>typeof c==='object'&&c&&w.tiles[c.y*48+c.x]?.zone),a=fine.length?fineZoneCells(w,fine,zone):{changed:0,blocked:0},b=legacy.length?zoneCells(w,legacy,zone):{changed:0,skipped:0};const changed=a.changed+b.changed,blocked=(a.blocked||0)+(b.skipped||0);return {ok:changed>0,changed,blocked,reason:changed?'':a.reason||b.reason||'No zoning changed'};}
@@ -178,6 +187,37 @@ function apartmentShapes(seed,shapes=apartmentLots){
  const rank=([width,depth])=>{let h=(seed^Math.imul(width*7+depth,0x45d9f3b))>>>0;h=Math.imul(h^(h>>>16),0x21f0aaad);return (h^(h>>>15))>>>0;};
  return shapes.slice().sort((a,b)=>rank(a)-rank(b));
 }
+const finePlanCache=new WeakMap();
+function fineLotShapes(zone,seed){
+ return zone.form==='lowrent'?apartmentShapes(seed).filter(([width,depth])=>width>=4&&depth>=4):zone.form==='row'?[[1+(seed>>>0)%3,3],[2,3],[1,3],[1,2]]:zone.type==='residential'&&zone.density==='low'?apartmentShapes(seed,[[2,2],[2,3],[3,2],[3,3],[3,4],[4,3],[4,4]]):zone.density==='high'?apartmentShapes(seed,[[6,6],[5,5],[4,4],[3,4],[4,3],[3,3]]):zone.type==='residential'?(zone.form==='mixed'?apartmentShapes(seed,[[4,4],[3,4],[3,3]]):apartmentShapes(seed)):[[4,3],[3,3],[2,3],[2,2]];
+}
+function fineZonePlan(w){
+ const state=w.development;if(!state)return [];
+ const layout=fineZoningLayout(w),cached=finePlanCache.get(w),revision=state.revision||0;
+ if(cached&&cached.layout===layout&&cached.state===state&&cached.revision===revision&&cached.seed===w.seed)return cached.lots;
+ const lots=[],claimed=new Set();
+ for(const p of layout.values()){
+  const cell=state.cells[p.id],zone=ZONES[cell?.zone];if(p.row!==0||!zone||cell.owner||claimed.has(p.id))continue;
+  const seed=Buildings.seed(p.id)^w.seed,shapes=fineLotShapes(zone,seed),minWidth=Math.min(...shapes.map(s=>s[0]));
+  const free=col=>{const id=JSON.stringify([p.source,p.side,col,0]),q=layout.get(id);return q&&!claimed.has(id)&&!state.cells[id]?.owner&&state.cells[id]?.zone===cell.zone&&Math.abs(Math.sin(q.angle-p.angle))<.09;};
+  // Look ahead only as far as the largest lot plus its minimum neighbor.
+  // Avoid leaving a single frontage cell that could never grow a house.
+  let run=0;while(run<12&&free(p.col+run))run++;
+  let candidate,fallback;
+  for(const [width,depth]of shapes){
+   const quote=FineZones.proposal(state,layout,p.id,width,depth);
+   if(!quote||quote.cells.some(id=>claimed.has(id)))continue;
+   fallback ||= quote;
+   if(run>width&&run-width<minWidth)continue;
+   candidate=quote;break;
+  }
+  candidate ||= fallback;
+  if(!candidate)continue;
+  for(const id of candidate.cells)claimed.add(id);
+  lots.push({...candidate,startId:p.id,roadIndex:p.roadIndex,seed});
+ }
+ finePlanCache.set(w,{layout,state,revision,seed:w.seed,lots});return lots;
+}
 function developFineZones(w,a,budget){
  const state=w.development;if(!state)return;let power=budget?.power??a.power-a.utilityNeed,water=budget?.water??a.water-a.utilityNeed;const random=rng(w.seed+w.simStep*1297+771),connected=p=>Buildings.frontage(w,p.id,a.roads).length>0;let changed=false;
  // Existing construction retains its parcel and pauses when essential access fails.
@@ -187,15 +227,16 @@ function developFineZones(w,a,budget){
  if(changed)state.revision=(state.revision||0)+1;
  if(power<8||water<8||a.happiness<=35)return;
  const layout=fineZoningLayout(w);let starts=0;
- for(const p of layout.values()){
-  if(starts>=6||power<8||water<8)break;const cell=state.cells[p.id],zone=ZONES[cell?.zone];if(!zone||cell.owner||p.row!==0||!a.roads.has(p.roadIndex))continue;
+ // Plan the whole frontage before rolling demand. A later random start must
+ // not steal cells from a neighboring multi-cell lot that is still waiting.
+ for(const plan of fineZonePlan(w)){
+  if(starts>=6||power<8||water<8)break;const zone=ZONES[plan.zone];if(!a.roads.has(plan.roadIndex))continue;
   const demand=zone.form==='mixed'?Math.min(a.demand[0],a.demand[1]):a.demand[zone.type==='residential'?0:zone.type==='commercial'?1:2];if(demand<15||random()>demand/500)continue;
-  const seed=Buildings.seed(p.id)^w.seed,shapes=zone.form==='lowrent'?apartmentShapes(seed).filter(([width,depth])=>width>=4&&depth>=4):zone.form==='row'?[[1+(seed>>>0)%3,3],[2,3],[1,3],[1,2]]:zone.type==='residential'&&zone.density==='low'?apartmentShapes(seed,[[2,2],[2,3],[3,2],[3,3],[3,4],[4,3],[4,4]]):zone.density==='high'?[[6,6],[5,5],[4,4],[3,4]]:zone.type==='residential'?(zone.form==='mixed'?[[4,4],[3,4],[3,3]]:apartmentShapes(seed)):[[4,3],[3,3],[2,3],[2,2]];
-  let parcel;for(const [width,depth]of shapes){parcel=FineZones.reserve(state,layout,p.id,width,depth);if(parcel)break;}if(!parcel)continue;
-  parcel.occupant={type:zone.type,building:fineBuilding(zone,seed>>>0),density:zone.density,level:1,people:0,variant:(seed>>>0)%4,construction:1};power-=8;water-=8;starts++;
+  const parcel=FineZones.reserve(state,layout,plan.startId,plan.width,plan.depth);if(!parcel)continue;
+  parcel.occupant={type:zone.type,building:fineBuilding(zone,plan.seed>>>0),density:zone.density,level:1,people:0,variant:(plan.seed>>>0)%4,construction:1};power-=8;water-=8;starts++;
  }
 }
 function validZoneSites(w){if(!Array.isArray(w.tiles))return false;return w.tiles.every((t,i)=>{if(!t)return false;if(t.zoneOwner===undefined)return t.zoneSite===undefined;const owner=t.zoneOwner;if(!Number.isInteger(owner)||owner<0||owner>=2304)return false;const site=w.tiles[owner]?.zoneSite;if(!site||site.owner!==owner||!Array.isArray(site.members)||site.members.length<2||site.members.length>16||site.width*site.depth!==site.members.length||new Set(site.members).size!==site.members.length||!site.members.includes(i)||!site.members.includes(owner))return false;if(owner!==i)return t.zoneSite===undefined&&t.people===0&&t.level===0&&t.type===w.tiles[owner].type;const p=site.oriented;return site.members.every(j=>Number.isInteger(j)&&j>=0&&j<2304&&w.tiles[j].zoneOwner===owner&&w.tiles[j].ground==='land')&&[site.width,site.depth].every(n=>Number.isInteger(n)&&n>0&&n<=4)&&p&&['cx','cz','angle','width','depth'].every(k=>Number.isFinite(p[k]))&&Math.abs(p.cx)<=96&&Math.abs(p.cz)<=96&&p.width>0&&p.width<=16&&p.depth>0&&p.depth<=16&&p.frontage&&[p.frontage.x,p.frontage.z].every(n=>Number.isFinite(n)&&Math.abs(n)<=100)&&(p.frontage.pathId===undefined||typeof p.frontage.pathId==='string')&&Number.isInteger(p.frontage.roadIndex)&&p.frontage.roadIndex>=0&&p.frontage.roadIndex<2304;});}
 
-const api={playerZoneCells,playerZoneRectangle,playerZoneBrush,playerZoneFill,playerZoneStroke,fineZoneRectangle,fineZoneBrush,fineZoneStroke,fineZoneFill,demolishFineParcel,fineZoningLayout,fineZoneCells,jobCapacity,hasShops,zoningLayout,zoneRectangle,FACILITY_SITES,FACILITY_DEFAULTS,facilityOwner,facilityCells,facilityQuote,walkQuote,buildWalkPath,removeWalkPath,ZONES,zoneAccess,zoneCells,rectangleCells,fillZoneCells,migrateZones,developmentStatus,ROADS,BUILDINGS,building,sampleRoad,roadQuote,buildRoadPath,removeRoadPath,lineTiles,buildRoad,GameSession,SIZE,AUTOSAVE_MS,KEY,TOOLS,createWorld,neighbors,analyze,place,tick,valid,WorldStore};if(typeof module!=='undefined')module.exports=api;else root.CityEngine=api;
+const api={fineZonePlan,playerZoneCells,playerZoneRectangle,playerZoneBrush,playerZoneFill,playerZoneStroke,fineZoneRectangle,fineZoneBrush,fineZoneStroke,fineZoneFill,demolishFineParcel,fineZoningLayout,fineZoneCells,jobCapacity,hasShops,zoningLayout,zoneRectangle,FACILITY_SITES,FACILITY_DEFAULTS,facilityOwner,facilityCells,facilityQuote,walkQuote,buildWalkPath,removeWalkPath,ZONES,zoneAccess,zoneCells,rectangleCells,fillZoneCells,migrateZones,developmentStatus,ROADS,BUILDINGS,building,sampleRoad,roadQuote,buildRoadPath,removeRoadPath,lineTiles,buildRoad,GameSession,SIZE,AUTOSAVE_MS,KEY,TOOLS,createWorld,neighbors,analyze,place,tick,valid,WorldStore};if(typeof module!=='undefined')module.exports=api;else root.CityEngine=api;
 })(globalThis);

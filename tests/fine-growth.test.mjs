@@ -49,3 +49,20 @@ test('low-rent blocks combine many roadside cells and preserve resident homes th
  const single=world();utilities(single);const first=[...E.fineZoningLayout(single).values()].find(p=>p.row===0&&p.cx>-60);
  E.fineZoneCells(single,[first.id],'residential_low');grow(single,100);assert.equal(Object.keys(single.development.parcels).length,0);
  });
+
+
+test('growth fills a planned frontage without stealing cells from waiting neighboring lots',()=>{
+ for(const zone of ['residential_low','residential_medium','residential_high','residential_row']){
+  const w=world();utilities(w);const layout=E.fineZoningLayout(w),a=[...layout.values()].find(p=>p.row===0&&p.side===-1&&p.cx>-70),ids=[...layout.values()].filter(p=>p.source===a.source&&p.side===a.side&&p.col>=a.col&&p.col<a.col+14&&p.row<4).map(p=>p.id);
+  assert.ok(E.fineZoneCells(w,ids,zone).ok);const plans=E.fineZonePlan(w),fronts=ids.filter(id=>layout.get(id).row===0);
+  assert.ok(plans.length>=3);assert.equal(new Set(plans.flatMap(p=>p.cells).filter(id=>layout.get(id).row===0)).size,fronts.length,'every street-facing cell belongs to a multi-cell lot');
+  const planned=new Map(plans.map(p=>[p.startId,p]));grow(w,160);const lots=Object.values(w.development.parcels);assert.equal(lots.length,plans.length);
+  for(const p of lots){const expected=planned.get(p.cells[0]);assert.ok(expected);assert.deepEqual(p.cells,expected.cells);assert.deepEqual(p.frame,expected.frame);assert.ok(p.cells.length>1);}
+  const saved=JSON.parse(JSON.stringify(w));assert.ok(E.valid(saved));assert.deepEqual(saved.development,w.development);
+ }
+});
+
+test('an imperfect frontage still develops when its remainder cannot fit another building',()=>{
+ const w=world();utilities(w);const layout=E.fineZoningLayout(w),a=[...layout.values()].find(p=>p.row===0&&p.side===-1&&p.cx>-70),ids=[...layout.values()].filter(p=>p.source===a.source&&p.side===a.side&&p.col>=a.col&&p.col<a.col+5&&p.row<3).map(p=>p.id);
+ E.fineZoneCells(w,ids,'residential_high');const plans=E.fineZonePlan(w);assert.equal(plans.length,1);assert.ok(plans[0].cells.length>=9);grow(w,100);assert.equal(Object.keys(w.development.parcels).length,1);assert.ok(E.valid(w));
+});
