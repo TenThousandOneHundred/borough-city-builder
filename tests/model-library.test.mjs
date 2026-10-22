@@ -14,7 +14,7 @@ loader.register(()=>({name:'test-images',loadTexture:()=>Promise.resolve(new THR
 async function library(){const lib=Object.create(ModelLibrary.prototype);lib.models=[];lib.materials=new Set();lib.lotGeometry=new THREE.PlaneGeometry(1,1);lib.lotGeometry.rotateX(-Math.PI/2);lib.view={renderer:{capabilities:{getMaxAnisotropy:()=>8}},landscape:{material:()=>new THREE.MeshStandardMaterial()}};
  for(const file of ['urban','industry','modern']){const data=fs.readFileSync(new URL('../dist/assets/buildings/'+file+'.glb',import.meta.url));const result=await loader.parseAsync(data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength),'');lib.ingest(result.scene);}return lib;}
 test('all complete building assets decode with finite UV-mapped geometry and valid categories',async()=>{
- const lib=await library();assert.equal(lib.models.length,76);assert.deepEqual([...new Set(lib.models.map(m=>m.category))].sort(),['commercial','fire','hospital','industrial','office','police','residential','residential-low','school']);
+ const lib=await library();assert.equal(lib.models.length,78);assert.deepEqual([...new Set(lib.models.map(m=>m.category))].sort(),['commercial','fire','hospital','industrial','office','police','residential','residential-low','school']);
  for(const model of lib.models){assert.ok(model.size.x>0&&model.size.y>0&&model.size.z>0);assert.ok(model.root.children.length<=(model.category==='commercial'?13:model.site?11:10));for(const mesh of model.root.children){if(mesh.material.map)assert.ok(mesh.geometry.attributes.uv);assert.ok([...mesh.geometry.attributes.position.array].every(Number.isFinite));}}
 });
 test('model placement fits saved lots uniformly and instancing survives demolition without disposing shared models',async()=>{
@@ -39,7 +39,7 @@ test('loaded models follow angled roads without stretching or overlapping neighb
 });
 
 test('modern library retains facade detail with shared materials and a bounded geometry cost',async()=>{
- const lib=await library(),modern=lib.models.filter(m=>m.family==='modern');assert.equal(modern.length,55);
+ const lib=await library(),modern=lib.models.filter(m=>m.family==='modern');assert.equal(modern.length,57);
  const materials=new Set();let triangles=0,hasWindowVariation=false;
  for(const model of modern){let count=0;for(const mesh of model.root.children){materials.add(mesh.material);count+=mesh.geometry.index.count/3;const color=mesh.geometry.attributes.color;assert.ok(color,'baked facade variation is retained');assert.ok([...color.array].every(Number.isFinite));if(new Set(color.array).size>3)hasWindowVariation=true;}assert.ok(count<(model.name.startsWith('perimeter-')?17000:model.building==='lowrent'?11000:model.site?8000:6600),model.name+' triangle budget');triangles+=count;}
  assert.ok(materials.size<=13,'materials are reused across modern buildings');assert.ok(triangles<196000);assert.ok(hasWindowVariation);
@@ -402,3 +402,15 @@ test('both new suburban houses occur in normal zoning at full scale and survive 
  }
  assert.deepEqual(found,wanted);
 });
+
+ test('low office zoning selects original small buildings at metre scale and high offices keep towers',async()=>{
+ const lib=await library(),world=E.createWorld('Office forms','plains',324),names=new Set(),offices=lib.models.filter(m=>m.building==='localoffice');assert.equal(offices.length,2);
+ for(const asset of offices){assert.ok(asset.floors>=2&&asset.floors<=3);assert.ok(asset.size.y<13);assert.ok(asset.streetFronts.some(f=>f.kind==='entrance'));assert.ok(asset.root.children.reduce((n,m)=>n+m.geometry.index.count/3,0)<1000);}
+ for(const [width,depth]of [[2,2],[3,2],[3,3],[4,6]])for(let seed=1;seed<=20;seed++){
+  const p={entityId:'parcel-'+seed,entitySeed:seed,definition:{type:'office',density:'low',building:'localoffice',level:5},width,depth,oriented:{cx:0,cz:0,angle:seed*.19,width:width*1.6-.04,depth:depth*1.6-.04,frontage:{x:0,z:8,roadIndex:1176}}},root=lib.create(world,1176,p),asset=lib.models.find(m=>m.name===root.userData.model),model=root.children[0];names.add(asset.name);
+  assert.equal(asset.building,'localoffice');assert.ok(root.userData.plan.floors<=3);assert.ok(model.scale.x>=.17);assert.equal(model.scale.x,model.scale.y);assert.equal(model.scale.y,model.scale.z);
+  root.rotation.y=0;root.position.set(0,0,0);root.updateMatrixWorld(true);const bounds=new THREE.Box3().setFromObject(model);assert.ok(bounds.min.x>=-p.oriented.width/2&&bounds.max.x<=p.oriented.width/2);assert.ok(bounds.min.z>=-p.oriented.depth/2&&bounds.max.z<=p.oriented.depth/2);
+  p.definition={type:'office',density:'high',building:'glass',level:5};const high=lib.create(world,1176,p);assert.ok(lib.models.find(m=>m.name===high.userData.model).floors>=5);
+ }
+ assert.equal(names.size,2,'both small office forms appear in normal lot selection');
+ });

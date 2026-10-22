@@ -407,6 +407,29 @@ m=Model('glass-podium-offices','office',21);h=m.shell(25,21,3,curtain=True);h=m.
 m=Model('stepped-concrete-offices','office',18);h=m.shell(24,20,3);h=m.shell(21,17,7,y=h,curtain=True);h=m.shell(16,13,5,x=-2,y=h,curtain=True);h=m.shell(11,9,3,x=-3,y=h,curtain=True);m.roofwork(-3,h,0,4,2);m.plant(8,32.3,4,2,5);m.entrance(10.5);m.finish()
 m=Model('elliptic-glass-offices','office',19);h=m.shell(23,19,2,bevel=3);h=m.shell(19,15,17,y=h,curtain=True,oval=True);m.roofwork(0,h,0);m.entrance(10);m.finish()
 m=Model('slender-glass-offices','office',23);h=m.shell(11,13,23,bevel=1.3,curtain=True);m.roofwork(0,h,0,4,2);m.entrance(7);m.finish()
+
+# Small workplaces use their own metre-scale forms, not scaled-down towers.
+# Reference: the official CS2 low-density-office district image, reviewed
+# before authoring these original facades, roof equipment and entry volumes.
+def office_solar(m,y,z):
+ for x in [-3,0,3]:
+  m.quad((x-1.2,y+.18,z+1),(x+1.2,y+.18,z+1),(x+1.2,y+.52,z-1),(x-1.2,y+.52,z-1),FRAME,(.34,.45,.54))
+  for dx in [-.4,.4]:m.quad((x+dx-.02,y+.19,z+1),(x+dx+.02,y+.19,z+1),(x+dx+.02,y+.53,z-1),(x+dx-.02,y+.53,z-1),CONCRETE)
+
+m=Model('corner-glass-local-offices','office',3,building='localoffice')
+h=m.shell(12,11,3,bevel=.2,curtain=True)
+# A projecting entrance bay and narrow upper fins break the facade silhouette.
+m.box(3.9,0,5.8,.18,h+.65,.65,PAINT);m.box(1.5,0,5.8,.18,h+.65,.65,PAINT)
+for y in [0,3.2,6.4,9.6]:m.box(2.7,y,5.8,2.6,.12,.65,PAINT)
+m.entrance(6.0,x=0);m.roofwork(2.5,h,-2.5,2.4,1.8);office_solar(m,h,1.2)
+m.finish()
+
+m=Model('garden-wing-local-offices','office',2,building='localoffice')
+h=m.shell(18,10,2,z=-1.5,bevel=.18,windowWidth=2.2,tint=(.78,.75,.65))
+m.shell(5,4,1,x=3.5,z=5.4,bevel=.15,curtain=True)
+m.box(3.5,3.15,7.6,5.6,.15,1.3,FRAME)
+m.plant(-5,0,5.6,5,2);m.roofwork(-4,h,-2.2,2.4,1.8);office_solar(m,h,1)
+m.finish()
 m=Model('garden-terrace-residences','residential',9);h=m.shell(24,18,4,balconies=True);m.plant(9,h+.3,4,2,7);h=m.shell(18,15,3,x=-2,y=h,balconies=True);m.plant(4,h+.3,3,2,5);h=m.shell(12,11,2,x=-4,y=h);m.roofwork(-4,h,0,3,2);m.entrance(10);m.finish()
 m=Model('balcony-podium-residences','residential',17);h=m.shell(22,19,3,curtain=True);h=m.shell(14,13,14,x=-1,y=h,bevel=1.2,balconies=True);m.roofwork(-1,h,0);m.plant(8,9.9,5,2,4);m.entrance(10);m.finish()
 m=Model('split-wing-residences','residential',10);h=m.shell(10,20,7,x=-6,balconies=True);m.roofwork(-6,h,0,3,2);h=m.shell(11,13,10,x=5,z=-3,balconies=True);m.roofwork(5,h,-3,3,2);m.shell(8,7,2,x=4,z=7,curtain=True);m.plant(5,6.7,7,5,3);m.entrance(11,-5);m.finish()

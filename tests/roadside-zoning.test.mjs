@@ -43,3 +43,15 @@ test('drag hit testing remains attached to the starting frontage outside the cel
  const {CityView}=await import('../dist/renderer.js'),w=world(),grid=E.fineZoningLayout(w),anchor=[...grid.values()].find(p=>p.row===0&&p.side===-1&&p.cx>-60),previous=globalThis.CityEngine;globalThis.CityEngine=E;
  try{const view={world:w,point:{x:-30,z:35},getTile:()=>({x:16,y:32})};const hit=CityView.prototype.getZoneDragTile.call(view,0,0,anchor);assert.ok(hit);const cell=grid.get(hit.id);assert.equal(cell.source,anchor.source);assert.equal(cell.side,anchor.side);assert.equal(cell.row,0);view.getTile=()=>null;assert.equal(CityView.prototype.getZoneDragTile.call(view,0,0,anchor),null);}finally{globalThis.CityEngine=previous;}
 });
+
+test('the depth offered for every zone permits development and shallower strips do not',()=>{
+ for(const [id,zone] of Object.entries(E.ZONES)){
+  const minimum=E.fineLotMinimumDepth(zone);assert.ok(minimum>=2&&minimum<=4);
+  for(const depth of [minimum-1,minimum]){
+   const w=world(),grid=E.fineZoningLayout(w),a=[...grid.values()].find(p=>p.row===0&&p.side===-1&&p.cx>-60),b=grid.get(JSON.stringify([a.source,a.side,a.col+11,depth-1]));
+   E.fineZoneCells(w,E.fineZoneRectangle(w,a,b),id);const plans=E.fineZonePlan(w);
+   assert.equal(plans.length>0,depth===minimum,id+' at '+depth+' cells deep');
+  }
+ }
+ assert.equal(E.fineLotMinimumDepth(E.ZONES.residential_lowrent),4);
+});

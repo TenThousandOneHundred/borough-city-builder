@@ -46,6 +46,7 @@ export function lotPlan(world,index,parcel){
  if(low)floors=style===0?1:2;
  else if(type==='commercial'&&density==='low')floors=style%3===0?2:1;
  else if(type==='industrial')floors=1;
+ else if(type==='office'&&density==='low')floors=2+style%2;
  else if(density==='medium'||tile.building==='apartments')floors=3+style%4;
  else{const large=width*depth>1;floors=type==='office'?(large?8:5)+Math.floor(variation*16):(large?5:3)+Math.floor(variation*10);}
  return{entityId:parcel?.entityId,facility:!!parcel?.facility,oriented:!!parcel?.oriented,ownedCells:parcel?.oriented&&!parcel.entityId?parcel.members:undefined,index,type,density,low,style,tone,variation,floors,angle,frontage,cx,cz,lotWidth,lotDepth,parcelWidth:parcel?.entityId?lotWidth:width*4,parcelDepth:parcel?.entityId?lotDepth:depth*4,seed:seed>>>0,level:tile.level};

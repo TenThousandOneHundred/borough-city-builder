@@ -3,7 +3,7 @@
 'use strict';
 const Z=typeof module!=='undefined'?require('./zoning-layout.js'):root.BoroughZoning;
 const CELL=1.6,MAX_SIDE=6;
-const zones=new Set(['residential_low','residential_row','residential_medium','residential_mixed','residential_lowrent','residential_high','commercial_low','commercial_high','industrial','office']);
+const zones=new Set(['residential_low','residential_row','residential_medium','residential_mixed','residential_lowrent','residential_high','commercial_low','commercial_high','industrial','office_low','office']);
 function create(){return {version:2,cellSize:CELL,revision:0,nextParcel:1,cells:{},parcels:{}};}
 function grid(world,roads){return Z.layout(world,roads,{cellSize:CELL,rows:6,independent:true});}
 function paint(state,layout,ids,zone){
