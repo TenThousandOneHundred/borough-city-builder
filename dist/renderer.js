@@ -1,25 +1,25 @@
-import './building-entities.js?v=96';
+import './building-entities.js?v=97';
 const Buildings=globalThis.BoroughBuildings;
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {ZonePlaneBatch} from './zoning-render-batch.js?v=96';
-import {trackAssetGroups} from './asset-transfer.js?v=96';
-import {buildFootpaths} from './footpaths.js?v=96';
-import {Transit,transitLeg,stopPosition} from './transit.js?v=96';
-import {SimulationClock} from './simulation-clock.js?v=96';
-import {Residents} from './residents.js?v=96';
-import {Traffic,carCapacity} from './traffic.js?v=96';
-import {Vehicles} from './vehicles.js?v=96';
-import {BuildingFactory} from './building-factory.js?v=96';
-import {StreetLife} from './street-life.js?v=96';
-import {visualParcels} from './parcels.js?v=96';
-import {Graphics} from './graphics.js?v=96';
-import {Vegetation} from './vegetation.js?v=96';
+import {ZonePlaneBatch} from './zoning-render-batch.js?v=97';
+import {trackAssetGroups} from './asset-transfer.js?v=97';
+import {buildFootpaths} from './footpaths.js?v=97';
+import {Transit,transitLeg,stopPosition} from './transit.js?v=97';
+import {SimulationClock} from './simulation-clock.js?v=97';
+import {Residents} from './residents.js?v=97';
+import {Traffic,carCapacity} from './traffic.js?v=97';
+import {Vehicles} from './vehicles.js?v=97';
+import {BuildingFactory} from './building-factory.js?v=97';
+import {StreetLife} from './street-life.js?v=97';
+import {visualParcels} from './parcels.js?v=97';
+import {Graphics} from './graphics.js?v=97';
+import {Vegetation} from './vegetation.js?v=97';
 import {RGBELoader} from './vendor/RGBELoader.js';
 import * as THREE from './vendor/three.module.js';
 import {OrbitControls} from './vendor/OrbitControls.js';
-import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=96';
-import {Architecture} from './architecture.js?v=96';
-import {Roadworks} from './roadworks.js?v=96';
+import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=97';
+import {Architecture} from './architecture.js?v=97';
+import {Roadworks} from './roadworks.js?v=97';
 const N=48,T=4,HALF=96,zoneColors={residential:'#54b663',commercial:'#5bb1d8',industrial:'#cdb268',office:'#aa87c9'};
 export class CityView{
 constructor(canvas){this.assetsReady=false;this.loadingElement=document.getElementById('sceneLoading');this.canvas=canvas;this.scene=new THREE.Scene();this.scene.background=new THREE.Color('#aebfca');this.scene.fog=new THREE.FogExp2('#b7c6cc',.00105);
@@ -144,9 +144,7 @@ showRoadPreview(controls,type,valid){this.clearLine();const points=CityEngine.sa
 getZoneTile(x,y){if(!this.getTile(x,y))return null;const p=BoroughZoning.hit(CityEngine.fineZoningLayout(this.world),this.point.x,this.point.z);if(p)return {id:p.id,x:p.index%48,y:Math.floor(p.index/48)};const old=BoroughZoning.hit(CityEngine.zoningLayout(this.world),this.point.x,this.point.z);return old&&this.world.tiles[old.index].zone?{legacy:true,x:old.index%48,y:Math.floor(old.index/48)}:null}
 getZoneDragTile(x,y,start){
  if(!this.getTile(x,y))return null;
- const layout=CityEngine.fineZoningLayout(this.world),anchor=layout.get(start.id);if(!anchor)return null;
- let closest=null,distance=Infinity;
- for(const p of layout.values())if(p.source===anchor.source&&p.side===anchor.side&&p.row===0){const d=(p.cx-this.point.x)**2+(p.cz-this.point.z)**2;if(d<distance){distance=d;closest=p;}}
+ const closest=CityEngine.fineZoneDragPoint(this.world,start,this.point.x,this.point.z);
  return closest?{id:closest.id,x:closest.index%48,y:Math.floor(closest.index/48)}:null;
 }
 

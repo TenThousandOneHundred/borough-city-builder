@@ -3,6 +3,7 @@
 const Zoning=typeof module!=='undefined'?require('./zoning-layout.js'):root.BoroughZoning;
 const Buildings=typeof module!=='undefined'?require('./building-entities.js'):root.BoroughBuildings;
 const FineZones=typeof module!=='undefined'?require('./fine-zoning-state.js'):root.BoroughFineZones;
+const Streets=typeof module!=='undefined'?require('./roadside-streets.js'):root.BoroughStreets;
 const Coastline=typeof module!=='undefined'?require('./coastline.js'):root.BoroughCoastline;
 const SIZE=48,AUTOSAVE_MS=300000,KEY='borough.worlds.v1';
 const TOOLS={path:{name:'Pedestrian path',icon:'♧',cost:20,upkeep:.1},inspect:{name:'Inspect',icon:'⌖',cost:0},road:{name:'Road',icon:'╬',cost:50},residential:{name:'Homes',icon:'⌂',cost:80},commercial:{name:'Retail',icon:'▤',cost:100},industrial:{name:'Industry',icon:'▥',cost:120},power:{name:'Power',icon:'ϟ',cost:1800,upkeep:35},water:{name:'Water',icon:'◉',cost:1200,upkeep:25},park:{name:'Park',icon:'♧',cost:300,upkeep:4},hospital:{name:'Health',icon:'✚',cost:2200,upkeep:30},school:{name:'School',icon:'▱',cost:1600,upkeep:20},office:{name:'Offices',icon:'▥',cost:160},police:{name:'Police station',icon:'◈',cost:1800,upkeep:22},fire:{name:'Fire station',icon:'♨',cost:1800,upkeep:22},garbage:{name:'Recycling center',icon:'♻',cost:1400,upkeep:18},bus:{name:'Bus depot',icon:'▣',cost:1600,upkeep:18},bulldoze:{name:'Remove',icon:'⌫',cost:10}};
@@ -167,10 +168,38 @@ function fineFrontages(layout){
 }
 function fineFrontage(layout,p){return fineFrontages(layout).sources.get(p.source)?.get(p.side)||[];}
 function fineZoneRectangle(w,a,b){const layout=fineZoningLayout(w),pa=layout.get(a.id),pb=layout.get(b.id);if(!pa||!pb)return [];const aligned=pa.source===pb.source&&pa.side===pb.side;return (aligned?fineFrontage(layout,pa):[...layout.values()]).filter(p=>aligned?p.col>=Math.min(pa.col,pb.col)&&p.col<=Math.max(pa.col,pb.col)&&p.row>=Math.min(pa.row,pb.row)&&p.row<=Math.max(pa.row,pb.row):p.cx>=Math.min(pa.cx,pb.cx)-.01&&p.cx<=Math.max(pa.cx,pb.cx)+.01&&p.cz>=Math.min(pa.cz,pb.cz)-.01&&p.cz<=Math.max(pa.cz,pb.cz)+.01).map(p=>p.id);}
-// Roadside strip always stays on the side where the drag began.
+const fineStreetCache=new WeakMap();
+function fineStreetSections(w,layout,first){
+ let cached=fineStreetCache.get(layout);if(!cached){cached=new Map();fineStreetCache.set(layout,cached);}
+ const key=JSON.stringify([first.source,first.side]);if(cached.has(key))return cached.get(key);
+ const raw=FineZones.grid(w,ROADS),sections=Streets.corridor(w,raw,first).map(section=>({...section,cells:fineFrontage(layout,section)}));
+ cached.set(key,sections);return sections;
+}
+// Roadside strip stays on the physical side where the drag began, even when
+// the next section was drawn in the opposite direction.
+function fineZoneDragPoint(w,start,x,z){
+ const layout=fineZoningLayout(w),first=layout.get(start.id);if(!first)return null;
+ let closest=null,distance=Infinity;
+ for(const section of fineStreetSections(w,layout,first))for(const p of section.cells)if(p.row===0){const d=(p.cx-x)**2+(p.cz-z)**2;if(d<distance){distance=d;closest=p;}}
+ return closest;
+}
 function fineZoneStrip(w,a,b,depth=3){
  const layout=fineZoningLayout(w),first=layout.get(a.id),last=layout.get(b.id);if(!first||!last)return [];
  depth=Math.max(1,Math.min(6,Math.floor(depth)||1));
+ const sections=fineStreetSections(w,layout,first),startIndex=sections.findIndex(s=>s.source===first.source),endIndex=sections.findIndex(s=>s.source===last.source&&s.side===last.side);
+ if(endIndex>=0&&endIndex!==startIndex){
+  const forward=endIndex>startIndex,selected=new Set();
+  for(let n=Math.min(startIndex,endIndex);n<=Math.max(startIndex,endIndex);n++){
+   const section=sections[n];for(const p of section.cells){
+    if(p.row>=depth)continue;
+    if(n===startIndex&&(p.col-first.col)*section.dir*(forward?1:-1)<0)continue;
+    if(n===endIndex&&(p.col-last.col)*section.dir*(forward?1:-1)>0)continue;
+    selected.add(p.id);
+   }
+  }
+  // Retain layout order so previews and committed lot planning agree.
+  const order=fineFrontages(layout).order;return [...selected].sort((a,b)=>order.get(a)-order.get(b));
+ }
  const frontage=fineFrontage(layout,first);let end=last;
  if(last.source!==first.source||last.side!==first.side){let distance=Infinity;for(const p of frontage)if(p.row===0){const d=(p.cx-last.cx)**2+(p.cz-last.cz)**2;if(d<distance){distance=d;end=p;}}}
  return frontage.filter(p=>p.col>=Math.min(first.col,end.col)&&p.col<=Math.max(first.col,end.col)&&p.row<depth).map(p=>p.id);
@@ -283,5 +312,5 @@ function developFineZones(w,a,budget){
 }
 function validZoneSites(w){if(!Array.isArray(w.tiles))return false;return w.tiles.every((t,i)=>{if(!t)return false;if(t.zoneOwner===undefined)return t.zoneSite===undefined;const owner=t.zoneOwner;if(!Number.isInteger(owner)||owner<0||owner>=2304)return false;const site=w.tiles[owner]?.zoneSite;if(!site||site.owner!==owner||!Array.isArray(site.members)||site.members.length<2||site.members.length>16||site.width*site.depth!==site.members.length||new Set(site.members).size!==site.members.length||!site.members.includes(i)||!site.members.includes(owner))return false;if(owner!==i)return t.zoneSite===undefined&&t.people===0&&t.level===0&&t.type===w.tiles[owner].type;const p=site.oriented;return site.members.every(j=>Number.isInteger(j)&&j>=0&&j<2304&&w.tiles[j].zoneOwner===owner&&w.tiles[j].ground==='land')&&[site.width,site.depth].every(n=>Number.isInteger(n)&&n>0&&n<=4)&&p&&['cx','cz','angle','width','depth'].every(k=>Number.isFinite(p[k]))&&Math.abs(p.cx)<=96&&Math.abs(p.cz)<=96&&p.width>0&&p.width<=16&&p.depth>0&&p.depth<=16&&p.frontage&&[p.frontage.x,p.frontage.z].every(n=>Number.isFinite(n)&&Math.abs(n)<=100)&&(p.frontage.pathId===undefined||typeof p.frontage.pathId==='string')&&Number.isInteger(p.frontage.roadIndex)&&p.frontage.roadIndex>=0&&p.frontage.roadIndex<2304;});}
 
-const api={fineZonePreview,fineLotMinimumDepth,fineZoneStrip,fineZonePlan,playerZoneCells,playerZoneRectangle,playerZoneBrush,playerZoneFill,playerZoneStroke,fineZoneRectangle,fineZoneBrush,fineZoneStroke,fineZoneFill,demolishFineParcel,fineZoningLayout,fineZoneCells,jobCapacity,hasShops,zoningLayout,zoneRectangle,FACILITY_SITES,FACILITY_DEFAULTS,facilityOwner,facilityCells,facilityQuote,walkQuote,buildWalkPath,removeWalkPath,ZONES,zoneAccess,zoneCells,rectangleCells,fillZoneCells,migrateZones,developmentStatus,ROADS,BUILDINGS,building,sampleRoad,roadQuote,buildRoadPath,removeRoadPath,lineTiles,buildRoad,GameSession,SIZE,AUTOSAVE_MS,KEY,TOOLS,createWorld,neighbors,analyze,place,tick,valid,WorldStore};if(typeof module!=='undefined')module.exports=api;else root.CityEngine=api;
+const api={fineZoneDragPoint,fineZonePreview,fineLotMinimumDepth,fineZoneStrip,fineZonePlan,playerZoneCells,playerZoneRectangle,playerZoneBrush,playerZoneFill,playerZoneStroke,fineZoneRectangle,fineZoneBrush,fineZoneStroke,fineZoneFill,demolishFineParcel,fineZoningLayout,fineZoneCells,jobCapacity,hasShops,zoningLayout,zoneRectangle,FACILITY_SITES,FACILITY_DEFAULTS,facilityOwner,facilityCells,facilityQuote,walkQuote,buildWalkPath,removeWalkPath,ZONES,zoneAccess,zoneCells,rectangleCells,fillZoneCells,migrateZones,developmentStatus,ROADS,BUILDINGS,building,sampleRoad,roadQuote,buildRoadPath,removeRoadPath,lineTiles,buildRoad,GameSession,SIZE,AUTOSAVE_MS,KEY,TOOLS,createWorld,neighbors,analyze,place,tick,valid,WorldStore};if(typeof module!=='undefined')module.exports=api;else root.CityEngine=api;
 })(globalThis);

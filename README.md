@@ -612,3 +612,18 @@ The two models add 3,760 triangles to the shared library and about 28 KiB to the
 The same 47-lot browser district selects 13 existing gabled terraces, 15 bell-gable terraces and 19 stepped-gable terraces. At the fixed test camera, the full scene rises from 62 to 78 draw calls and 452,690 to 504,259 triangles. The added visual variety has a measurable rendering cost; instancing and distant detail still apply. Automated checks cover ordinary zoning growth, road-facing multi-cell placement, authored door access, unchanged save state, reload selection, brick UV direction and the actual recessed attic opening.
 
 This is feature update one after the Edition 95 optimization. Two more feature updates precede the next dedicated optimization pass.
+
+
+## Edition 97 — Zoning along connected streets
+
+The Along road tool now follows a street across separately drawn straight and curved sections, including extensions of the starter road. It keeps the same physical side when the next section was drawn backwards. At a T junction it follows a clear straight continuation; it stops at an ambiguous fork. It does not jump to nearby disconnected streets or continue through highways. Removing a connecting road invalidates the cached street chain.
+
+The brush, live lot outlines, committed zoning and growth use the same selected cells. The six existing housing choices keep distinct building forms and multi-cell footprints: detached homes, row houses, medium apartments, apartments over shops, low-rent blocks and towers. Existing occupied lots, geometry, residents and save addresses are unchanged. This update fixes a continuous-street selection gap; it does not replace the zoning grid or add new building models.
+
+Reference: reviewed excerpts of the official [Zones & Signature Buildings video](https://www.youtube.com/watch?v=PBwwZ4XnW34) and [Zones, Zoning, Zoned developer video](https://www.youtube.com/watch?v=5eO3Bp5MnJQ), alongside the [zoning developer diary](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/zones-signature-buildings). Reference footage is not shipped as an asset.
+
+Validation: 342 automated tests pass, including both sides of joined curves, reverse-drawn sections, starter-road extensions, demolition, T junctions, ambiguous forks, disconnected streets, closed loops, all six housing forms and saved lot ownership. A real browser drag selected 220 squares across three sections. After simulated growth, 13 apartment buildings occupied 200 squares in four lot sizes, housing 296 residents. In the actual game, 33 painted squares formed four planned lots and survived manual save, save-and-exit, reload and Continue.
+
+The local browser's joined-street hit-test and strip selection measured 0.10 ms median and 0.20 ms p95 over 200 warmed samples. A paired 5,956-cell preview benchmark retained identical outputs and save data; existing single-section preview and brush times remained comparable with Edition 96. These measure CPU operations, not overall FPS. Street connections are cached and only consulted by zoning tools. Rendering assets and simulation scheduling are unchanged; model and distant-geometry URLs retain their previous asset versions to reuse browser downloads.
+
+This is feature update two after the Edition 95 optimization. One further feature update precedes the next dedicated optimization pass.
