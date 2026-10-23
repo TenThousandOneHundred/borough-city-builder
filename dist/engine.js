@@ -234,7 +234,7 @@ function apartmentShapes(seed,shapes){
 const finePlanCache=new WeakMap();
 function fineLotMinimumDepth(zone){return zone?.form==='lowrent'?4:zone?.form==='mixed'||zone?.density==='high'?3:2;}
 function fineLotShapes(zone,seed){
- const widths=zone.form==='row'?[1,2,3]:zone.form==='lowrent'?[4,5,6]:zone.form==='mixed'?[3,4]:zone.density==='high'?[3,4,5,6]:zone.type==='residential'&&zone.density==='low'?[2,3,4]:zone.type==='residential'?[2,3,4,5,6]:[2,3,4];
+ const widths=zone.form==='row'?[1,2,3]:zone.form==='lowrent'?[4,5,6]:zone.form==='mixed'||zone.density==='high'?[3,4,5,6]:zone.type==='residential'&&zone.density==='low'?[2,3,4]:zone.type==='residential'?[2,3,4,5,6]:[2,3,4];
  const minimumDepth=fineLotMinimumDepth(zone);
  // Vary frontage, but use the available painted depth before splitting the
  // next lot. Random shallow lots strand rear cells with no street access.

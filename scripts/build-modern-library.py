@@ -48,7 +48,7 @@ class Model:
  def band(self,points,y,h,mat=CONCRETE,color=(1,1,1)):
   for a,b in zip(points,points[1:]+points[:1]):self.quad((b[0],y,b[1]),(a[0],y,a[1]),(a[0],y+h,a[1]),(b[0],y+h,b[1]),mat,color)
   self.surface(points,y+h,mat,color)
- def shell(self,w,d,floors,x=0,z=0,y=0,bevel=.7,balconies=False,curtain=False,oval=False,tint=(1,1,1),cladding=CONCRETE,windowWidth=None,framed=False,balconySides=None,openRail=False,baySpacing=None,balconyDoors=(),frameOut=.06):
+ def shell(self,w,d,floors,x=0,z=0,y=0,bevel=.7,balconies=False,curtain=False,oval=False,tint=(1,1,1),cladding=CONCRETE,windowWidth=None,framed=False,balconySides=None,openRail=False,baySpacing=None,balconyDoors=(),frameOut=.06,retailWidth=None,retailGroup=3,clothAwning=False,compactFar=False):
   points=([(x+w/2*math.cos(j*math.tau/32),z+d/2*math.sin(j*math.tau/32)) for j in range(32)] if oval else self.ring(w,d,bevel,x,z))
   fh=3.2;top=y+floors*fh
   # Recessed dark walls sit behind individual panes and facade structure.
@@ -72,12 +72,16 @@ class Model:
     for lo,hi in [(level,level+bottom),(level+fh-upper,level+fh)]:
      if bands and abs(bands[-1][1]-lo)<1e-8:bands[-1]=(bands[-1][0],hi)
      else:bands.append((lo,hi))
-   for lo,hi in bands:self.quad(p(length,lo,.025),p(0,lo,.025),p(0,hi,.025),p(length,hi,.025),FRAME if curtain else cladding,(1,1,1) if curtain else tint)
+   for lo,hi in bands:
+    if shop and retailWidth and lo<y+fh:
+     split=min(hi,y+fh);self.quad(p(length,lo,.025),p(0,lo,.025),p(0,split,.025),p(length,split,.025),PAINT,(.70,.72,.68));lo=split
+    if hi>lo:self.quad(p(length,lo,.025),p(0,lo,.025),p(0,hi,.025),p(length,hi,.025),FRAME if curtain else cladding,(1,1,1) if curtain else tint)
    for f in range(floors):
     level=y+f*fh;retail=shop and f==0;bottom=.12 if retail else .32 if curtain else .75;upper=.55 if retail else .13 if curtain else .38
     for j in range(bays):
-     margin=.045 if curtain else max(.24,(bay-windowWidth)/2) if windowWidth else .24;l=j*bay+margin;r=(j+1)*bay-margin;shade=.74+((j*17+f*31+side*11)%19)/65
-     door=front and ((f==0 and (j%3==1 if retail else j==bays//2)) or (f>0 and j in balconyDoors))
+     opening=retailWidth if retail and retailWidth else windowWidth
+     margin=.045 if curtain else max(.24,(bay-opening)/2) if opening else .24;l=j*bay+margin;r=(j+1)*bay-margin;shade=.74+((j*17+f*31+side*11)%19)/65
+     door=front and ((f==0 and (j%retailGroup==1 if retail else j==bays//2)) or (f>0 and j in balconyDoors))
      sill=.08 if door else bottom
      if retail:
       self.shop_room(p,l,r,level,fh-upper,j,door)
@@ -93,15 +97,26 @@ class Model:
       self.detail=True
       for u in [centre-.14,centre+.14]:self.quad(p(u+.02,level+1,.13),p(u-.02,level+1,.13),p(u-.02,level+1.5,.13),p(u+.02,level+1.5,.13),CONCRETE)
       self.detail=False
-     if retail and j%3==0:
-      sl=j*bay+margin;sr=min(bays,j+3)*bay-margin
-      band=abs(sum(ord(c) for c in self.name)+j//3)%4;v0=(band+.06)/4;v1=(band+.94)/4
-      self.quad(p(sl,level+3.1,.02),p(sr,level+3.1,.02),p(sr,level+3.1,.85),p(sl,level+3.1,.85),FRAME)
-      for u in [sl,sr]:self.quad(p(u,level+2.73,.02),p(u,level+2.73,.85),p(u,level+3.1,.85),p(u,level+3.1,.02),FRAME)
-      self.quad(p(sr,level+2.73,.86),p(sl,level+2.73,.86),p(sl,level+3.08,.86),p(sr,level+3.08,.86),SIGN,uvs=[(0,v1),(1,v1),(1,v0),(0,v0)])
+     if retail and j%retailGroup==0:
+      sl=j*bay+margin;sr=min(bays,j+retailGroup)*bay-margin
+      band=abs(sum(ord(c) for c in self.name)+j//retailGroup)%4;v0=(band+.06)/4;v1=(band+.94)/4
+      if clothAwning:
+       # Shallow fabric canopies sit below separate wall-mounted shop signs.
+       # Reuse paint and the existing sign atlas, including at a distance.
+       fabric=(.80,.77,.64) if band%2 else (.24,.43,.39)
+       self.quad(p(sl,level+2.65,.07),p(sr,level+2.65,.07),p(sr,level+2.36,1.05),p(sl,level+2.36,1.05),PAINT,fabric)
+       self.quad(p(sr,level+2.24,1.05),p(sl,level+2.24,1.05),p(sl,level+2.36,1.05),p(sr,level+2.36,1.05),PAINT,fabric)
+       for u in [sl,sr]:self.quad(p(u,level+2.36,.07),p(u,level+2.36,1.05),p(u,level+2.65,.07),p(u,level+2.36,.07),PAINT,fabric)
+       self.quad(p(sr,level+2.78,.10),p(sl,level+2.78,.10),p(sl,level+3.12,.10),p(sr,level+3.12,.10),SIGN,uvs=[(0,v1),(1,v1),(1,v0),(0,v0)])
+      else:
+       self.quad(p(sl,level+3.1,.02),p(sr,level+3.1,.02),p(sr,level+3.1,.85),p(sl,level+3.1,.85),FRAME)
+       for u in [sl,sr]:self.quad(p(u,level+2.73,.02),p(u,level+2.73,.85),p(u,level+3.1,.85),p(u,level+3.1,.02),FRAME)
+       self.quad(p(sr,level+2.73,.86),p(sl,level+2.73,.86),p(sl,level+3.08,.86),p(sr,level+3.08,.86),SIGN,uvs=[(0,v1),(1,v1),(1,v0),(0,v0)])
      if (j*17+f*31+side*11)%9<2 and f>0:
       blindtop=level+fh-upper;blindbottom=blindtop-(fh-bottom-upper)*.36
+      self.detail=compactFar
       self.quad(p(r,blindbottom,glazing+.009),p(l,blindbottom,glazing+.009),p(l,blindtop,glazing+.009),p(r,blindtop,glazing+.009),BLIND,(shade,shade,shade))
+      self.detail=False
      # Shallow recess returns make window openings read in direct sunlight.
      if not curtain and not door:
       returnDepth=glazing-.035 if framed else -.07
@@ -110,7 +125,9 @@ class Model:
       self.quad(p(l,level+bottom-.07,.14),p(r,level+bottom-.07,.14),p(r,level+bottom,returnDepth),p(l,level+bottom,returnDepth),CONCRETE,tint)
       self.quad(p(r,level+fh-upper,.03),p(l,level+fh-upper,.03),p(l,level+fh-upper,returnDepth),p(r,level+fh-upper,returnDepth),CONCRETE,tint)
       self.detail=False
+      self.detail=compactFar
       for u,sign in [(l,-1),(r,1)]:self.quad(p(u,level+bottom,.03),p(u,level+bottom,returnDepth),p(u,level+fh-upper,returnDepth),p(u,level+fh-upper,.03),CONCRETE,(.78,.79,.76))
+      self.detail=False
     if balconies and length>5 and f>0 and (side in balconySides if balconySides is not None else side%2==0):
      # Slabs and framed balcony panels project from selected faces, not all faces.
      l=.45;r=length-.45;out=1.05;h=level+.12
@@ -137,8 +154,12 @@ class Model:
    self.detail=False
    # Continuous narrow mullions do not duplicate geometry at every floor.
    for j in range(bays+1):
-    u=j*bay;half=.045 if curtain else max(.22,(bay-windowWidth)/2) if windowWidth else .22;l=max(0,u-half);r=min(length,u+half)
-    self.quad(p(r,y,.06),p(l,y,.06),p(l,top,.06),p(r,top,.06),FRAME if curtain else cladding,(1,1,1) if curtain else tint)
+    u=j*bay
+    spans=[(y,y+fh,retailWidth,PAINT,(.70,.72,.68)),(y+fh,top,windowWidth,cladding,tint)] if shop and retailWidth else [(y,top,windowWidth,FRAME if curtain else cladding,(1,1,1) if curtain else tint)]
+    for lo,hi,opening,mat,color in spans:
+     if hi<=lo:continue
+     half=.045 if curtain else max(.22,(bay-opening)/2) if opening else .22;l=max(0,u-half);r=min(length,u+half)
+     self.quad(p(r,lo,.06),p(l,lo,.06),p(l,hi,.06),p(r,hi,.06),mat,color)
   # A raised, hollow parapet has an inner face and coping instead of a
   # solid cap. The membrane remains below its rim and catches roof shadows.
   inner=[(x+(px-x)*max(0,1-.5/w),z+(pz-z)*max(0,1-.5/d)) for px,pz in points]
@@ -146,7 +167,9 @@ class Model:
   for i,(a,b) in enumerate(zip(points,points[1:]+points[:1])):
    c,e=inner[i],inner[(i+1)%len(inner)]
    self.quad((b[0],top,b[1]),(a[0],top,a[1]),(a[0],top+.65,a[1]),(b[0],top+.65,b[1]),cladding,tint)
+   self.detail=compactFar
    self.quad((c[0],top,c[1]),(e[0],top,e[1]),(e[0],top+.65,e[1]),(c[0],top+.65,c[1]),CONCRETE,tint)
+   self.detail=False
    self.quad((a[0],top+.65,a[1]),(c[0],top+.65,c[1]),(e[0],top+.65,e[1]),(b[0],top+.65,b[1]),CONCRETE,tint)
   return top
  def window_frame(self,p,l,r,lo,hi,out=.06):
@@ -673,20 +696,35 @@ for x in [-4,0]:
  m.detail=True;m.box(x,h+1.2,-2,1.6,.08,1.4,CONCRETE);m.detail=False
 m.entrance(7.3,-2.22);finish_apartment(m)
 m=Model('corner-retail-gallery','commercial',3);h=m.shell(24,18,2,curtain=True);h=m.shell(14,12,1,x=-4,z=-2,y=h,curtain=True);m.plant(8,6.7,3,3,5);m.roofwork(-4,h,-2,4,2);m.entrance(10);m.finish()
-m=Model('neighborhood-mixed-use','commercial',5);h=m.shell(18,12,1,curtain=True);h=m.shell(17,11,4,y=h,balconies=True);m.roofwork(0,h,0,4,2);m.entrance(7);m.finish()
+def apartment_lobby(m,x,z):
+ # Separate dwelling access fits in the masonry pier between retail displays.
+ m.quad((x-.46,.08,z+.12),(x+.46,.08,z+.12),(x+.46,2.45,z+.12),(x-.46,2.45,z+.12),GLASS)
+ for dx in [-.49,.49]:m.box(x+dx,.08,z+.14,.06,2.43,.06,PAINT)
+ m.box(x,2.48,z+.27,1.16,.10,.46,FRAME)
+ m.streetFronts.append({'kind':'entrance','position':[x,.08,z+.16],'normal':[0,1],'width':.92})
+
+m=Model('neighborhood-mixed-use','commercial',5)
+h=m.shell(18,12,5,bevel=.12,cladding=BRICK,tint=(.61,.39,.30),windowWidth=1.65,framed=True,baySpacing=4.3,balconyDoors=(1,2),frameOut=.10,retailWidth=3.3,retailGroup=2,clothAwning=True,compactFar=True)
+for floor in range(1,5):
+ for x in [-2.22,2.22]:apartment_balcony(m,x,floor*3.2+.12,6.5,2.8)
+apartment_cornice(m,18.4,12.4,h-.16,.18)
+m.roofwork(0,h,-2,3,1.6)
+apartment_lobby(m,0,6)
+finish_apartment(m)
 m=Model('modern-courtyard-house','residential-low',2);h=m.shell(8,10,2,x=-3);m.shell(5,6,1,x=3,z=-2,curtain=True);m.box(3,0,4,4,.15,5,WOOD);m.plant(5,0,6,1,3);m.roofwork(-3,h,-2,1,.8);m.entrance(5.5,-3);m.finish()
 m=Model('modern-rowhouse','residential-low',3);h=m.shell(7,11,3,balconies=True);m.box(-2,0,5.55,.8,9.3,.16,WOOD);m.plant(2,0,6,1,2);m.roofwork(0,h,-2,1.2,1);m.entrance(6);m.finish()
 
 # Perimeter blocks use actual metre-sized wings around an open courtyard.
 # Their larger footprint fills consolidated zones without enlarging windows.
-def courtyard(name,category,floors,w=46,d=32,tint=(.86,.83,.74)):
+def courtyard(name,category,floors,w=46,d=32,tint=(.86,.83,.74),facade=None):
  m=Model(name,category,floors)
+ facade=facade or {}
  cladding=CONCRETE if category=='office' else BRICK
  # Separate wings leave a planted, ground-level central court; no solid podium.
- h=m.shell(w,9,floors,z=-(d-9)/2,bevel=.35,tint=tint,cladding=cladding)
- m.shell(w,9,floors-1,z=(d-9)/2,bevel=.35,tint=tint,balconies=category=='residential',cladding=cladding)
- m.shell(9,d-18,floors-1,x=-(w-9)/2,bevel=.35,tint=tint,cladding=cladding)
- m.shell(9,d-18,floors-2,x=(w-9)/2,bevel=.35,tint=tint,cladding=cladding)
+ h=m.shell(w,9,floors,z=-(d-9)/2,bevel=.35,tint=tint,cladding=cladding,**facade)
+ m.shell(w,9,floors-1,z=(d-9)/2,bevel=.35,tint=tint,balconies=category=='residential',cladding=cladding,**facade)
+ m.shell(9,d-18,floors-1,x=-(w-9)/2,bevel=.35,tint=tint,cladding=cladding,**facade)
+ m.shell(9,d-18,floors-2,x=(w-9)/2,bevel=.35,tint=tint,cladding=cladding,**facade)
  m.roofwork(-w*.28,h,-(d-9)/2,5,2)
  m.terrace(-w*.23,(floors-1)*3.2,(d-9)/2,10,5)
  m.terrace(w*.23,(floors-1)*3.2,(d-9)/2,10,5)
@@ -695,7 +733,10 @@ def courtyard(name,category,floors,w=46,d=32,tint=(.86,.83,.74)):
  m.plant(w*.23,h+.06,-(d-9)/2,min(10,w*.25),4.5)
  for x in [-w*.22,w*.22]:
   m.plant(x,0,0,5,5)
-  m.entrance(d/2+.35,x)
+  if not facade:m.entrance(d/2+.35,x)
+ if facade:
+  front=w-.7;bays=round(front/facade['baySpacing']);bay=front/bays
+  for j in [2,bays-3]:apartment_lobby(m,front/2-j*bay,d/2)
  # Benches and walkways make the courtyard read as usable shared space.
  m.box(0,.02,0,w-18,.08,1.8,ROOF)
  for x in [-6,6]:m.box(x,.45,3,3,.18,.6,WOOD)
@@ -703,10 +744,10 @@ def courtyard(name,category,floors,w=46,d=32,tint=(.86,.83,.74)):
 m=courtyard('perimeter-garden-apartments','residential',6);m.finish()
 m=courtyard('perimeter-terrace-residences','residential',9,48,34,tint=(.95,.72,.55));m.finish()
 m=courtyard('perimeter-tower-residences','residential',10,46,32,tint=(.72,.80,.82));h=m.shell(14,9,5,x=-12,z=-11.5,y=32,curtain=True);m.roofwork(-12,h,-11.5,4,2);m.floors=15;m.finish()
-m=courtyard('perimeter-mixed-use','commercial',6,44,30,tint=(.86,.67,.51))
+m=courtyard('perimeter-mixed-use','commercial',6,44,30,tint=(.72,.73,.60),facade={'windowWidth':1.65,'framed':True,'baySpacing':4.6,'frameOut':.10,'retailWidth':3.3,'retailGroup':2,'clothAwning':True,'compactFar':True})
 # Street-level canopies run along the retail frontage, leaving entrances between.
 # Individual sign-fronted canopies are generated with each storefront bay.
-m.finish()
+finish_apartment(m)
 m=courtyard('perimeter-campus-offices','office',10,44,32,tint=(.72,.76,.73));m.finish()
 
 # Compact urban service facilities fit the game's existing owned lots. These

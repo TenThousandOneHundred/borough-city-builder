@@ -80,7 +80,7 @@ test('street setbacks remain inside owned parcels at every road angle',async()=>
 });
 
 test('brick facades retain metre-scale UVs, PBR textures and accurate packed normals',async()=>{
- const lib=await library(),bricks=lib.models.flatMap(m=>m.root.children).filter(m=>m.material.name==='modern-brick');assert.equal(bricks.length,35);
+ const lib=await library(),bricks=lib.models.flatMap(m=>m.root.children).filter(m=>m.material.name==='modern-brick');assert.equal(bricks.length,36);
  for(const mesh of bricks){assert.ok(mesh.material.map);assert.ok(mesh.material.normalMap);assert.ok(mesh.material.roughnessMap);const uv=mesh.geometry.attributes.uv;const p=mesh.geometry.attributes.position;for(let i=0;i<p.count;i+=4){const metres=Math.hypot(p.getX(i+1)-p.getX(i),p.getY(i+1)-p.getY(i),p.getZ(i+1)-p.getZ(i));assert.ok(Math.abs(Math.hypot(uv.getX(i+1)-uv.getX(i),uv.getY(i+1)-uv.getY(i))-metres/2)<1e-5,'brick texture maintains two-metre repeat scale');}}
  for(const model of lib.models.filter(m=>m.family==='modern'))for(const mesh of model.root.children){const n=mesh.geometry.attributes.normal;assert.ok(n.normalized);assert.ok(n.array instanceof Int8Array);for(let i=0;i<n.count;i++){const length=Math.hypot(n.getX(i),n.getY(i),n.getZ(i));assert.ok(Math.abs(length-1)<.012,'lighting normals retain unit length');}}
 });
@@ -315,6 +315,39 @@ test('office districts mix full-scale silhouettes without increasing model geome
 
  test('mixed-use lots select detailed shopfront apartment models with shared geometry',async()=>{const lib=await library(),w=E.createWorld('Mixed models','plains',8),index=23*48+8;Object.assign(w.tiles[index],{type:'residential',building:'mixeduse',density:'medium',level:2});const g=lib.create(w,index,{width:2,depth:2});assert.ok(g.userData.model.includes('mixed-use'));const asset=lib.models.find(m=>m.name===g.userData.model);assert.equal(g.children[0].children[0].geometry,asset.root.children[0].geometry);assert.equal(g.children[0].children[0].material,asset.root.children[0].material);});
 
+test('mixed-use storefronts keep broad displays, separate apartment access and open courtyard space',async()=>{
+ const lib=await library(),bytes=fs.readFileSync(new URL('../dist/assets/buildings/lod.bin',import.meta.url));lib.ingestLod(JSON.parse(fs.readFileSync(new URL('../dist/assets/buildings/lod.json',import.meta.url))),bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.length));
+ for(const name of ['neighborhood-mixed-use','perimeter-mixed-use']){
+  const model=lib.models.find(m=>m.name===name),shop=model.root.children.find(m=>m.material.name==='modern-shop-glass'),p=shop.geometry.attributes.position;
+  const displayWidths=[];for(let i=0;i<p.count;i+=4)displayWidths.push(Math.abs(p.getX(i+1)-p.getX(i)));
+  assert.ok(displayWidths.some(w=>w>3),'street display windows are broader than apartment windows');
+  assert.ok(model.streetFronts.filter(f=>f.kind==='shop').length>=2);model.root.updateMatrixWorld(true);
+  const check=()=>{
+   const lobby=model.streetFronts.find(f=>f.kind==='entrance');assert.ok(lobby);assert.ok(lobby.width>.8&&lobby.width<1.4);
+   const ray=(x,y)=>new THREE.Raycaster(new THREE.Vector3(x+model.origin.x,y+model.origin.y,100),new THREE.Vector3(0,0,-1)).intersectObject(model.root,true);
+   assert.equal(ray(lobby.position[0],1.4)[0].object.material.name,'modern-glass','apartment entrance is visible between shops');
+   if(name==='neighborhood-mixed-use'){
+    const hits=ray(7.2,1.5);assert.equal(hits[0].object.material.name,'modern-shop-glass');assert.ok(hits.some(h=>h.object.material.name==='modern-recess'&&h.point.z<hits[0].point.z-.5),'display glazing has a room behind it');
+   }else{
+    const hit=new THREE.Raycaster(new THREE.Vector3(model.origin.x,100,model.origin.z),new THREE.Vector3(0,-1,0)).intersectObject(model.root,true)[0];assert.ok(hit);assert.ok(hit.point.y<1+model.origin.y,'courtyard stays open to ground level');
+   }
+  };
+  check();for(const mesh of model.root.children)mesh.geometry=mesh.geometry.userData.lod;check();
+ }
+});
+
+test('mixed-use zoning grows small shopfronts and full-size courtyard blocks on varied lots and reloads them',async()=>{
+ const lib=await library(),w=E.createWorld('Mixed-use street','plains',8);w.money=1e6;E.place(w,1,23,'power');E.place(w,2,23,'water');
+ const grid=E.fineZoningLayout(w),ids=[...grid.values()].filter(p=>p.side===-1&&p.row<6).map(p=>p.id);E.fineZoneCells(w,ids,'residential_mixed');
+ for(let n=0;n<160;n++)E.tick(w);
+ const B=globalThis.BoroughBuildings,lots=Object.values(w.development.parcels).filter(p=>p.occupant&&!p.occupant.construction),names=new Set(),state=JSON.stringify(w);
+ assert.ok(lots.some(p=>p.width>=5),'mixed-use planning must allow larger frontage');assert.ok(lots.some(p=>p.width<=4),'small shopfront sites remain available');
+ const selections=new Map();for(const p of lots){const parcel=B.renderParcel(w,p.id),root=lib.create(w,parcel.index,parcel);names.add(root.userData.model);selections.set(p.id,root.userData.model);assert.ok(root.children[0].scale.x>=.17,'larger blocks retain authored metre scale');assert.equal(root.rotation.y,p.frame.angle);assert.ok(root.userData.plan.entranceXs.length>0,'separate apartment entrances connect to the street');}
+ assert.deepEqual(names,new Set(['neighborhood-mixed-use','perimeter-mixed-use']));assert.equal(JSON.stringify(w),state);
+ const copy=JSON.parse(state);assert.ok(E.valid(copy));E.fineZonePlan(copy);assert.deepEqual(copy.development,w.development,'replanning cannot resize saved occupied lots');
+ for(const p of lots){const parcel=B.renderParcel(copy,p.id);assert.equal(lib.create(copy,parcel.index,parcel).userData.model,selections.get(p.id));}
+});
+
 test('road-facing row lots repeat full-size shared homes with individual doors and bounded rear gardens',async()=>{
  const lib=await library(),world=E.createWorld('Terrace frontage','plains',431),index=20*48+20;world.tiles[index]={type:'residential',density:'medium',building:'townhouse',level:2};
  const parcel={width:2,depth:2,members:[index,index+1,index+48,index+49],oriented:{cx:0,cz:0,width:7.88,depth:7.88,angle:.35,frontage:{x:0,z:6}}},before=JSON.stringify(world),root=lib.create(world,index,parcel),asset=lib.models.find(m=>m.name===root.userData.model),copies=root.userData.homeCopies,p=root.userData.plan;
@@ -391,7 +424,7 @@ test('smallest apartment lots select different full-scale forms while retaining 
 
 test('framed apartment windows keep recessed glass and sash profiles at full and distant detail',async()=>{
  const lib=await library(),bytes=fs.readFileSync(new URL('../dist/assets/buildings/lod.bin',import.meta.url));lib.ingestLod(JSON.parse(fs.readFileSync(new URL('../dist/assets/buildings/lod.json',import.meta.url))),bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.length));
- for(const name of ['compact-hipped-apartments','brick-neighborhood-walkup','small-courtyard-apartments','narrow-balcony-apartments','linear-balcony-apartments','stepped-midrise-apartments']){
+ for(const name of ['compact-hipped-apartments','brick-neighborhood-walkup','small-courtyard-apartments','narrow-balcony-apartments','linear-balcony-apartments','stepped-midrise-apartments','neighborhood-mixed-use','perimeter-mixed-use']){
   const model=lib.models.find(m=>m.name===name),panes=[];
   for(const mesh of model.root.children.filter(m=>m.material.name==='modern-glass'||m.material.name==='modern-glass-occupied')){
    const pos=mesh.geometry.attributes.position,normal=mesh.geometry.attributes.normal;
