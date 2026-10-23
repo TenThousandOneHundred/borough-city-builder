@@ -1,13 +1,25 @@
 (function(root){
 'use strict';
 const cache=new WeakMap(),SIZE=48,CELL=4;
+function sameTiles(tiles,previous){
+ if(tiles.length!==previous.grounds.length)return false;
+ for(let i=0;i<tiles.length;i++){
+  const t=tiles[i],road=previous.roads[i];if(t.ground!==previous.grounds[i]||(t.type==='road')!==!!road)return false;
+  if(!road)continue;
+  if(t.roadType!==road.type||t.roadWidth!==road.width||t.legacyRoad!==road.legacy||(t.pathIds?.length||0)!==road.paths.length)return false;
+  for(let j=0;j<road.paths.length;j++)if(t.pathIds[j]!==road.paths[j])return false;
+ }return true;
+}
+function tileSnapshot(tiles){return {grounds:tiles.map(t=>t.ground),roads:tiles.map(t=>t.type==='road'?{type:t.roadType,width:t.roadWidth,legacy:t.legacyRoad,paths:t.pathIds?.slice()||[]}:null)};}
 const indexAt=(x,z)=>{const a=Math.floor((x+96)/4),b=Math.floor((z+96)/4);return a<0||b<0||a>=48||b>=48?-1:b*48+a;};
 function corners(p,width=p.width||CELL,depth=p.depth||CELL){const c=Math.cos(p.angle),s=Math.sin(p.angle);return [[-1,-1],[1,-1],[1,1],[-1,1]].map(([x,z])=>({x:p.cx+x*width/2*c+z*depth/2*s,z:p.cz-x*width/2*s+z*depth/2*c}));}
 function overlaps(a,b){const ac=Math.cos(a.angle),as=Math.sin(a.angle),bc=Math.cos(b.angle),bs=Math.sin(b.angle),dx=b.cx-a.cx,dz=b.cz-a.cz;for(const [x,z]of [[ac,-as],[as,ac],[bc,-bs],[bs,bc]]){const ar=Math.abs(x*ac-z*as)*(a.width||4)/2+Math.abs(x*as+z*ac)*(a.depth||4)/2,br=Math.abs(x*bc-z*bs)*(b.width||4)/2+Math.abs(x*bs+z*bc)*(b.depth||4)/2;if(Math.abs(dx*x+dz*z)>=ar+br-.02)return false;}return true;}
 function layout(w,roads,options={}){
  const cellSize=options.cellSize??4,rows=options.rows??4,independent=options.independent===true;if(![1.6,4].includes(cellSize)||!Number.isInteger(rows)||rows<1||rows>6)throw Error('Unsupported zoning grid dimensions');const variant=cellSize+':'+rows+':'+independent;
- const signature=JSON.stringify(w.roadPaths||[])+'|'+w.tiles.map(t=>t.ground+'/'+(t.type==='road'?[t.roadType,t.roadWidth,t.legacyRoad,(t.pathIds||[]).join(',')].join(':'):'')).join(';');
- const variants=cache.get(w)||new Map(),old=variants.get(variant);if(old?.signature===signature)return old.cells;
+ const paths=JSON.stringify(w.roadPaths||[]),variants=cache.get(w)||new Map(),old=variants.get(variant);
+ // Hover and brush queries still detect in-place road/terrain edits, but an
+ // unchanged map no longer allocates thousands of temporary strings.
+ if(old?.paths===paths&&sameTiles(w.tiles,old.tiles))return old.cells;
  const candidates=[],sources=[],roadBins=new Map();
  function roadRectangle(a,b,width){const dx=b.x-a.x,dz=b.z-a.z,length=Math.hypot(dx,dz);if(length<1e-8)return;const p={cx:(a.x+b.x)/2,cz:(a.z+b.z)/2,angle:Math.atan2(-dz,dx),width:length+.05,depth:width+.8},points=corners(p,p.width,p.depth),minX=Math.floor(Math.min(...points.map(v=>v.x))/8),maxX=Math.floor(Math.max(...points.map(v=>v.x))/8),minZ=Math.floor(Math.min(...points.map(v=>v.z))/8),maxZ=Math.floor(Math.max(...points.map(v=>v.z))/8);for(let z=minZ;z<=maxZ;z++)for(let x=minX;x<=maxX;x++){const key=x+','+z;if(!roadBins.has(key))roadBins.set(key,[]);roadBins.get(key).push(p);}}
  function crossesRoad(p){const x=Math.floor(p.cx/8),z=Math.floor(p.cz/8),seen=new Set();for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++)for(const road of roadBins.get((x+dx)+','+(z+dz))||[]){if(seen.has(road))continue;seen.add(road);if(overlaps(p,road))return true;}return false;}
@@ -30,7 +42,7 @@ function layout(w,roads,options={}){
  // Only retain an unbroken column from the sidewalk. A rejected frontage
  // cell must not leave floating buildable cells behind a crossing or curve.
  if(independent&&p.row>0&&!cells.has(JSON.stringify([p.source,p.side,p.col,p.row-1])))continue;const x=Math.floor(p.cx/8),z=Math.floor(p.cz/8);let collision=false;for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++)for(const q of bins.get((x+dx)+','+(z+dz))||[])if(overlaps(p,q))collision=true;if(collision)continue;cells.set(cellKey,p);const key=x+','+z;if(!bins.has(key))bins.set(key,[]);bins.get(key).push(p);}
- variants.set(variant,{signature,cells});cache.set(w,variants);return cells;
+ variants.set(variant,{paths,tiles:tileSnapshot(w.tiles),cells});cache.set(w,variants);return cells;
 }
 function hit(cells,x,z){for(const p of cells.values()){const dx=x-p.cx,dz=z-p.cz,c=Math.cos(p.angle),s=Math.sin(p.angle);if(Math.abs(dx*c-dz*s)<=(p.width||4)/2&&Math.abs(dx*s+dz*c)<=(p.depth||4)/2)return p;}return null;}
 function selection(cells,a,b){const pa=cells.get(a.y*48+a.x),pb=cells.get(b.y*48+b.x);if(pa&&pb&&pa.source===pb.source&&pa.side===pb.side)return [...cells.values()].filter(p=>p.source===pa.source&&p.side===pa.side&&p.col>=Math.min(pa.col,pb.col)&&p.col<=Math.max(pa.col,pb.col)&&p.row>=Math.min(pa.row,pb.row)&&p.row<=Math.max(pa.row,pb.row)).map(p=>({x:p.index%48,y:Math.floor(p.index/48)}));return [...cells.values()].filter(p=>p.index%48>=Math.min(a.x,b.x)&&p.index%48<=Math.max(a.x,b.x)&&Math.floor(p.index/48)>=Math.min(a.y,b.y)&&Math.floor(p.index/48)<=Math.max(a.y,b.y)).map(p=>({x:p.index%48,y:Math.floor(p.index/48)}));}

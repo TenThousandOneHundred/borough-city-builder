@@ -76,3 +76,28 @@ test('rezoning and erasing previews preserve occupied homes and only virtually r
   E.fineZoneCells(w,ids,zone);const selection=new Set(ids),plans=zone==='erase'?[]:E.fineZonePlan(w).filter(p=>p.cells.some(id=>selection.has(id)));assert.deepEqual(preview.lots,plans);assert.ok(E.valid(w));
  }
 });
+
+test('indexed roadside queries remain fresh through painting, reservations, demolition, roads and terrain changes',()=>{
+ const w=world();let checks=0;
+ function audit(){
+  const copy=JSON.parse(JSON.stringify(w)),grid=E.fineZoningLayout(w),cells=[...grid.values()],saved=JSON.stringify(w);
+  for(const n of [0,Math.floor(cells.length/3),Math.floor(cells.length*2/3)]){
+   const a=cells[n],same=cells.filter(p=>p.source===a.source&&p.side===a.side),b=same.at(-1),other=cells.at(-1);
+   for(const [method,args]of [['fineZoneStrip',[a,b,4]],['fineZoneStrip',[a,other,6]],['fineZoneRectangle',[a,b]],['fineZoneRectangle',[a,other]],['fineZoneBrush',[a,4]],['fineZoneStroke',[a,b,2]],['fineZoneFill',[a]]])assert.deepEqual(E[method](w,...args),E[method](copy,...args),method);
+   const ids=E.fineZoneStrip(w,a,b,4);assert.deepEqual(E.fineZonePreview(w,ids,'residential_medium'),E.fineZonePreview(copy,ids,'residential_medium'));
+  }
+  assert.equal(JSON.stringify(w),saved);checks++;
+ }
+ audit();const grid=E.fineZoningLayout(w);E.fineZoneCells(w,[...grid.keys()],'residential_low');audit();
+ const first=E.fineZonePlan(w)[0],parcel=F.reserve(w.development,grid,first.startId,first.width,first.depth);parcel.occupant={type:'residential',density:'low',building:'cottage',level:1,people:4,variant:0};audit();
+ parcel.occupant.construction=2;w.development.revision++;audit();E.demolishFineParcel(w,parcel.id);audit();
+ const road=E.buildRoadPath(w,[{x:19,y:24},{x:34,y:12},{x:42,y:25}]).path;assert.ok(road);audit();E.removeRoadPath(w,road.id);audit();
+ E.place(w,1,23,'power');audit();const cell=[...E.fineZoningLayout(w).values()].find(p=>p.row===2&&p.cx>-60);w.tiles[cell.index].ground='water';audit();assert.equal(checks,9);
+});
+test('preview combines several road sides in the original lot order and does not mutate frozen construction',()=>{
+ const w=world();E.buildRoadPath(w,[{x:19,y:24},{x:34,y:12},{x:42,y:25}]);const grid=E.fineZoningLayout(w);E.fineZoneCells(w,[...grid.keys()],'residential_low');
+ const first=E.fineZonePlan(w)[0],parcel=F.reserve(w.development,grid,first.startId,first.width,first.depth);parcel.occupant={type:'residential',density:'low',building:'cottage',level:1,people:0,variant:0,construction:2};
+ const ids=[...grid.values()].filter(p=>p.row<4&&p.col%20<10).map(p=>p.id).reverse();ids.push(...parcel.cells);const copy=JSON.parse(JSON.stringify(w)),saved=JSON.stringify(w);
+ function freeze(value){if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}}freeze(w);
+ const preview=E.fineZonePreview(w,ids,'residential_medium');assert.equal(JSON.stringify(w),saved);E.fineZoneCells(copy,ids,'residential_medium');const selected=new Set(ids),plans=E.fineZonePlan(copy).filter(p=>p.cells.some(id=>selected.has(id)));assert.deepEqual(preview.lots,plans);assert.ok(preview.lots.length>5);assert.ok(E.valid(copy));
+});

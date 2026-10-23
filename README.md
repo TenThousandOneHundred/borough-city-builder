@@ -590,3 +590,13 @@ All 331 automated checks pass. Tests compare preview lots with committed plannin
 The 60-lot hardscape comparison falls from 19,436 to 10,466 triangles (about 46% fewer); isolated hardscape material/geometry batches increase from seven to nine. Planning is about 0.005 ms per lot. In a 5,956-cell city, live lot preview planning measured 9.68 ms for changed selections and 0.38 ms for cached selections. These are local operation measurements, not an FPS guarantee. The 78 building models, model downloads, instancing and independent traffic/resident simulation remain intact. Run `scripts/benchmark-site-grounds.mjs` and `scripts/benchmark-zone-preview.mjs` for these measurements.
 
 This is the third feature update since Edition 91. The next update must be a dedicated optimization pass before adding more features.
+
+## Edition 95 — Faster roadside zoning queries
+
+Roadside strip, brush, rectangle and fill selections now reuse an index of each road frontage. Live building-lot previews copy only the affected frontages instead of the entire city's zoning state. Layout cache checks compare road and ground fields directly, avoiding thousands of temporary strings on unchanged maps. Edits to roads, curves, terrain and building occupancy still invalidate the appropriate caches. Construction previews remain isolated from saved parcel ownership.
+
+The paired comparison uses the Edition 94 engine and layout modules against the current modules on the same deterministic 5,956-cell city. With 238 occupied lots, median changed-selection planning decreased from 4.16 to 1.87 ms and a long roadside brush stroke from 4.82 to 0.38 ms. Every compared preview and selection is identical, and the world data remains unchanged. Run `node scripts/compare-zone-preview.mjs` to repeat it; set `GIT_BIN` if Git is installed outside the usual path.
+
+The browser comparison measured changed-selection planning at 3.7 versus 2.0 ms and the long brush stroke at 4.3 versus 0.4 ms, with identical output. These are local zoning-operation timings, not overall frame rates or a guarantee for other devices. Actual game checks painted 11 cells into three outlined lots, verified a manual save, returned home, reloaded and continued with the zones retained.
+
+The building models, textures, terrain geometry, resident travel and simulation scheduling are unchanged. This is the dedicated optimization pass after Editions 92–94; the feature-update counter resets to zero.

@@ -41,3 +41,24 @@ test('zoning overlay batches hundreds of cells while retaining their geometry an
 test('zoning cell footprints stay clear of crossing streets, not only their center tiles',()=>{const w=world();E.buildRoadPath(w,[{x:19,y:24},{x:36,y:9}],'street');E.buildRoadPath(w,[{x:25,y:8},{x:25,y:34}],'boulevard');const cells=E.zoningLayout(w);let violations=0;for(const p of cells.values())for(const path of w.roadPaths){const points=E.sampleRoad(path.controls);for(let k=1;k<points.length;k++){const a=points[k-1],b=points[k],dx=(b.x-a.x)*4,dz=(b.y-a.y)*4,road={cx:(a.x+b.x+1)*2-96,cz:(a.y+b.y+1)*2-96,angle:Math.atan2(-dz,dx),width:Math.hypot(dx,dz),depth:E.ROADS[path.type].width+.6};if(Z.overlaps(p,road)){violations++;break;}}}assert.equal(violations,0,'no cell edge crosses the road surface or sidewalk');});
 
 test('crossing highways block zoning footprints without creating their own frontage',()=>{const w=world();E.buildRoadPath(w,[{x:19,y:24},{x:36,y:9}],'street');E.buildRoadPath(w,[{x:25,y:8},{x:25,y:34}],'highway');const highway=w.roadPaths[1],cells=[...E.zoningLayout(w).values()],road={cx:6,cz:-10,angle:-Math.PI/2,width:104,depth:E.ROADS.highway.width+.6};assert.ok(cells.length>50);for(const p of cells){assert.notEqual(p.source,highway.id);assert.equal(Z.overlaps(p,road),false);}});
+
+test('allocation-free layout checks detect every road and ground edit, including in-place path changes',()=>{
+ const base=world();E.buildRoadPath(base,[{x:19,y:24},{x:34,y:12},{x:42,y:25}]);
+ const changes=[
+  w=>{w.tiles[22*48+8].ground='water';},
+  w=>{w.tiles[24*48+8].type=null;},
+  w=>{w.tiles[24*48+8].roadType='highway';},
+  w=>{delete w.tiles[24*48+8].roadType;w.tiles[24*48+8].roadWidth=2;},
+  w=>{w.tiles[24*48+8].legacyRoad=false;},
+  w=>{w.tiles[24*48+8].pathIds=['new-path'];},
+  w=>{const t=w.tiles.find(t=>t.pathIds?.length);t.pathIds.push('another-path');},
+  w=>{const t=w.tiles.find(t=>t.pathIds?.length);t.pathIds[0]='changed-path';},
+  w=>{w.roadPaths[0].controls[1].y+=2;},
+  w=>{w.roadPaths[0].type='avenue';},
+  w=>{w.roadPaths[0].tiles.reverse();}
+ ];
+ for(const change of changes)for(const options of [{},{cellSize:1.6,rows:6,independent:true}]){
+  const w=structuredClone(base),first=Z.layout(w,E.ROADS,options);assert.equal(Z.layout(w,E.ROADS,options),first);change(w);const actual=Z.layout(w,E.ROADS,options);assert.notEqual(actual,first);assert.deepEqual(actual,Z.layout(structuredClone(w),E.ROADS,options));
+ }
+ const w=structuredClone(base),first=Z.layout(w,E.ROADS);w.money-=123;w.tiles[0].people=5;w.tiles[0].type='residential';w.tiles=w.tiles.map(t=>({...t}));assert.equal(Z.layout(w,E.ROADS),first,'population, non-road occupancy and equivalent tile copies do not change road geometry');
+});

@@ -158,17 +158,25 @@ function fineZoningLayout(w){
  }fineLayoutCache.set(w,{cells,state,revision,occupancy,available});return available;
 }
 function fineZoneCells(w,ids,zone){if(zone!=='erase'&&!ZONES[zone])return {ok:false,changed:0,blocked:ids.length};w.development ||= FineZones.create();const layout=fineZoningLayout(w);for(const id of ids){if(!layout.has(id))continue;const cell=w.development.cells[id],p=w.development.parcels[cell?.owner];if(p&&(!p.occupant||p.occupant.construction)&&(zone==='erase'||cell.zone!==zone))FineZones.release(w.development,p.id);}const result=FineZones.paint(w.development,layout,ids,zone==='erase'?null:zone);return {...result,ok:result.changed>0,reason:result.changed?'':result.blocked?'Existing buildings are preserved. Paint free roadside cells.':'No zoning changed'};}
-function fineZoneRectangle(w,a,b){const layout=fineZoningLayout(w),pa=layout.get(a.id),pb=layout.get(b.id);if(!pa||!pb)return [];return [...layout.values()].filter(p=>pa.source===pb.source&&pa.side===pb.side?p.source===pa.source&&p.side===pa.side&&p.col>=Math.min(pa.col,pb.col)&&p.col<=Math.max(pa.col,pb.col)&&p.row>=Math.min(pa.row,pb.row)&&p.row<=Math.max(pa.row,pb.row):p.cx>=Math.min(pa.cx,pb.cx)-.01&&p.cx<=Math.max(pa.cx,pb.cx)+.01&&p.cz>=Math.min(pa.cz,pb.cz)-.01&&p.cz<=Math.max(pa.cz,pb.cz)+.01).map(p=>p.id);}
+const fineFrontageCache=new WeakMap();
+function fineFrontages(layout){
+ let index=fineFrontageCache.get(layout);if(index)return index;
+ const sources=new Map(),order=new Map();let n=0;
+ for(const p of layout.values()){let sides=sources.get(p.source);if(!sides){sides=new Map();sources.set(p.source,sides);}let cells=sides.get(p.side);if(!cells){cells=[];sides.set(p.side,cells);}cells.push(p);order.set(p.id,n++);}
+ index={sources,order};fineFrontageCache.set(layout,index);return index;
+}
+function fineFrontage(layout,p){return fineFrontages(layout).sources.get(p.source)?.get(p.side)||[];}
+function fineZoneRectangle(w,a,b){const layout=fineZoningLayout(w),pa=layout.get(a.id),pb=layout.get(b.id);if(!pa||!pb)return [];const aligned=pa.source===pb.source&&pa.side===pb.side;return (aligned?fineFrontage(layout,pa):[...layout.values()]).filter(p=>aligned?p.col>=Math.min(pa.col,pb.col)&&p.col<=Math.max(pa.col,pb.col)&&p.row>=Math.min(pa.row,pb.row)&&p.row<=Math.max(pa.row,pb.row):p.cx>=Math.min(pa.cx,pb.cx)-.01&&p.cx<=Math.max(pa.cx,pb.cx)+.01&&p.cz>=Math.min(pa.cz,pb.cz)-.01&&p.cz<=Math.max(pa.cz,pb.cz)+.01).map(p=>p.id);}
 // Roadside strip always stays on the side where the drag began.
 function fineZoneStrip(w,a,b,depth=3){
  const layout=fineZoningLayout(w),first=layout.get(a.id),last=layout.get(b.id);if(!first||!last)return [];
  depth=Math.max(1,Math.min(6,Math.floor(depth)||1));
- let end=last;
- if(last.source!==first.source||last.side!==first.side){let distance=Infinity;for(const p of layout.values())if(p.source===first.source&&p.side===first.side&&p.row===0){const d=(p.cx-last.cx)**2+(p.cz-last.cz)**2;if(d<distance){distance=d;end=p;}}}
- return [...layout.values()].filter(p=>p.source===first.source&&p.side===first.side&&p.col>=Math.min(first.col,end.col)&&p.col<=Math.max(first.col,end.col)&&p.row<depth).map(p=>p.id);
+ const frontage=fineFrontage(layout,first);let end=last;
+ if(last.source!==first.source||last.side!==first.side){let distance=Infinity;for(const p of frontage)if(p.row===0){const d=(p.cx-last.cx)**2+(p.cz-last.cz)**2;if(d<distance){distance=d;end=p;}}}
+ return frontage.filter(p=>p.col>=Math.min(first.col,end.col)&&p.col<=Math.max(first.col,end.col)&&p.row<depth).map(p=>p.id);
 }
 function fineZoneBrush(w,start,size=1){return fineBrushCells(fineZoningLayout(w),start,size);}
-function fineBrushCells(layout,start,size){const first=layout.get(start.id);if(!first)return [];size=Math.max(1,Math.min(6,Math.floor(size)||1));return [...layout.values()].filter(p=>p.source===first.source&&p.side===first.side&&p.col>=first.col&&p.col<first.col+size&&p.row>=first.row&&p.row<first.row+size).map(p=>p.id);}
+function fineBrushCells(layout,start,size){const first=layout.get(start.id);if(!first)return [];size=Math.max(1,Math.min(6,Math.floor(size)||1));return fineFrontage(layout,first).filter(p=>p.col>=first.col&&p.col<first.col+size&&p.row>=first.row&&p.row<first.row+size).map(p=>p.id);}
 function fineZoneStroke(w,a,b,size=1){
  const layout=fineZoningLayout(w),pa=layout.get(a.id),pb=layout.get(b.id);if(!pa||!pb)return [];
  const aligned=pa.source===pb.source&&pa.side===pb.side,steps=Math.max(1,aligned?Math.max(Math.abs(pb.col-pa.col),Math.abs(pb.row-pa.row)):Math.ceil(Math.hypot(pb.cx-pa.cx,pb.cz-pa.cz)/.6)),ids=new Set();
@@ -179,7 +187,7 @@ function fineZoneStroke(w,a,b,size=1){
   if(p)for(const id of fineBrushCells(layout,p,size))ids.add(id);
  }return [...ids];
 }
-function fineZoneFill(w,start){const layout=fineZoningLayout(w),first=layout.get(start.id);if(!first)return [];const state=w.development,zone=state?.cells[first.id]?.zone;if(state?.cells[first.id]?.owner)return [];const lookup=new Map([...layout.values()].filter(p=>p.source===first.source&&p.side===first.side&&!state?.cells[p.id]?.owner&&state?.cells[p.id]?.zone===zone).map(p=>[p.col+','+p.row,p])),queue=[first],seen=new Set([first.id]);for(let n=0;n<queue.length;n++){const p=queue[n];for(const [x,y]of [[1,0],[-1,0],[0,1],[0,-1]]){const q=lookup.get((p.col+x)+','+(p.row+y));if(q&&!seen.has(q.id)){seen.add(q.id);queue.push(q);}}}return [...seen];}
+function fineZoneFill(w,start){const layout=fineZoningLayout(w),first=layout.get(start.id);if(!first)return [];const state=w.development,zone=state?.cells[first.id]?.zone;if(state?.cells[first.id]?.owner)return [];const lookup=new Map(fineFrontage(layout,first).filter(p=>!state?.cells[p.id]?.owner&&state?.cells[p.id]?.zone===zone).map(p=>[p.col+','+p.row,p])),queue=[first],seen=new Set([first.id]);for(let n=0;n<queue.length;n++){const p=queue[n];for(const [x,y]of [[1,0],[-1,0],[0,1],[0,-1]]){const q=lookup.get((p.col+x)+','+(p.row+y));if(q&&!seen.has(q.id)){seen.add(q.id);queue.push(q);}}}return [...seen];}
 function demolishFineParcel(w,id){const p=Buildings.parcel(w,id);if(!p?.occupant)return {ok:false,reason:'Nothing to remove'};if(w.money<10)return {ok:false,reason:'Not enough funds'};w.money-=10;FineZones.release(w.development,id);return {ok:true,cost:10};}
 function playerZoneCells(w,cells,zone){const fine=cells.filter(c=>typeof c==='string'),legacy=cells.filter(c=>typeof c==='object'&&c&&w.tiles[c.y*48+c.x]?.zone),a=fine.length?fineZoneCells(w,fine,zone):{changed:0,blocked:0},b=legacy.length?zoneCells(w,legacy,zone):{changed:0,skipped:0};const changed=a.changed+b.changed,blocked=(a.blocked||0)+(b.skipped||0);return {ok:changed>0,changed,blocked,reason:changed?'':a.reason||b.reason||'No zoning changed'};}
 function playerZoneRectangle(w,a,b){return a.legacy||b.legacy?zoneRectangle(w,a,b).filter(p=>w.tiles[p.y*48+p.x].zone):fineZoneRectangle(w,a,b);}
@@ -238,15 +246,20 @@ const finePreviewCache=new WeakMap();
 function fineZonePreview(w,ids,zone){
  const layout=fineZoningLayout(w),original=w.development,revision=original?.revision||0,selected=[...new Set(ids.filter(id=>typeof id==='string'&&layout.has(id)))],cached=finePreviewCache.get(w);
  if(cached&&cached.layout===layout&&cached.state===original&&cached.revision===revision&&cached.seed===w.seed&&cached.zone===zone&&cached.selected.length===selected.length&&selected.every((id,i)=>id===cached.selected[i]))return cached.result;
- const state={...(original||FineZones.create()),cells:{...original?.cells},parcels:{...original?.parcels}},affected=new Set();
+ // Layout identities change when roads or blockers change. Index each one
+ // once, then copy only the affected frontages rather than the entire city.
+ const index=fineFrontages(layout),groups=new Set(selected.map(id=>fineFrontage(layout,layout.get(id)))),points=[...groups].flat();
+ if(groups.size>1)points.sort((a,b)=>index.order.get(a.id)-index.order.get(b.id));
+ const local=new Map(points.map(p=>[p.id,p])),state={...(original||FineZones.create()),cells:Object.create(null),parcels:original?.parcels||{}};
+ for(const p of points)if(original?.cells[p.id])state.cells[p.id]=original.cells[p.id];
  // Copy only cells whose construction reservation must be released. Preview
  // painting must never change a save, building owner or resident's home.
  for(const id of selected){const p=state.parcels[state.cells[id]?.owner];if(p&&(!p.occupant||p.occupant.construction)&&(zone==='erase'||state.cells[id].zone!==zone)){
-  for(const cell of p.cells)state.cells[cell]={...state.cells[cell]};FineZones.release(state,p.id);
+  if(state.parcels===original?.parcels)state.parcels={...state.parcels};
+  for(const cell of p.cells)state.cells[cell]={...original?.cells[cell]};FineZones.release(state,p.id);
  }}
  FineZones.paint(state,layout,selected,zone==='erase'?null:zone);
- for(const id of selected){const p=layout.get(id);affected.add(JSON.stringify([p.source,p.side]));}
- const local=new Map([...layout].filter(([,p])=>affected.has(JSON.stringify([p.source,p.side])))),selection=new Set(selected),all=zone==='erase'||!ZONES[zone]?[]:fineZonePlan(w,{layout:local,state}),covered=new Set(all.flatMap(p=>p.cells));
+ const selection=new Set(selected),all=zone==='erase'||!ZONES[zone]?[]:fineZonePlan(w,{layout:local,state}),covered=new Set(all.flatMap(p=>p.cells));
  const lots=all.filter(p=>p.cells.some(id=>selection.has(id))),blocked=selected.filter(id=>state.cells[id]?.owner),unbuildable=zone==='erase'?[]:selected.filter(id=>!state.cells[id]?.owner&&state.cells[id]?.zone===zone&&!covered.has(id));
  const result={lots,blocked,unbuildable};finePreviewCache.set(w,{layout,state:original,revision,seed:w.seed,zone,selected,result});return result;
 }
