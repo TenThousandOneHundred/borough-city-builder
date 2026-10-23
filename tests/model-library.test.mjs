@@ -80,7 +80,7 @@ test('street setbacks remain inside owned parcels at every road angle',async()=>
 });
 
 test('brick facades retain metre-scale UVs, PBR textures and accurate packed normals',async()=>{
- const lib=await library(),bricks=lib.models.flatMap(m=>m.root.children).filter(m=>m.material.name==='modern-brick');assert.equal(bricks.length,33);
+ const lib=await library(),bricks=lib.models.flatMap(m=>m.root.children).filter(m=>m.material.name==='modern-brick');assert.equal(bricks.length,35);
  for(const mesh of bricks){assert.ok(mesh.material.map);assert.ok(mesh.material.normalMap);assert.ok(mesh.material.roughnessMap);const uv=mesh.geometry.attributes.uv;const p=mesh.geometry.attributes.position;for(let i=0;i<p.count;i+=4){const metres=Math.hypot(p.getX(i+1)-p.getX(i),p.getY(i+1)-p.getY(i),p.getZ(i+1)-p.getZ(i));assert.ok(Math.abs(Math.hypot(uv.getX(i+1)-uv.getX(i),uv.getY(i+1)-uv.getY(i))-metres/2)<1e-5,'brick texture maintains two-metre repeat scale');}}
  for(const model of lib.models.filter(m=>m.family==='modern'))for(const mesh of model.root.children){const n=mesh.geometry.attributes.normal;assert.ok(n.normalized);assert.ok(n.array instanceof Int8Array);for(let i=0;i<n.count;i++){const length=Math.hypot(n.getX(i),n.getY(i),n.getZ(i));assert.ok(Math.abs(length-1)<.012,'lighting normals retain unit length');}}
 });
@@ -391,7 +391,7 @@ test('smallest apartment lots select different full-scale forms while retaining 
 
 test('framed apartment windows keep recessed glass and sash profiles at full and distant detail',async()=>{
  const lib=await library(),bytes=fs.readFileSync(new URL('../dist/assets/buildings/lod.bin',import.meta.url));lib.ingestLod(JSON.parse(fs.readFileSync(new URL('../dist/assets/buildings/lod.json',import.meta.url))),bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.length));
- for(const name of ['compact-hipped-apartments','brick-neighborhood-walkup','small-courtyard-apartments','narrow-balcony-apartments']){
+ for(const name of ['compact-hipped-apartments','brick-neighborhood-walkup','small-courtyard-apartments','narrow-balcony-apartments','linear-balcony-apartments','stepped-midrise-apartments']){
   const model=lib.models.find(m=>m.name===name),panes=[];
   for(const mesh of model.root.children.filter(m=>m.material.name==='modern-glass'||m.material.name==='modern-glass-occupied')){
    const pos=mesh.geometry.attributes.position,normal=mesh.geometry.attributes.normal;
@@ -404,6 +404,24 @@ test('framed apartment windows keep recessed glass and sash profiles at full and
   assert.ok(check(),name+' has actual frame and glass depth, not a painted rectangle');railing();
   for(const mesh of model.root.children){assert.equal(mesh.geometry.userData.lod.attributes.position,mesh.geometry.attributes.position);mesh.geometry=mesh.geometry.userData.lod;}
   assert.ok(check(),name+' retains its window profile in distant geometry');railing();
+ }
+});
+
+test('rebuilt midrise balconies have usable doors and open rails at full and distant detail',async()=>{
+ const lib=await library(),bytes=fs.readFileSync(new URL('../dist/assets/buildings/lod.bin',import.meta.url));
+ lib.ingestLod(JSON.parse(fs.readFileSync(new URL('../dist/assets/buildings/lod.json',import.meta.url))),bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.length));
+ for(const [name,centre,front]of [['linear-balcony-apartments',4.152,6.675],['stepped-midrise-apartments',2.22,8.125]]){
+  const model=lib.models.find(m=>m.name===name);model.root.updateMatrixWorld(true);
+  assert.ok(model.streetFronts.length>0);assert.ok(model.streetFronts.every(p=>p.position[1]<.2),'balcony doors must not become street entrances');
+  assert.ok(model.root.children.some(p=>p.material.name==='modern-brick'),'masonry is textured geometry');
+  const ray=(x,y)=>new THREE.Raycaster(new THREE.Vector3(x+model.origin.x,y+model.origin.y,100),new THREE.Vector3(0,0,-1)).intersectObject(model.root,true)[0];
+  const check=()=>{
+   const post=ray(centre,3.9),through=ray(centre+.2,3.9),door=ray(centre+.2,3.55);
+   assert.equal(post.object.material.name,'modern-frame');assert.ok(Math.abs(post.point.z-(front+model.origin.z))<.002);
+   assert.ok(through.object.material.name.startsWith('modern-glass'),'rail gaps reveal the balcony door');assert.ok(post.point.z-through.point.z>1);
+   assert.ok(door.object.material.name.startsWith('modern-glass'),'door opening reaches the balcony deck instead of stopping at a window sill');
+  };
+  check();for(const mesh of model.root.children)mesh.geometry=mesh.geometry.userData.lod;check();
  }
 });
 
