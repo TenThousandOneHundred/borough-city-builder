@@ -679,3 +679,17 @@ Coastal backdrops also have an inland slope transition instead of a near-vertica
 All 348 tests pass, including coastal continuity, historical terrain, saves, road-following zoning, household travel and independent offscreen simulation. Browser checks cover river and coastal terrain, grassland, near/distant cameras, day/night shading and shader compilation.
 
 This is feature update two after the Edition 99 optimization. Edition 102 is the third feature update; Edition 103 is reserved for the next dedicated optimization pass.
+
+## Edition 102 — Detailed water and broken reflections
+
+Water now uses two animated layers of small ripple normals, with different scales, directions and drift rates. These replace the long, uniformly spaced sine-wave bands. Reflections distort with the surface, fade safely at the reflection-image boundary, and become stronger at shallow viewing angles. The water body is darker at depth, with a narrow sediment-colored shallow margin based on the rendered riverbed and the viewing direction. Small patches of shore wash, sun highlights and distance haze complete the surface. The shader also uses the renderer's display transform when contact shading is disabled.
+
+The Port and Passenger Port screenshots in the official [Ports & Beyond diary](https://www.paradoxinteractive.com/games/cities-skylines-ii/news/bridges-and-ports-dev-diary-ports) were inspected before implementation. Their ripple scale, broken reflections, dark deeper water and restrained shallow edges guided this update. These reference pictures are not shipped as game assets.
+
+A 128×128 procedural gradient texture is baked once in memory and sampled at two scales. Its base level is 64 KiB, with mip filtering for distant views; it adds no network download. Each world's GPU texture is owned and disposed separately. The existing reflection target remains 384×384 and refreshes at most four times per second. No additional terrain geometry or reflection passes are introduced, and building/model quality and independent resident simulation are retained. This changes water rendering; water levels and terrain/save data are unchanged.
+
+All 350 tests pass, including ripple continuity, independent texture ownership, complete disposal, shoreline edits, saves and resident movement. Browser checks cover low-angle and overhead views, rivers and coasts, day/night, reflections disabled, and all three graphics settings. The existing local QA save was not opened; its listing and original Balanced setting were retained.
+
+In alternating old/new coastal runs, median GPU time was 11.38/11.02 ms and 11.33/10.88 ms. Both versions used 45 draws and 435,202 triangles on ordinary frames, and 88 draws and 874,501 triangles when refreshing reflections. The riverbank runs measured 14.04/13.64 ms and 12.78/12.40 ms. Median frame intervals stayed at 16.6–16.7 ms. These are matched-scene measurements on the test device, not a guarantee for every city or computer.
+
+This is feature update three after the Edition 99 optimization. The next update, Edition 103, is the scheduled dedicated optimization pass.

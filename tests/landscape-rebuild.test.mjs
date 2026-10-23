@@ -70,10 +70,10 @@ test('water-bed textures encode the rendered terrain without resampling or mutat
 test('sculpted shoreline refreshes the actual shader texture and water resources dispose together',async()=>{
  const {reflectedWater}=await import('../dist/water.js');
  const ground=new THREE.PlaneGeometry(192,192,2,2),far=new THREE.PlaneGeometry(1100,1100,2,2);ground.rotateX(-Math.PI/2);far.rotateX(-Math.PI/2);
- const water=reflectedWater({reflectionsEnabled:false},ground,far),near=water.material.uniforms.nearHeight.value,distant=water.material.uniforms.farHeight.value;
+ const water=reflectedWater({reflectionsEnabled:false},ground,far),near=water.material.uniforms.nearHeight.value,distant=water.material.uniforms.farHeight.value,ripples=water.material.uniforms.ripples.value;
  const previous=near.image.data.slice(),version=near.version;ground.attributes.position.setY(4,-3);water.userData.refreshDepth(ground);
  assert.notDeepEqual(near.image.data,previous);assert.ok(near.version>version);assert.equal(near.image.data[16]+near.image.data[17]/256-64,-3);
- let disposed=0;near.addEventListener('dispose',()=>disposed++);distant.addEventListener('dispose',()=>disposed++);water.getRenderTarget().addEventListener('dispose',()=>disposed++);water.userData.dispose();assert.equal(disposed,3);
+ let disposed=0;near.addEventListener('dispose',()=>disposed++);distant.addEventListener('dispose',()=>disposed++);ripples.addEventListener('dispose',()=>disposed++);water.getRenderTarget().addEventListener('dispose',()=>disposed++);water.userData.dispose();assert.equal(disposed,4);
  ground.dispose();far.dispose();water.geometry.dispose();water.material.dispose();
 });
 
