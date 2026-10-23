@@ -663,3 +663,19 @@ The other 57 modern models retain identical geometry, attributes, metadata and d
 All 347 tests pass, including normal growth of both mixed-use models at full scale, varied lot widths, stable save/reload selection, preserved occupied sites, visible apartment doors, transparent shop displays with room backs, open courtyard space and framed windows at both detail levels. Day/night and neighborhood browser checks load without console warnings or errors. The test street grows 15 buildings over 360 cells in four lot sizes, housing 360 residents: ten small shopfronts and five courtyard blocks. At the same camera with the same lots and model counts, the complete scene decreases from 72 to 70 draws and from 481,356 to 478,632 triangles. These are asset and scene costs, not overall FPS measurements.
 
 This is feature update one after the Edition 99 optimization. Two more feature updates precede the next dedicated optimization pass.
+
+## Edition 101 — Layered grass, outcrops and riverbanks
+
+The terrain surface now blends regional green and drier grass, irregular rock outcrops and vegetated pockets on slopes. Low banks transition through granular sediment to darker, smoother wet ground. Rock faces have non-repeating bedding variation. Color, normal detail and roughness share the same surface boundaries, and each world's seed determines its regional pattern. Near and distant terrain use the same world-space coordinates and seed.
+
+The Waterway Pass and Lakeland pictures in the official [Autumn Breeze visual update](https://www.paradoxinteractive.com/games/cities-skylines-ii/news/autumn-breeze) were inspected before implementation. Their grass variation, broken vegetation edges and narrow shoreline transitions guided this pass. The reference pictures are not included in the game.
+
+Flat grass skips the three rock-color and three rock-normal texture samples. Explicit gradients are calculated before conditional shading, so mip selection and tangent frames remain valid at material boundaries. Shared masks also avoid recalculating the same noise for color, normals and roughness. The full-detail rock path still uses the scanned color and normal textures. Mesh resolution, textures, building models and simulation detail are retained. Existing cities retain their elevations and road/building alignment, and model downloads remain pinned to Edition 100 for cache reuse.
+
+A matched river overview used exactly 45 draws and 473,723 triangles for both surfaces. In alternating old/new measurements, median GPU rendering time was 16.49/12.10 ms and 15.29/11.14 ms. Frame intervals were near 16.7 ms in three runs and 18.8 ms in the first baseline run. These measurements cover this scene on the test device; they do not establish performance for every city or computer.
+
+Coastal backdrops also have an inland slope transition instead of a near-vertical wall at the sea edge. This affects the scenic hills outside the editable map. Across three seeds, all 9,409 sampled city elevations per world and the outside road approach are byte-identical to Edition 100. The steepest sampled one-unit coastal height change falls from 18–87 units to below three. Legacy landform versions retain their original heights.
+
+All 348 tests pass, including coastal continuity, historical terrain, saves, road-following zoning, household travel and independent offscreen simulation. Browser checks cover river and coastal terrain, grassland, near/distant cameras, day/night shading and shader compilation.
+
+This is feature update two after the Edition 99 optimization. Edition 102 is the third feature update; Edition 103 is reserved for the next dedicated optimization pass.

@@ -1,17 +1,17 @@
-import './coastline.js?v=100';
-import './building-entities.js?v=100';
+import './coastline.js?v=101';
+import './building-entities.js?v=101';
 const Buildings=globalThis.BoroughBuildings;
-import {supportsTree} from './tree-placement.js?v=100';
-import {terrainMeshes} from './terrain-mesh.js?v=100';
-import {inlandRelief} from './landforms.js?v=100';
-import {streetStations,atDistance} from './street-geometry.js?v=100';
-import {terrainOffset} from './terrain-edit.js?v=100';
-import {outsidePortals} from './traffic.js?v=100';
-import {ScannedRocks} from './scanned-rocks.js?v=100';
-import {groundCover} from './ground-cover.js?v=100';
-import {terrainField} from './terrain-field.js?v=100';
-import {reflectedWater} from './water.js?v=100';
-import {naturalTerrain} from './terrain-material.js?v=100';
+import {supportsTree} from './tree-placement.js?v=101';
+import {terrainMeshes} from './terrain-mesh.js?v=101';
+import {inlandRelief} from './landforms.js?v=101';
+import {streetStations,atDistance} from './street-geometry.js?v=101';
+import {terrainOffset} from './terrain-edit.js?v=101';
+import {outsidePortals} from './traffic.js?v=101';
+import {ScannedRocks} from './scanned-rocks.js?v=101';
+import {groundCover} from './ground-cover.js?v=101';
+import {terrainField} from './terrain-field.js?v=101';
+import {reflectedWater} from './water.js?v=101';
+import {naturalTerrain} from './terrain-material.js?v=101';
 import * as THREE from './vendor/three.module.js';
 export const TILE=4,SIZE=48,HALF=96;
 const landBase=new THREE.Color('#c8e0ad'),landLight=new THREE.Color('#d4dfb3'),shoreColor=new THREE.Color('#c3bda6'),slopeColor=new THREE.Color('#959a8d');
@@ -23,7 +23,9 @@ const waterFields=new WeakMap();
 function field(w){if(waterFields.has(w))return waterFields.get(w);const f=new Float32Array(52*52),weights=[.18,.64,.18];for(let y=-2;y<50;y++)for(let x=-2;x<50;x++){let v=0;for(let j=-1;j<=1;j++)for(let i=-1;i<=1;i++)v+=wetTile(w,x+i,y+j)*weights[i+1]*weights[j+1];f[(y+2)*52+x+2]=v}waterFields.set(w,f);return f}
 function baseWetness(w,x,z){const gx=(x+HALF)/TILE-.5,gy=(z+HALF)/TILE-.5;if(w.terrain==='river'){const distance=Math.abs(gx-(34+Math.sin(gy/7+w.seed%9)*3));return smooth(clamp((3.35-distance)/2.1,0,1))}if(w.terrain==='islands'&&w.landformVersion===2)return 1-smooth(clamp((globalThis.BoroughCoastline.distance(w.seed,x,z)+3)/6,0,1));if(w.terrain==='islands'){const level=Math.sin(gx/7)+Math.cos(gy/8)+Math.sin((gx+gy)/9);return smooth(clamp((level-.72)/.65,0,1))}return 0}
 export function wetness(w,x,z,height=groundHeight){const offset=terrainOffset(w,x,z);if(Math.abs(offset)<.0001)return baseWetness(w,x,z);return smooth(clamp((.65-height(w,x,z))/1.3,0,1));}
-function valleyFalloff(w,x,z){if(w.terrain==='river'){const gx=(x+96)/4-.5,gy=(z+96)/4-.5,d=Math.abs(gx-(34+Math.sin(gy/7+w.seed%9)*3))*4;return smooth(clamp((d-10)/65,0,1))}return 1-smooth(clamp(baseWetness(w,x,z)*3,0,1))}
+// Scenic coastal hills taper across an inland apron. Their amplitude is zero
+// throughout the editable map, so this cannot lift existing buildings or roads.
+function valleyFalloff(w,x,z){if(w.terrain==='river'){const gx=(x+96)/4-.5,gy=(z+96)/4-.5,d=Math.abs(gx-(34+Math.sin(gy/7+w.seed%9)*3))*4;return smooth(clamp((d-10)/65,0,1))}if(w.terrain==='islands'&&w.landformVersion===2)return smooth(clamp(globalThis.BoroughCoastline.distance(w.seed,x,z)/70,0,1));return 1-smooth(clamp(baseWetness(w,x,z)*3,0,1))}
 export function groundHeight(w,x,z){const water=baseWetness(w,x,z),inland=.35+noise(x*.012,z*.012,w.seed)*1.6+noise(x*.028,z*.028,w.seed+3)*.7+noise(x*.09,z*.09,w.seed+17)*.12;const edge=smooth(clamp((Math.max(Math.abs(x),Math.abs(z))-98)/150,0,1)),hills=edge*terrainField(w.seed).sample(x,z),bank=smooth(clamp(water*1.85,0,1));return inland*(1-bank)+hills*valleyFalloff(w,x,z)-bank*1.6+inlandRelief(w,x,z,water)+terrainOffset(w,x,z);}
 export function terrainColor(w,x,z,height=groundHeight){const wet=wetness(w,x,z,height),variation=noise(x*.037,z*.037,w.seed+51),c=landBase.clone().lerp(landLight,variation*.7);c.lerp(shoreColor,smooth(clamp(wet*3,0,1)));const slope=Math.abs(height(w,x+1,z)-height(w,x-1,z))+Math.abs(height(w,x,z+1)-height(w,x,z-1));c.lerp(slopeColor,clamp((slope-1.2)*.28,0,.8));return c.multiplyScalar(.93+noise(x*.14,z*.14,w.seed+21)*.13)}
 export function floorHeight(w,x,z){return Math.max(.2,groundHeight(w,x,z))}
@@ -32,8 +34,8 @@ constructor(view){this.view=view;this.group=new THREE.Group();view.scene.add(thi
 async load(){const defs=['grass-color','grass-normal','grass-rough','asphalt-color','asphalt-normal','asphalt-rough','brick-color','brick-normal','brick-rough','rock-color','rock-normal'];await Promise.all(defs.map(async name=>{try{const t=await this.loader.loadAsync(new URL('./assets/'+name+'.jpg',import.meta.url).href);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=this.view.renderer.capabilities.getMaxAnisotropy();if(name.endsWith('color'))t.colorSpace=THREE.SRGBColorSpace;this.assets[name]=t}catch(e){console.warn('Texture fallback:',name)}}));}
 material(name,repeat=1,color='#ffffff'){const map=this.assets[name+'-color']?.clone(),normal=this.assets[name+'-normal']?.clone(),rough=this.assets[name+'-rough']?.clone();for(let t of [map,normal,rough])if(t){t.repeat.set(repeat,repeat);t.needsUpdate=true}return new THREE.MeshStandardMaterial({color,map:map||null,normalMap:normal||null,roughnessMap:rough||null,normalScale:new THREE.Vector2(.3,.3),roughness:.92});}
 clear(){this.group.traverse(o=>{o.userData.dispose?.();if(o.geometry&&!o.userData.sharedAsset)o.geometry.dispose();if(o.material&&!o.userData.sharedMaterial){for(let m of Array.isArray(o.material)?o.material:[o.material]){if(m===this.leafMat||[...this.view.materials.values()].includes(m))continue;for(let k of ['map','normalMap','roughnessMap'])if(m[k]&&!Object.values(this.assets).includes(m[k]))m[k].dispose();m.dispose()}}});this.group.clear()}
-build(w){this.clear();this.world=w;const meshes=terrainMeshes(w,groundHeight,terrainColor),geo=meshes.ground;this.geometryCacheHit=meshes.cacheHit;this.baseColors=geo.attributes.color.array.slice();const mat=naturalTerrain(this.material('grass',14,'#ffffff'),this.assets);mat.vertexColors=true;mat.normalScale.set(.55,.55);this.ground=new THREE.Mesh(geo,mat);this.ground.receiveShadow=true;this.group.add(this.ground);
-const far=meshes.far;const fm=naturalTerrain(this.material('grass',80.2083,'#ffffff'),this.assets);fm.vertexColors=true;this.surroundings=new THREE.Mesh(far,fm);this.surroundings.receiveShadow=true;this.group.add(this.surroundings);
+build(w){this.clear();this.world=w;const meshes=terrainMeshes(w,groundHeight,terrainColor),geo=meshes.ground;this.geometryCacheHit=meshes.cacheHit;this.baseColors=geo.attributes.color.array.slice();const mat=naturalTerrain(this.material('grass',14,'#ffffff'),this.assets,w.seed);mat.vertexColors=true;mat.normalScale.set(.55,.55);this.ground=new THREE.Mesh(geo,mat);this.ground.receiveShadow=true;this.group.add(this.ground);
+const far=meshes.far;const fm=naturalTerrain(this.material('grass',80.2083,'#ffffff'),this.assets,w.seed);fm.vertexColors=true;this.surroundings=new THREE.Mesh(far,fm);this.surroundings.receiveShadow=true;this.group.add(this.surroundings);
 this.water=reflectedWater(this.view,geo,far);this.waterMaterial=this.water.material;this.group.add(this.water);this.makeTrees(w);this.rockGroup=new THREE.Group();this.group.add(this.rockGroup);this.makeRocks(w);this.cover=groundCover(this.view,w,groundHeight,wetness);this.group.add(this.cover);}
 leafMaterial(){if(this.leafMat)return this.leafMat;const c=document.createElement('canvas');c.width=c.height=128;const ctx=c.getContext('2d');for(let i=0;i<380;i++){let a=i*2.39996,r=Math.sqrt(i/380)*59,x=64+Math.cos(a)*r,y=64+Math.sin(a)*r;ctx.fillStyle=['#6c8047','#70874d','#526a36','#8a9659'][i%4];ctx.beginPath();ctx.ellipse(x,y,2.3+(i%3),1.5+(i%2),a,0,Math.PI*2);ctx.fill()}const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;this.leafMat=new THREE.MeshStandardMaterial({map:tex,alphaTest:.45,side:THREE.DoubleSide,roughness:1,envMapIntensity:.1});return this.leafMat}
 makeTrees(w){const positions=[];w.tiles.forEach((t,i)=>{if(t.tree&&!t.type&&t.ground==='land'){const x=(i%48+.5)*4-96,z=(Math.floor(i/48)+.5)*4-96;for(let j=0;j<2;j++){const px=x+hash(i,j,w.seed)*3-1.5,pz=z+hash(j,i,w.seed)*3-1.5;if(wetness(w,px,pz)<.18)positions.push([px,pz,2.8+hash(i,j+3,w.seed)*2,i%4])}}});// Street trees occupy verges on straight road sections, not intersections.

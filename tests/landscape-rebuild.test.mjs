@@ -92,3 +92,24 @@ test('coastal worlds have connected mainland access, offshore islands and consis
   const significant=parts.filter(p=>p.length>40).sort((a,b)=>b.length-a.length);assert.equal(significant.length,3,'mainland and two offshore islands');assert.ok(significant[0].includes(24*48));assert.ok(significant[0].includes(24*48+19),'starter road stays on connected mainland');assert.ok(w.tiles.filter(t=>t.ground==='water').length>600);const copy=JSON.parse(JSON.stringify(w));assert.ok(E.valid(copy));assert.equal(groundHeight(w,70,-40),groundHeight(copy,70,-40));
  }
 });
+
+
+test('distant coastal hills taper into the sea without moving saved city terrain or its outside approach',async()=>{
+ const {default:E}=await import('../dist/engine.js'),{createHash}=await import('node:crypto'),{readFile}=await import('node:fs/promises');
+ const previous=JSON.parse(await readFile(new URL('./fixtures/coastal-elevations-100.json',import.meta.url),'utf8'));
+ const digest=heights=>createHash('sha256').update(new Uint8Array(new Float64Array(heights).buffer)).digest('hex');
+ for(const row of previous){
+  const w=E.createWorld('Coastal continuity','islands',row.seed),heights=[],approach=[];
+  for(let x=-96;x<=96;x+=2)for(let z=-96;z<=96;z+=2)heights.push(groundHeight(w,x,z));
+  assert.equal(digest(heights),row.cityHash,'every saved elevation sample remains identical');
+  for(let x=-500;x<-96;x+=2)approach.push(groundHeight(w,x,2));
+  assert.equal(digest(approach),row.roadHash,'outside road approach keeps its elevation');
+  let steepest=0;
+  for(let z=120;z<450;z+=3)for(let x=-35;x<55;x++){
+   const h=groundHeight(w,x,z);assert.ok(Number.isFinite(h));
+   steepest=Math.max(steepest,Math.abs(groundHeight(w,x+1,z)-h),Math.abs(groundHeight(w,x,z+1)-h));
+   if(globalThis.BoroughCoastline.distance(w.seed,x,z)<-4)assert.ok(h<0,'open sea stays submerged');
+  }
+  assert.ok(steepest<3.5&&steepest<row.steepest*.2,'coastal backdrop no longer has near-vertical terrain walls');
+ }
+});

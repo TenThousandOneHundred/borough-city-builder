@@ -1,0 +1,20 @@
+[
+  {
+    "seed": 8,
+    "cityHash": "694107bd23f23de689eac6a02b21b9fab841ab5abf6f2726a2938e39e61b2bb1",
+    "roadHash": "8e5cd772b07533007776d1517385273f47c2a84c57558adcba3bf608b3e52032",
+    "steepest": 49.04628186888941
+  },
+  {
+    "seed": 427,
+    "cityHash": "23eb53875031f03d7bb6dd5086f931d04b17701dbb9f4b29765e4fd64ac89d80",
+    "roadHash": "ebbb022b87c3b325c69647db58a4bf0d5c81f3b38ebbff0227221feabae4d872",
+    "steepest": 86.50393676037942
+  },
+  {
+    "seed": 777,
+    "cityHash": "effcc8b24f0da627e5aff98198f3c9e88edc99ce62b012f10a0898bf70ee4712",
+    "roadHash": "eb8104989530017fcd79b9d685bbb9169bc93408dd964b1ce7063fd084995635",
+    "steepest": 18.30314610163549
+  }
+]
