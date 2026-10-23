@@ -1,7 +1,8 @@
-import './building-entities.js?v=98';
+import './building-entities.js?v=99';
 const Buildings=globalThis.BoroughBuildings;
-import {roadPoint} from './traffic.js?v=98';
-import {visualParcels} from './parcels.js?v=98';
+import {roadPoint} from './traffic.js?v=99';
+import {visualParcels} from './parcels.js?v=99';
+import {WalkingSearch} from './walking-search.js?v=99';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const cell=p=>Math.floor((p.z+96)/4)*48+Math.floor((p.x+96)/4);
 export function sidewalkPosition(traffic,i){const p=traffic.positions.get(i)||roadPoint(i),neighbors=traffic.graph.get(i)||[],q=neighbors.map(j=>traffic.positions.get(j)||roadPoint(j)).find(q=>distance(p,q)>.01);if(!q)return p;let dx=q.x-p.x,dz=q.z-p.z;if(dx<0||Math.abs(dx)<.001&&dz<0){dx=-dx;dz=-dz;}const length=Math.hypot(dx,dz)||1,width=traffic.engine.ROADS[traffic.world.tiles[i].roadType]?.width||2.45,offset=width/2+.22;return {x:p.x-dz/length*offset,z:p.z+dx/length*offset};}
@@ -23,12 +24,9 @@ export class Walking {
  near(p,radius){const out=[];for(let x=Math.floor((p.x-radius)/3);x<=Math.floor((p.x+radius)/3);x++)for(let z=Math.floor((p.z-radius)/3);z<=Math.floor((p.z+radius)/3);z++)for(const node of this.bins.get(x+':'+z)||[])if(distance(node,p)<=radius)out.push(node);return out;}
  ignored(indices){const result=new Set();for(const i of indices){if(Buildings.parcelId(i))result.add(i);else if(Number.isInteger(i))for(const j of this.parcels.get(i)?.members||[i])result.add(j);}return result;}
  route(from,to,allowed=[]){const address=v=>typeof v==='number'||typeof v==='string',a=address(from)?Buildings.point(this.world,from):from,b=address(to)?Buildings.point(this.world,to):to;if(!a||!b||![a.x,a.z,b.x,b.z].every(Number.isFinite))return null;const key=JSON.stringify([address(from)?from:[a.x,a.z],address(to)?to:[b.x,b.z],allowed]);if(this.cache.has(key))return this.cache.get(key);
-  const ignore=this.ignored([from,to,...allowed]),starts=this.near(a,8).filter(n=>this.clearLine(a,n,ignore)),ends=this.near(b,8).filter(n=>this.clearLine(n,b,ignore)),goals=new Map(ends.map(n=>[n.id,distance(n,b)]));
-  const costs=new Map(),parents=new Map(),heap=[];const push=(id,cost)=>{const item={id,cost};heap.push(item);let i=heap.length-1;while(i){const p=(i-1)>>1;if(heap[p].cost<=cost)break;heap[i]=heap[p];i=p;}heap[i]=item;};
-  const pop=()=>{const item=heap[0],last=heap.pop();if(heap.length){let i=0;while(i*2+1<heap.length){let j=i*2+1;if(j+1<heap.length&&heap[j+1].cost<heap[j].cost)j++;if(heap[j].cost>=last.cost)break;heap[i]=heap[j];i=j;}heap[i]=last;}return item;};
-  for(const n of starts){const d=distance(a,n);costs.set(n.id,d);push(n.id,d);}let best=Infinity,end=null;
-  while(heap.length){const {id,cost}=pop();if(cost!==costs.get(id)||cost>=best)continue;if(goals.has(id)&&cost+goals.get(id)<best){best=cost+goals.get(id);end=id;}for(const [next,length]of this.nodes[id].links){const d=cost+length;if(d<(costs.get(next)??Infinity)){costs.set(next,d);parents.set(next,id);push(next,d);}}}
-  let result=null;if(end!==null){const ids=[end];while(parents.has(ids[0]))ids.unshift(parents.get(ids[0]));const points=[a,...ids.map(i=>this.nodes[i]),b].map(p=>({x:p.x,z:p.z}));result={points:points.filter((p,i)=>!i||distance(p,points[i-1])>1e-6),length:best};if(result.points.length===1)result.points.push({...b});}
+  const ignore=this.ignored([from,to,...allowed]),starts=this.near(a,8).filter(n=>this.clearLine(a,n,ignore)),ends=this.near(b,8).filter(n=>this.clearLine(n,b,ignore));
+  this.searchWorkspace ||= new WalkingSearch();const path=this.searchWorkspace.find(this.nodes,starts,ends,a,b);
+  let result=null;if(path){const points=[a,...path.ids.map(i=>this.nodes[i]),b].map(p=>({x:p.x,z:p.z}));result={points:points.filter((p,i)=>!i||distance(p,points[i-1])>1e-6),length:path.length};if(result.points.length===1)result.points.push({...b});}
   if(this.cache.size>=4096)this.cache.delete(this.cache.keys().next().value);this.cache.set(key,result);return result;
  }
  canReach(a,b){return !!this.route(a,b);}
