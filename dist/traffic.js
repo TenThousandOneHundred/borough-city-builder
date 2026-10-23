@@ -1,9 +1,9 @@
-import './building-entities.js?v=95';
+import './building-entities.js?v=96';
 const Buildings=globalThis.BoroughBuildings;
-import {laneOffset,transitionLaneOffsets} from './road-lanes.js?v=95';
-import {roadGeometry} from './road-junction-plan.js?v=95';
-import {TrafficSpatial} from './traffic-spatial.js?v=95';
-import {Junctions,smoothRoute} from './junctions.js?v=95';
+import {laneOffset,transitionLaneOffsets} from './road-lanes.js?v=96';
+import {roadGeometry} from './road-junction-plan.js?v=96';
+import {TrafficSpatial} from './traffic-spatial.js?v=96';
+import {Junctions,smoothRoute} from './junctions.js?v=96';
 // Car slots grow with population; saved road trips always have room to resume.
 export function carCapacity(world){const population=Buildings.entries(world).reduce((n,[,t])=>n+(t.type==='residential'&&!t.construction?(t.people||0):0),0),saved=world.citizens?.residents.filter(r=>r.trip).length||0;return Math.max(32,Math.min(512,Math.ceil(population/4)),saved);}
 // Destination-based road trips. No random placement or per-frame route searches.

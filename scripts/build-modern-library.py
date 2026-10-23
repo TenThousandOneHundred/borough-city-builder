@@ -401,6 +401,96 @@ m=dwelling('covered-porch-family-home',10,10.8,2,tint=(.70,.78,.84),siding=True,
 m=dwelling('cross-gable-family-home',8.2,10,2,tint=(.85,.78,.67),brick=True);domestic_block(m,5,6,1,x=5,z=-1,tint=(.79,.81,.74));pitched_roof(m,5,-1,5,6,2.85,1.6);m.finish()
 m=dwelling('brick-paired-homes',12,11,2,form='semi',roof='hip',tint=(.88,.67,.54),brick=True);m.finish()
 m=dwelling('narrow-gabled-townhouse',6.6,12,2,form='terrace',tint=(.76,.77,.73),brick=True);dormer(m,-1.5,1,6.65);m.finish()
+
+def historic_terrace(name,stepped):
+ # Narrow party-wall houses, with genuine recessed sash windows and a shaped
+ # masonry gable in front of the pitched roof. All dimensions are metres.
+ w,d,h,rise=7.6,12,8.55,2.5
+ m=Model(name,'residential-low',3);m.houseForm='terrace';m.roofForm='stepped-gable' if stepped else 'bell-gable'
+ tint=(.63,.46,.35) if stepped else (.80,.65,.49)
+ def wall(x0,x1,y0,y1,z,material=BRICK,color=tint):
+  if x1<=x0 or y1<=y0:return
+  q=[(x0,y0,z),(x1,y0,z),(x1,y1,z),(x0,y1,z)]
+  m.quad(*(q if z>0 else q[::-1]),material,color,uvs=[(x0/2,y0/2),(x1/2,y0/2),(x1/2,y1/2),(x0/2,y1/2)] if material==BRICK else None)
+ def opening(x,lo,hi,width,z,door=False):
+  sign=1 if z>0 else -1;l=x-width/2;r=x+width/2
+  def frame(x,y,z,w,height,depth):
+   # Distant topology keeps every sash and frame face. Only sub-pixel side
+   # returns are omitted; the close model and its recessed depth stay intact.
+   part=m.parts[PAINT];start=len(part['i']);m.detail=True;m.box(x,y,z,w,height,depth,PAINT);m.detail=False
+   face=start+(0 if sign>0 else 6);part['far']+=part['i'][face:face+6]
+  wall(l,r,lo,hi,z-sign*.18,WOOD if door else OCCUPIED if (round(x*10)+round(lo))%3==0 else GLASS,(.60,.68,.67))
+  for side in [l,r]:m.quad((side,lo,z),(side,hi,z),(side,hi,z-sign*.18),(side,lo,z-sign*.18),PAINT)
+  for side in [l-.055,r+.055]:frame(side,lo-.065,z,.11,hi-lo+.13,.16)
+  for y in [lo-.06,hi]:frame(x,y,z,width+.22,.10,.20)
+  if door:
+   wall(l+.16,r-.16,hi-.64,hi-.14,z-sign*.15,GLASS,(.65,.75,.75))
+   for y in [lo+.15,lo+.84]:m.box(x,y,z-sign*.14,width-.25,.53,.025,FRAME)
+   m.box(r-.15,lo+1.0,z-sign*.1,.035,.22,.045,PAINT)
+   if sign>0:m.streetFronts.append({'kind':'entrance','position':[x,.08,z+.08],'normal':[0,1],'width':width})
+  else:
+   frame(x,lo,z-sign*.09,.045,hi-lo,.045)
+   frame(x,lo+(hi-lo)*.54,z-sign*.09,width,.055,.045)
+  m.detail=True;m.box(x,lo-.12,z+sign*.04,width+.30,.06,.36,CONCRETE);m.detail=False
+ # No windows in the shared side walls, and no projecting side eaves.
+ for side in [-1,1]:
+  x=side*w/2;q=[(x,0,-d/2),(x,h,-d/2),(x,h,d/2),(x,0,d/2)]
+  q=q if side>0 else q[::-1]
+  m.quad(*q,BRICK,tint,uvs=[(z/2,y/2) for _,y,z in q])
+ for sign in [-1,1]:
+  z=sign*d/2;bay=w/3
+  for f in range(3):
+   y=f*2.85
+   for j in range(3):
+    x=(j-1)*bay;door=sign>0 and f==0 and j==0;width=1.08 if door else 1.30
+    lo=y+(.08 if door else .58);hi=y+2.37;l=x-width/2;r=x+width/2
+    for rect in [(x-bay/2,l,y,y+2.85),(r,x+bay/2,y,y+2.85),(l,r,y,lo),(l,r,hi,y+2.85)]:wall(*rect,z)
+    opening(x,lo,hi,width,z,door)
+  m.box(0,.04,z,w,.22,.18,CONCRETE,(.67,.65,.59))
+  for y in [2.83,5.68,h-.06]:m.box(0,y,z,w,.10,.18,PAINT,(.85,.85,.78))
+ # Roof slopes stop behind the front masonry gable instead of overhanging it.
+ W=w-.16;front=d/2-.12;back=-d/2-.12;roof_tint=(.78,.44,.30) if stepped else (.53,.56,.55)
+ for side in [-1,1]:
+  q=[(side*W/2,h,front),(0,h+rise,front),(0,h+rise,back),(side*W/2,h,back)]
+  m.quad(*(q if side<0 else q[::-1]),ROOF,roof_tint,uvs=[(0,0),(2.3,0),(2.3,d/2),(0,d/2)])
+  m.detail=True
+  for k in range(1,17):
+   t=k/17;x=side*W/2*(1-t);y=h+rise*t+.015
+   q=[(x,y,back),(x,y,front),(x+side*.035,y-.01,front),(x+side*.035,y-.01,back)]
+   m.quad(*(q if side>0 else q[::-1]),ROOF,tuple(c*.72 for c in roof_tint))
+  m.detail=False
+ m.box(0,h+rise-.025,0,.14,.12,d-.24,ROOF,roof_tint)
+ q=[(w/2,h,-d/2),(-w/2,h,-d/2),(0,h+rise,-d/2),(w/2,h,-d/2)]
+ m.quad(*q,BRICK,tint,uvs=[(x/2,y/2) for x,y,_ in q])
+ # Piecewise profiles produce a stepped crown or a gently curved bell crown.
+ profile=([(3.8,0),(3.8,.56),(3.1,.56),(3.1,1.12),(2.4,1.12),(2.4,1.68),(1.7,1.68),(1.7,2.24),(1,2.24),(1,2.8)] if stepped else [(3.8,0),(3.8,.35),(3.25,.35),(2.9,.48),(2.55,.72),(2.28,1.02),(2.02,1.4),(1.8,1.8),(1.57,2.18),(1.28,2.48),(.93,2.68),(.65,2.8)])
+ z=d/2+.075;window_lo=h+.58;window_hi=h+1.92;half=.57
+ for (a,y0),(b,y1) in zip(profile,profile[1:]):
+  if y1<=y0:continue
+  cuts=sorted({h+y0,h+y1,*[y for y in [window_lo,window_hi] if h+y0<y<h+y1]})
+  for lo,hi in zip(cuts,cuts[1:]):
+   left=a+(b-a)*(lo-h-y0)/(y1-y0);right=a+(b-a)*(hi-h-y0)/(y1-y0)
+   def panel(points):m.quad(*[(x,y,z) for x,y in points],BRICK,tint,uvs=[(x/2,y/2) for x,y in points])
+   if lo>=window_lo and hi<=window_hi:
+    panel([(-left,lo),(-half,lo),(-half,hi),(-right,hi)]);panel([(half,lo),(left,lo),(right,hi),(half,hi)])
+   else:panel([(-left,lo),(left,lo),(right,hi),(-right,hi)])
+ # White stone capping follows the actual outer silhouette, including steps.
+ for sign in [-1,1]:
+  for (a,y0),(b,y1) in zip(profile,profile[1:]):
+   x0=sign*a;x1=sign*b;dx=x1-x0;dy=y1-y0;length=math.hypot(dx,dy)
+   nx=-sign*dy/length*.075;ny=sign*dx/length*.075
+   q=[(x0,h+y0,z+.08),(x1,h+y1,z+.08),(max(-w/2,min(w/2,x1+nx)),h+y1+ny,z+.08),(max(-w/2,min(w/2,x0+nx)),h+y0+ny,z+.08)]
+   m.quad(*(q if sign>0 else q[::-1]),PAINT)
+ opening(0,window_lo,window_hi,half*2,z)
+ m.box(0,h+2.8,z,profile[-1][0]*2,.12,.28,PAINT)
+ # Slim lift beam and chimney add recognizable silhouettes at close range.
+ m.box(0,h+2.43,z+.28,.11,.13,.62,FRAME)
+ m.detail=True;m.box(0,h+2.23,z+.56,.045,.20,.045,FRAME);m.detail=False
+ m.box(w*.28,h+.6,-2,.55,1.65,.62,BRICK,tint);m.box(w*.28,h+2.25,-2,.70,.12,.77,PAINT)
+ m.finish()
+
+historic_terrace('stepped-gable-brick-terrace',True)
+historic_terrace('bell-gable-brick-terrace',False)
 m=dwelling('garden-wing-bungalow',9,10,1,tint=(.83,.86,.77),siding=True);domestic_block(m,5,7,1,x=5.5,z=-1.5,tint=(.7,.76,.78),siding=True);pitched_roof(m,5.5,-1.5,5,7,2.85,1.5,hip=1.1);m.finish()
 
 m=Model('glass-podium-offices','office',21);h=m.shell(25,21,3,curtain=True);h=m.shell(16,14,18,x=-2,z=-1,y=h,bevel=2,curtain=True);m.roofwork(-2,h,-1);m.plant(9,9.85,6,3,4);m.entrance(11);m.finish()

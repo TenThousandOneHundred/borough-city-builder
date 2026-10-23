@@ -600,3 +600,15 @@ The paired comparison uses the Edition 94 engine and layout modules against the 
 The browser comparison measured changed-selection planning at 3.7 versus 2.0 ms and the long brush stroke at 4.3 versus 0.4 ms, with identical output. These are local zoning-operation timings, not overall frame rates or a guarantee for other devices. Actual game checks painted 11 cells into three outlined lots, verified a manual save, returned home, reloaded and continued with the zones retained.
 
 The building models, textures, terrain geometry, resident travel and simulation scheduling are unchanged. This is the dedicated optimization pass after Editions 92–94; the feature-update counter resets to zero.
+
+## Edition 96 — Historic row-house streets
+
+Row-housing zones can now grow two additional original three-storey brick terraces: a stepped-gable house and a curved bell-gable house. Both have narrow sash windows recessed into the masonry, white stone frames and crown trim, an attic window, a separate paneled entrance, pitched roofs, a chimney and a small lifting beam. Shared side walls have no windows or projecting eaves. Their authored proportions fit the existing multi-cell lots, and each repeated entrance connects to the street with its own path. Selection is deterministic across save/reload.
+
+The street-block picture in the [official Netherlands Region Pack diary](https://www.paradoxinteractive.com/games/cities-skylines-ii/modding/dev-diary-netherlands-region-pack) guided the continuous frontage, narrow facade rhythm and varied gable silhouettes. The [reference picture](https://images.ctfassets.net/u73tyf0fa8v1/mTNclPfojdDwaa9FM2pZ7/a7328b3bceb4f4babd2f01871244ff94/cs2-nl-pack-7.jpg?fm=webp&q=75&w=1920) was inspected before modeling; it is not shipped as an asset.
+
+The two models add 3,760 triangles to the shared library and about 28 KiB to the combined compressed model/distant downloads. All 57 existing modern models retain identical full-detail geometry, attributes and metadata. The complete modern library now has 59 models and 199,600 triangles. Existing models retain their 196,000-triangle budget; the two new models have a separate combined 4,000-triangle limit. Raw and compressed asset budgets and the 13 shared materials are unchanged. Distant terraces retain the front faces of every frame and sash while omitting tiny side returns; windows and roof silhouettes stay intact. These asset figures are not an FPS guarantee.
+
+The same 47-lot browser district selects 13 existing gabled terraces, 15 bell-gable terraces and 19 stepped-gable terraces. At the fixed test camera, the full scene rises from 62 to 78 draw calls and 452,690 to 504,259 triangles. The added visual variety has a measurable rendering cost; instancing and distant detail still apply. Automated checks cover ordinary zoning growth, road-facing multi-cell placement, authored door access, unchanged save state, reload selection, brick UV direction and the actual recessed attic opening.
+
+This is feature update one after the Edition 95 optimization. Two more feature updates precede the next dedicated optimization pass.

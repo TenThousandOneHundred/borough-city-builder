@@ -14,7 +14,7 @@ loader.register(()=>({name:'test-images',loadTexture:()=>Promise.resolve(new THR
 async function library(){const lib=Object.create(ModelLibrary.prototype);lib.models=[];lib.materials=new Set();lib.lotGeometry=new THREE.PlaneGeometry(1,1);lib.lotGeometry.rotateX(-Math.PI/2);lib.view={renderer:{capabilities:{getMaxAnisotropy:()=>8}},landscape:{material:()=>new THREE.MeshStandardMaterial()}};
  for(const file of ['urban','industry','modern']){const data=fs.readFileSync(new URL('../dist/assets/buildings/'+file+'.glb',import.meta.url));const result=await loader.parseAsync(data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength),'');lib.ingest(result.scene);}return lib;}
 test('all complete building assets decode with finite UV-mapped geometry and valid categories',async()=>{
- const lib=await library();assert.equal(lib.models.length,78);assert.deepEqual([...new Set(lib.models.map(m=>m.category))].sort(),['commercial','fire','hospital','industrial','office','police','residential','residential-low','school']);
+ const lib=await library();assert.equal(lib.models.length,80);assert.deepEqual([...new Set(lib.models.map(m=>m.category))].sort(),['commercial','fire','hospital','industrial','office','police','residential','residential-low','school']);
  for(const model of lib.models){assert.ok(model.size.x>0&&model.size.y>0&&model.size.z>0);assert.ok(model.root.children.length<=(model.category==='commercial'?13:model.site?11:10));for(const mesh of model.root.children){if(mesh.material.map)assert.ok(mesh.geometry.attributes.uv);assert.ok([...mesh.geometry.attributes.position.array].every(Number.isFinite));}}
 });
 test('model placement fits saved lots uniformly and instancing survives demolition without disposing shared models',async()=>{
@@ -39,10 +39,10 @@ test('loaded models follow angled roads without stretching or overlapping neighb
 });
 
 test('modern library retains facade detail with shared materials and a bounded geometry cost',async()=>{
- const lib=await library(),modern=lib.models.filter(m=>m.family==='modern');assert.equal(modern.length,57);
+ const lib=await library(),modern=lib.models.filter(m=>m.family==='modern');assert.equal(modern.length,59);
  const materials=new Set();let triangles=0,hasWindowVariation=false;
  for(const model of modern){let count=0;for(const mesh of model.root.children){materials.add(mesh.material);count+=mesh.geometry.index.count/3;const color=mesh.geometry.attributes.color;assert.ok(color,'baked facade variation is retained');assert.ok([...color.array].every(Number.isFinite));if(new Set(color.array).size>3)hasWindowVariation=true;}assert.ok(count<(model.name.startsWith('perimeter-')?17000:model.building==='lowrent'?11000:model.site?8000:6600),model.name+' triangle budget');triangles+=count;}
- assert.ok(materials.size<=13,'materials are reused across modern buildings');assert.ok(triangles<196000);assert.ok(hasWindowVariation);
+ assert.ok(materials.size<=13,'materials are reused across modern buildings');const added=modern.filter(m=>m.name.endsWith('gable-brick-terrace')).reduce((n,m)=>n+m.root.children.reduce((s,part)=>s+part.geometry.index.count/3,0),0);assert.ok(triangles-added<196000,'existing catalogue budget retained');assert.ok(added<4000,'two original terraces share a 4000-triangle budget');assert.ok(triangles<200000);assert.ok(hasWindowVariation);
 });
 test('medium residential and low commercial zoning do not select high-rise models',async()=>{
  const lib=await library(),world=E.createWorld('Density model QA','plains',324);
@@ -80,7 +80,7 @@ test('street setbacks remain inside owned parcels at every road angle',async()=>
 });
 
 test('brick facades retain metre-scale UVs, PBR textures and accurate packed normals',async()=>{
- const lib=await library(),bricks=lib.models.flatMap(m=>m.root.children).filter(m=>m.material.name==='modern-brick');assert.equal(bricks.length,31);
+ const lib=await library(),bricks=lib.models.flatMap(m=>m.root.children).filter(m=>m.material.name==='modern-brick');assert.equal(bricks.length,33);
  for(const mesh of bricks){assert.ok(mesh.material.map);assert.ok(mesh.material.normalMap);assert.ok(mesh.material.roughnessMap);const uv=mesh.geometry.attributes.uv;const p=mesh.geometry.attributes.position;for(let i=0;i<p.count;i+=4){const metres=Math.hypot(p.getX(i+1)-p.getX(i),p.getY(i+1)-p.getY(i),p.getZ(i+1)-p.getZ(i));assert.ok(Math.abs(Math.hypot(uv.getX(i+1)-uv.getX(i),uv.getY(i+1)-uv.getY(i))-metres/2)<1e-5,'brick texture maintains two-metre repeat scale');}}
  for(const model of lib.models.filter(m=>m.family==='modern'))for(const mesh of model.root.children){const n=mesh.geometry.attributes.normal;assert.ok(n.normalized);assert.ok(n.array instanceof Int8Array);for(let i=0;i<n.count;i++){const length=Math.hypot(n.getX(i),n.getY(i),n.getZ(i));assert.ok(Math.abs(length-1)<.012,'lighting normals retain unit length');}}
 });
@@ -176,9 +176,9 @@ test('new civic sites select full-sized models with human-scale entrances inside
 test('pitched neighborhood houses retain roof silhouettes and windows in distant geometry',async()=>{
  const lib=await library(),homes=lib.models.filter(m=>m.houseForm),bytes=fs.readFileSync(new URL('../dist/assets/buildings/lod.bin',import.meta.url));
  lib.ingestLod(JSON.parse(fs.readFileSync(new URL('../dist/assets/buildings/lod.json',import.meta.url))),bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.length));
- assert.equal(homes.length,10);assert.equal(homes.filter(m=>m.houseForm==='detached').length,8);
+ assert.equal(homes.length,12);assert.equal(homes.filter(m=>m.houseForm==='detached').length,8);
  for(const home of homes){
-  assert.ok(home.size.y>5&&home.size.y<11);assert.ok(home.streetFronts.some(f=>f.kind==='entrance'&&f.normal[1]>.9));
+  assert.ok(home.size.y>5&&home.size.y<(home.name.endsWith('gable-brick-terrace')?12:11));assert.ok(home.streetFronts.some(f=>f.kind==='entrance'&&f.normal[1]>.9));
   const roof=home.root.children.find(m=>m.material.name==='modern-roof');assert.ok(roof,home.name);
   const n=roof.geometry.attributes.normal;let slopes=0;
   for(let i=0;i<n.count;i++){assert.ok(n.getY(i)>=0,home.name+' roof faces upward');if(n.getY(i)>.1&&n.getY(i)<.95)slopes++;}
@@ -196,7 +196,42 @@ test('low zoning uses detached houses and row housing keeps paired or terrace fo
   assert.ok(b.min.x>=p.cx-2-1e-5&&b.max.x<=p.cx+2+1e-5&&b.min.z>=p.cz-2-1e-5&&b.max.z<=p.cz+2+1e-5,'house and porch fit owned lot');
   if(building==='townhouse'){assert.ok(['semi','terrace'].includes(model.houseForm));rows.add(model.name);}else{assert.equal(model.houseForm,'detached');detached.add(model.name);}
  }
- assert.ok(detached.size>=4);assert.equal(rows.size,2);
+ assert.ok(detached.size>=4);assert.equal(rows.size,4);
+});
+
+test('historic terraces retain shaped crowns, recessed windows and correctly oriented party-wall brickwork',async()=>{
+ const lib=await library(),homes=lib.models.filter(m=>m.name.endsWith('gable-brick-terrace'));assert.equal(homes.length,2);
+ const bytes=fs.readFileSync(new URL('../dist/assets/buildings/lod.bin',import.meta.url));lib.ingestLod(JSON.parse(fs.readFileSync(new URL('../dist/assets/buildings/lod.json',import.meta.url))),bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.length));
+ assert.deepEqual(new Set(homes.map(h=>h.roofForm)),new Set(['stepped-gable','bell-gable']));
+ for(const home of homes){
+  assert.equal(home.houseForm,'terrace');assert.equal(home.floors,3);assert.ok(home.size.x>7.5&&home.size.x<7.7);assert.ok(home.size.y>11&&home.size.y<12);
+  assert.ok(home.root.children.reduce((n,m)=>n+m.geometry.index.count/3,0)<2000);
+  const full=home.root.children.reduce((n,m)=>n+m.geometry.index.count,0),far=home.root.children.reduce((n,m)=>n+m.geometry.userData.lod.index.count,0);assert.ok(far<full*.48,'distant terraces retain facade faces with fewer small frame edges');
+  const brick=home.root.children.find(m=>m.material.name==='modern-brick'),pos=brick.geometry.attributes.position,norm=brick.geometry.attributes.normal,uv=brick.geometry.attributes.uv;let sideVertices=0;
+  for(let i=0;i<pos.count;i++)if(Math.abs(norm.getX(i))>.99&&Math.abs(pos.getX(i))>3.7){
+   assert.ok(Math.abs(uv.getY(i)-(pos.getY(i)-home.origin.y)/2)<1e-5,'vertical brick UV follows height');
+   assert.ok(Math.abs(uv.getX(i)-(pos.getZ(i)-home.origin.z)/2)<1e-5,'horizontal brick courses follow wall length');sideVertices++;
+  }assert.equal(sideVertices,8);
+  const front=home.streetFronts.filter(f=>f.kind==='entrance'&&f.normal[1]>.9);assert.equal(front.length,1);assert.ok(front[0].position[0]<-2,'entrance occupies its own narrow bay');
+  for(const glass of home.root.children.filter(m=>m.material.name.startsWith('modern-glass'))){const n=glass.geometry.attributes.normal;for(let i=0;i<n.count;i++)assert.ok(Math.abs(n.getX(i))<1e-6,'no party-wall windows');}
+  // Cast through the attic opening: glazing lies behind the masonry face,
+  // rather than a solid brick triangle covering the window at a distance.
+  const ray=new THREE.Raycaster(new THREE.Vector3(.25,9.7,20),new THREE.Vector3(0,0,-1));home.root.updateMatrixWorld(true);
+  const hits=ray.intersectObject(home.root,true);assert.ok(hits.length);assert.ok(hits[0].object.material.name.startsWith('modern-glass'),'attic opening reaches recessed glazing');
+ }
+});
+
+test('ordinary row zoning grows both historic terraces on multi-cell road-facing lots and reloads the same models',async()=>{
+ const lib=await library(),w=E.createWorld('Historic row district','plains',8),B=globalThis.BoroughBuildings;w.money=1e6;E.place(w,1,23,'power');E.place(w,2,23,'water');
+ const cells=[...E.fineZoningLayout(w).values()].filter(p=>p.row<3);assert.ok(E.fineZoneCells(w,cells.map(p=>p.id),'residential_row').ok);for(let i=0;i<120;i++)E.tick(w);
+ const saved=JSON.stringify(w),reloaded=JSON.parse(saved),names=new Set(),lots=Object.values(w.development.parcels).filter(p=>p.occupant&&!p.occupant.construction);assert.ok(lots.length>15);
+ for(const lot of lots){
+  assert.ok(lot.cells.length>1);const p=B.renderParcel(w,lot.id),root=lib.create(w,p.index,p),again=B.renderParcel(reloaded,lot.id),restored=lib.create(reloaded,again.index,again);names.add(root.userData.model);assert.equal(restored.userData.model,root.userData.model);assert.equal(root.rotation.y,lot.frame.angle);
+  const asset=lib.models.find(m=>m.name===root.userData.model),plan=root.userData.plan;assert.equal(asset.houseForm,'terrace');
+  for(const home of root.children.slice(0,root.userData.homeCopies)){assert.ok(home.scale.x>=.17&&home.scale.x<=.24);assert.equal(home.scale.x,home.scale.y);assert.equal(home.scale.x,home.scale.z);assert.ok(Math.abs(home.position.x)+asset.size.x*home.scale.x/2<=plan.lotWidth/2-.019);assert.ok(Math.abs(home.position.z)+asset.size.z*home.scale.x/2<=plan.lotDepth/2-.14);}
+  for(const x of plan.entranceXs)assert.ok(plan.accessPoints.some(a=>a.kind==='walk'&&Math.abs(a.x-x)<1e-8),'every authored door has street access');
+ }
+ for(const name of ['narrow-gabled-townhouse','stepped-gable-brick-terrace','bell-gable-brick-terrace'])assert.ok(names.has(name),name+' actually grows');assert.equal(JSON.stringify(w),saved);assert.ok(E.valid(reloaded));
 });
 
 test('authored household doors position their own clear garden walks and road access points',async()=>{

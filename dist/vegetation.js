@@ -1,6 +1,6 @@
-import {loadBinary} from './asset-transfer.js?v=95';
-import {treeElevation,elevationTreeMaterial,elevationTreeDepthMaterial} from './tree-impostor.js?v=95';
-import {TreeSelection} from './tree-selection.js?v=95';
+import {loadBinary} from './asset-transfer.js?v=96';
+import {treeElevation,elevationTreeMaterial,elevationTreeDepthMaterial} from './tree-impostor.js?v=96';
+import {TreeSelection} from './tree-selection.js?v=96';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 export class Vegetation{
