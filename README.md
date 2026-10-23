@@ -693,3 +693,15 @@ All 350 tests pass, including ripple continuity, independent texture ownership, 
 In alternating old/new coastal runs, median GPU time was 11.38/11.02 ms and 11.33/10.88 ms. Both versions used 45 draws and 435,202 triangles on ordinary frames, and 88 draws and 874,501 triangles when refreshing reflections. The riverbank runs measured 14.04/13.64 ms and 12.78/12.40 ms. Median frame intervals stayed at 16.6–16.7 ms. These are matched-scene measurements on the test device, not a guarantee for every city or computer.
 
 This is feature update three after the Edition 99 optimization. The next update, Edition 103, is the scheduled dedicated optimization pass.
+
+## Edition 103 — Local road-edit refresh
+
+Road edits now rebuild legacy buildings only when a changed road is inside the rectangle used to find that lot's frontage. The rectangle includes the complete width and depth of a multi-cell lot. Independent zoning parcels retain their saved frames and model roots unless the parcel or building actually changes. Adding a distant road no longer recreates every house, apartment and landscaped site in the city.
+
+Road geometry, driveway and sidewalk access, traffic routes, street life and zoning overlays still refresh after road edits. Nearby additions, removals and curves still update legacy facades. Growth, demolition, changed parcel frames, night lighting, overlays and forced refreshes retain their existing behavior. Building models, textures, terrain, LOD settings and resident simulation are unchanged.
+
+All 356 tests pass. Six new checks cover local and distant road edits, curved frontage, multi-cell dependency bounds, retained independent parcels, construction, service buildings and access/traffic refresh. The differential CPU benchmark uses shipped building assets and compares exact mesh geometry, materials and transforms with Edition 102; world data also matches. In a 90-building legacy district, median building-refresh time falls from 29.78 to 2.16 ms. In a 300-building independent district it falls from 111.50 to 3.63 ms. These CPU measurements exclude road geometry, traffic graph work, GPU rendering and image decoding.
+
+A separate browser comparison includes the complete refresh, with real textures, trees, roads, access paving and traffic. In alternating runs of the same 100-building independent district, a distant road edit takes 1,754.9/198.6 ms and 1,785.9/192.6 ms before/after. Building roots recreated per edit fall from 100 to zero; all four runs retain the same 7,394 component meshes and vertex/index counts. The interval through the edit's next frame drops from 1,852.8 to 306.5 ms and from 1,882.4 to 269.8 ms. This measures an editing interruption in this test scene, not steady-state FPS or every city's performance. Removing a complete street in the browser retains all 100 occupied model roots while removing its traffic nodes and the disconnected access paving.
+
+This is the scheduled optimization after feature updates 100–102. The feature-update counter resets to zero; the next dedicated optimization follows updates 104–106.
