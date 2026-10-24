@@ -1,9 +1,10 @@
-import './building-entities.js?v=112';
+import {moveToRoute} from './route-progress.js?v=113';
+import './building-entities.js?v=113';
 const Buildings=globalThis.BoroughBuildings;
-import {laneOffset,transitionLaneOffsets} from './road-lanes.js?v=112';
-import {roadGeometry} from './road-junction-plan.js?v=112';
-import {TrafficSpatial} from './traffic-spatial.js?v=112';
-import {Junctions,smoothRoute} from './junctions.js?v=112';
+import {laneOffset,transitionLaneOffsets} from './road-lanes.js?v=113';
+import {roadGeometry} from './road-junction-plan.js?v=113';
+import {TrafficSpatial} from './traffic-spatial.js?v=113';
+import {Junctions,smoothRoute} from './junctions.js?v=113';
 // Car slots grow with population; saved road trips always have room to resume.
 export function carCapacity(world){const population=Buildings.entries(world).reduce((n,[,t])=>n+(t.type==='residential'&&!t.construction?(t.people||0):0),0),saved=world.citizens?.residents.filter(r=>r.trip).length||0;return Math.max(32,Math.min(512,Math.ceil(population/4)),saved);}
 // Destination-based road trips. No random placement or per-frame route searches.
@@ -12,13 +13,19 @@ export function outsidePortals(world){return world.tiles.flatMap((t,i)=>{const x
 const neighbors=i=>[i%48>0?i-1:-1,i%48<47?i+1:-1,i>=48?i-48:-1,i<2256?i+48:-1].filter(i=>i>=0);
 export class Traffic {
  constructor(world,engine){this.engine=engine;this.spatial=new TrafficSpatial();this.agents=[];this.sequence=0;this.spawnClock=0;this.completed=0;this.time=0;this.rebuild(world);}
- rebuild(world){this.world=world;this.portals=outsidePortals(world);this.graph=new Map();this.samples=new Map();this.positions=new Map();this.routeCache=new Map();this.searchCache=new Map();
+ rebuild(world){const replacement=this.roadEditRevision!==undefined&&this.roadEditRevision!==(world.roadEditRevision||0);this.roadEditRevision=world.roadEditRevision||0;this.world=world;this.portals=outsidePortals(world);this.graph=new Map();this.samples=new Map();this.positions=new Map();this.routeCache=new Map();this.searchCache=new Map();
  for(const path of world.roadPaths||[]){const samples=this.engine.sampleRoad(path.controls).map(p=>({x:(p.x+.5)*4-96,z:(p.y+.5)*4-96}));const mapping=new Map();for(const i of path.tiles){const p=roadPoint(i);let best=0,d=Infinity;samples.forEach((s,j)=>{const v=(s.x-p.x)**2+(s.z-p.z)**2;if(v<d){d=v;best=j}});mapping.set(i,best);if(!this.positions.has(i))this.positions.set(i,samples[best]);}this.samples.set(path.id,{samples,mapping,spec:this.engine.ROADS[path.type]});}
- for(let i=0;i<world.tiles.length;i++)if(world.tiles[i].type==='road'){const t=world.tiles[i];this.graph.set(i,neighbors(i).filter(j=>{if(world.tiles[j].type!=='road')return false;if(!this.engine.ROADS[t.roadType]?.oneway)return true;for(const id of t.pathIds||[]){const map=this.samples.get(id)?.mapping;if(map?.has(j))return map.get(j)>map.get(i);}return j>i;}));}
+ for(let i=0;i<world.tiles.length;i++)if(world.tiles[i].type==='road'){const t=world.tiles[i];this.graph.set(i,neighbors(i).filter(j=>{if(world.tiles[j].type!=='road')return false;let shared=false;for(const id of t.pathIds||[]){const path=this.samples.get(id),map=path?.mapping;if(!map?.has(j))continue;shared=true;if(!path.spec.oneway||map.get(j)>map.get(i))return true;}return shared?false:t.pathIds?.length?true:!this.engine.ROADS[t.roadType]?.oneway||j>i;}));}
  const previousJunctions=this.junctions;this.junctions=new Junctions(this.graph,roadPoint,roadGeometry(world,this.engine).junctions);for(const j of this.junctions.items){const previous=previousJunctions?.items.find(old=>old.id===j.id);if(previous?.owner?.active)j.owner=previous.owner;}
  this.reverseGraph=new Map([...this.graph.keys()].map(i=>[i,[]]));for(const [i,links]of this.graph)for(const j of links)this.reverseGraph.get(j).push(i);
  this.trips=[];const pathsFrom=new Map(this.portals.map(p=>[p.id,this.search(p.id)])),pathsTo=new Map(this.portals.map(p=>[p.id,this.search(p.id,this.reverseGraph)]));
  for(const [i,tile]of Buildings.entries(world)){if(!['residential','commercial','industrial','office'].includes(tile.type)||!tile.level||tile.construction)continue;const frontage=Buildings.frontage(world,i,this.graph),lotPoint=Buildings.point(world,i),nearest=[...this.portals].sort((a,b)=>Math.hypot(a.x-lotPoint.x,a.z-lotPoint.z)-Math.hypot(b.x-lotPoint.x,b.z-lotPoint.z));let found=false;for(const portal of nearest){const parents=pathsFrom.get(portal.id);for(const road of frontage){const inbound=this.trace(parents,road);if(!inbound)continue;for(const exit of nearest){const reverse=this.trace(pathsTo.get(exit.id),road);if(!reverse)continue;const outbound=reverse.reverse();const incoming=this.route(inbound,portal,true,Buildings.seed(i)),outgoing=this.route(outbound,exit,false,Buildings.seed(i)),lot=Buildings.point(world,i),stop={x:(lot.x+incoming.at(-1).x)/2,z:(lot.z+incoming.at(-1).z)/2};this.trips.push({destination:i,kind:tile.type==='industrial'?'Delivery':this.engine.hasShops(tile)?'Business visit':tile.type==='residential'?'Resident visit':'Business visit',inbound:[...incoming,stop],outbound:[stop,...outgoing],cells:[inbound,outbound],roads:new Set([...inbound,...outbound])});found=true;break;}if(found)break;}if(found)break;}}
+ // Width and direction changes need new lane geometry. Additions retain the
+ // existing route exactly; replacements project onto a newly connected trip.
+ if(replacement){const people=new Map((world.citizens?.residents||[]).map(r=>[r.id,r]));for(const a of this.agents){if(!a.active||a.kind==='bus')continue;
+  if(a.residentId){const r=people.get(a.residentId),trip=r?.trip,route=trip&&this.between(trip.from,trip.to);if(!route){a.active=false;continue;}a.trip={destination:trip.to,cells:[route.cells],roads:new Set(route.cells)};moveToRoute(a,route.points);Object.assign(trip,{segment:a.segment,distance:a.distance,x:a.x,z:a.z,heading:a.heading});}
+  else{const trip=this.trips.find(t=>t.destination===a.trip.destination);if(!trip){a.active=false;continue;}a.trip=trip;if(!a.dwell)moveToRoute(a,a.phase==='inbound'?trip.inbound:trip.outbound);}
+ }}
  // Keep valid trips across additions. Removed roads cancel only affected trips.
  for(const a of this.agents)if(a.active&&(!Buildings.get(world,a.trip.destination)?.level||a.trip.cells.some(cells=>cells.some((i,k)=>!this.graph.has(i)||k<cells.length-1&&!this.graph.get(i).includes(cells[k+1])))))a.active=false;
  }

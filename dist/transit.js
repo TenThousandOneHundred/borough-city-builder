@@ -1,7 +1,8 @@
-import './building-entities.js?v=112';
+import {moveToRoute} from './route-progress.js?v=113';
+import './building-entities.js?v=113';
 const Buildings=globalThis.BoroughBuildings;
-import {Walking,sidewalkPosition} from './walking.js?v=112';
-import {roadPoint} from './traffic.js?v=112';
+import {Walking,sidewalkPosition} from './walking.js?v=113';
+import {roadPoint} from './traffic.js?v=113';
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const nearby=(engine,i)=>engine.neighbors(i);
 export const stopPosition=sidewalkPosition;
@@ -22,10 +23,11 @@ export function createBusLine(world,traffic,stops){
 export class Transit{
  constructor(world,traffic){this.world=world;this.traffic=traffic;this.entries=new Map();this.passengers=new Map();this.journeyCache=new Map();this.walking=new Walking(world,traffic);this.passengerRoutes=new Map();this.rebuild();}
  syncPassengers(){const people=this.world.citizens?.residents;if(people===this.peopleSource)return;this.peopleSource=people;this.passengers=new Map((people||[]).filter(r=>r.transit).map(r=>[r.id,r]));for(const id of this.passengerRoutes.keys())if(!this.passengers.has(id))this.passengerRoutes.delete(id);}
- rebuild(){this.developmentRevision=this.world.development?.revision||0;if(this.walkingReady)this.walking.rebuild();this.walkingReady=true;this.walkRevision=this.world.walkRevision||0;this.passengerRoutes.clear();this.journeyCache.clear();const lines=this.world.transit?.lines||[],ids=new Set(lines.map(l=>l.id));for(const [id,e]of this.entries)if(!ids.has(id)){e.agent.active=false;this.entries.delete(id);}
+ rebuild(){const replacement=this.roadEditRevision!==undefined&&this.roadEditRevision!==(this.world.roadEditRevision||0);this.roadEditRevision=this.world.roadEditRevision||0;this.developmentRevision=this.world.development?.revision||0;if(this.walkingReady)this.walking.rebuild();this.walkingReady=true;this.walkRevision=this.world.walkRevision||0;this.passengerRoutes.clear();this.journeyCache.clear();const lines=this.world.transit?.lines||[],ids=new Set(lines.map(l=>l.id));for(const [id,e]of this.entries)if(!ids.has(id)){e.agent.active=false;this.entries.delete(id);}
  for(const line of lines){const plan=planBusLine(this.world,this.traffic,line.stops);let entry=this.entries.get(line.id);if(!entry){const agent=this.traffic.agents.find(a=>a.kind==='bus'&&!a.active&&![...this.entries.values()].some(e=>e.agent===a))||this.traffic.addAgent();agent.kind='bus';agent.length=2.1;entry={line,agent};this.entries.set(line.id,entry);}entry.plan=plan;entry.line=line;entry.stopPositions=line.stops.map(stop=>stopPosition(this.traffic,stop));
  if(!plan.ok){entry.agent.active=false;entry.reason=plan.reason;continue;}entry.reason='';if(this.world.tiles[line.depot]?.type!=='bus'){entry.reason='Original depot removed';entry.agent.active=false;continue;}
- if(!entry.agent.active){const dwell=line.vehicle.phase==='dwell',remaining=line.vehicle.dwell;this.launch(entry,true);if(dwell){line.vehicle.phase='dwell';line.vehicle.dwell=remaining;entry.agent.hold=true;}}
+ if(replacement&&entry.agent.active){const route=line.vehicle.leg<0?transitLeg(this.traffic,line.depot,line.stops[0],true):plan.legs[line.vehicle.leg];if(route){moveToRoute(entry.agent,route.points);entry.agent.trip={destination:line.stops[line.vehicle.leg<0?0:(line.vehicle.leg+1)%line.stops.length],cells:[route.cells],roads:new Set(route.cells)};Object.assign(line.vehicle,{segment:entry.agent.segment,distance:entry.agent.distance,x:entry.agent.x,z:entry.agent.z,heading:entry.agent.heading});}}
+ if(!entry.agent.active){const dwell=line.vehicle.phase==='dwell',remaining=line.vehicle.dwell;this.launch(entry,true);if(replacement){moveToRoute(entry.agent,entry.agent.points);Object.assign(line.vehicle,{segment:entry.agent.segment,distance:entry.agent.distance,x:entry.agent.x,z:entry.agent.z,heading:entry.agent.heading});}if(dwell){line.vehicle.phase='dwell';line.vehicle.dwell=remaining;entry.agent.hold=true;}}
  }this.graph=this.traffic.graph;this.lineKey=lines.map(l=>l.id+':'+l.stops.join(',')).join(';');}
  launch(entry,restore=false){const {line,plan,agent}=entry,v=line.vehicle,route=v.leg<0?transitLeg(this.traffic,line.depot,line.stops[0],true):plan.legs[v.leg];if(!route){entry.reason='Route disconnected';return false;}
  const segment=restore?Math.min(v.segment,route.points.length-2):0,p=route.points[segment],q=route.points[segment+1],distance=restore?Math.min(v.distance,dist(p,q)):0;

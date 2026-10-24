@@ -1,6 +1,18 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 113 — Replace existing roads
+
+Choose Replace in the road toolbar, or inspect a street and choose Replace road type, to switch an existing section among all eight road types. Curved roads keep their controls and direction. Older tile streets become sampled sections while retaining crossings and separate zoning-side settings. The preview shows the price, replacement width and any whole building lots that would be removed. Widening into occupied land requires the explicit removal checkbox; insufficient funds or an unapproved demolition leaves the city unchanged.
+
+Unaffected homes retain their saved lot dimensions, occupants and access. Manual saves and reloads retain the road type and zoning-side setting. Moving cars and buses are projected onto the replacement lanes while keeping their identity, destination and journey; bus passengers stay assigned to their trip. One-way edges now use the selected road's direction without making its crossing street one-way. A separate pedestrian path crossing the replacement footprint must be removed first. This update does not add elevation editing or a one-way reversal control.
+
+The road-type and tree-lined-street pictures in the official [Road Tools feature](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/road-tools) were inspected before implementation. They informed the section replacement and width preview. This was a focused picture review; reference pictures are not shipped in the game.
+
+All 416 regression tests pass, along with asset integrity, lossless compression and module syntax checks. Full-game local browser checks verified a narrowed avenue with 96 residents, left-side zoning, the eight-lot widening warning and disabled Apply button before removal was selected, a curved tree-lined upgrade, and exact funds and residents after save/reload. A further automated bus check verifies actual aboard passengers through a replacement and a subsequent completed circuit. The local browser reported no errors or warnings.
+
+In a 241-parcel fixture, 25 measured runs give median CPU costs of 5.6 ms to quote, 5.9 ms to replace and 26.7 ms to rebuild zoning after the edit. These are edit-operation timings, not overall frame-rate measurements. Lane reprojection runs only when a road is replaced. No building models or textures were added or reduced; model downloads remain pinned to Edition 108. This is feature update two after optimization 111. Edition 114 is the third feature update, followed by the scheduled optimization in Edition 115.
+
 ## Run
 `python3 -m http.server 4173 --directory dist`
 Open http://localhost:4173. No build or dependency installation is needed. Three.js 0.170.0, OrbitControls and Reflector are vendored with their MIT license. Google Fonts are optional; the interface has system font fallbacks.

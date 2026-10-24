@@ -32,3 +32,5 @@
 
 #roadControls{flex-wrap:wrap}#newRoadZoning{display:flex;align-items:center;gap:7px;font-size:11px;color:#d7e8ee}#newRoadZoning[hidden]{display:none}#newRoadSides{padding:6px;background:#183746;color:#e2f2f5;border:1px solid #7596a8;border-radius:4px;font-size:11px}#newRoadZoning small{color:#aac2cf}#newRoadSides:disabled{opacity:.55}.road-zoning-control label:not(:first-of-type){margin-top:10px}.road-zoning-control select:disabled{opacity:.6}
 #inspectContent{max-height:calc(100dvh - 260px);overflow-y:auto}.game-build .tool-status{bottom:var(--zoning-hint-bottom,326px)}
+
+.road-replacement-control h3{color:#9bdef2}.replacement-summary{padding:10px;background:#183746;border-radius:4px;line-height:1.6}.replacement-demolition{display:flex!important;align-items:flex-start;gap:8px;color:#ffc3a4;white-space:normal}.replacement-demolition[hidden]{display:none!important}.replacement-demolition input{margin:5px 0 0;flex-shrink:0}#applyRoadReplacement{width:100%;background:#267a8e}#applyRoadReplacement.replacement-destructive{background:#934f3f}.road-zoning-control>button{width:100%;margin-top:8px}
