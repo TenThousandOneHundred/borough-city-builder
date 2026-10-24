@@ -1,6 +1,18 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 119 — Less traffic work per simulation step
+
+This is the scheduled optimization after feature updates 116–118. Profiling the 4,872-resident city identified vehicle-following scans as the largest simulation cost. Drivers now query a conservative nearby rectangle through small spatial cells, bounded by the distance that can affect braking, movement or intersection clearance during the step. Vehicle lengths, long buses, turning speed limits and sequential movement remain accounted for. Starting drivers retain the previous distant-queue diagnostic through an unbounded fallback when necessary. Signals, yielding, routes, acceleration, movement and offscreen simulation are unchanged.
+
+The frozen Edition 118 comparison checks the entire saved world, every vehicle, queue summaries and completed journeys after each trial. For 90 simulated seconds, the 128-slot city decreases from a median 577.6 to 320.9 ms of CPU work (44%), and the 512-slot city from 3,407.0 to 1,554.6 ms (54%). Cities with working roundabouts decrease from 657.1 to 359.7 ms at 128 slots (45%) and 4,100.5 to 1,757.5 ms at 512 slots (57%). Small fleets retain the direct scan; their timing variation is not attributed to this index optimization. These results cover traffic, transit, walking and resident scheduling, excluding rendering, GPU work and engine growth ticks. They are not overall FPS claims. In the actual in-app browser, two alternating trials for each scene reduced simulation CPU time by 20% for 128 slots, 22% for 512 slots, and 28% for 512 slots with roundabouts. Every saved world and journey also matched the frozen release in those browser comparisons.
+
+All 450 regression tests pass. Additional cases cover arbitrary headings, sequential index moves, long avenues, exact lane and stopping boundaries, held buses, dwelling vehicles, tiny time steps, distant queue messages, unusual vehicle lengths and full-scan adapters. Reproduce the three alternating trials for each of five scenes with `node scripts/benchmark-traffic-following.mjs` (set `GIT_BIN` if the system Git wrapper is unavailable).
+
+The full local game retained 262 residents, day 38 and ₡990,204 through manual save, Save & Exit, a page reload and Continue. It resumed simulation with residents still assigned to their homes and journeys. The browser reported no warnings or errors.
+
+The only runtime behavior changes are the following query and its spatial search. All other changed game source bodies differ only in version strings. Geometry, materials, building/tree assets, terrain, detail settings, rendering visibility and save format remain unchanged. Buildings stay pinned to Edition 114 assets and broadleaf trees to Edition 117. This performance pass preserves the previously inspected visual references and introduces no new visual feature.
+
 ## Edition 118 — Working roundabouts
 
 Roads now includes a Roundabout tool: select an existing crossing, preview a small, medium or large island, then build or resize it. Inspect also opens these controls. The previous signal/stop choice returns when the roundabout is removed. The tool checks funds, road angles, dry and sufficiently level land, nearby junctions, occupied lots, footpaths and bus stops. Existing homes are never demolished by this operation. Connecting roads must have the roundabout removed before they can be replaced or deleted.

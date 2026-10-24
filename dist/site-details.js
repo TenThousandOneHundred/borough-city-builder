@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.js';
-import {GardenProps} from './garden-props.js?v=118';
-import {sitePlan} from './site-plan.js?v=118';
+import {GardenProps} from './garden-props.js?v=119';
+import {sitePlan} from './site-plan.js?v=119';
 // All props share geometry and materials across the city, allowing the existing
 // building instancer to submit them in a bounded number of draw calls.
 export class SiteDetails{

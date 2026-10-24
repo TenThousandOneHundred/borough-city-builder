@@ -1,14 +1,14 @@
-import {lotMaterials} from './lot-surfaces.js?v=118';
-import {bakeRoofFinish} from './roof-finishes.js?v=118';
-import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=118';
-import {loadBinary} from './asset-transfer.js?v=118';
-import {SiteDetails} from './site-details.js?v=118';
-import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=118';
+import {lotMaterials} from './lot-surfaces.js?v=119';
+import {bakeRoofFinish} from './roof-finishes.js?v=119';
+import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=119';
+import {loadBinary} from './asset-transfer.js?v=119';
+import {SiteDetails} from './site-details.js?v=119';
+import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=119';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {lotPlan} from './building-plan.js?v=118';
-import {floorHeight} from './landscape.js?v=118';
+import {lotPlan} from './building-plan.js?v=119';
+import {floorHeight} from './landscape.js?v=119';
 const IDENTITY=new THREE.Matrix4();
 const civicDefaults={hospital:'clinic',school:'elementary',police:'police',fire:'fire'};
 // Complete textured assets are loaded once, batched per material, and instanced.

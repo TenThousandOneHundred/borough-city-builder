@@ -2,15 +2,16 @@
 // Buckets are updated after each move, preserving the simulation's sequential order.
 const EMPTY=Object.freeze([]);
 export class TrafficSpatial {
- constructor(){this.x=new Map();this.z=new Map();this.cells=new WeakMap();this.candidates=[];this.active=[];this.size=4;this.u=new Map();this.v=new Map();this.diagonalReady=false;}
+ constructor(){this.x=new Map();this.z=new Map();this.cells=new WeakMap();this.candidates=[];this.active=[];this.size=4;this.u=new Map();this.v=new Map();this.diagonalReady=false;this.grid=new Map();}
  reset(agents){
-  for(const bins of [this.x,this.z])for(const bucket of bins.values())bucket.length=0;
-  this.diagonalReady=false;this.active.length=0;this.minX=this.minZ=Infinity;this.maxX=this.maxZ=-Infinity;
-  for(const a of agents)if(a.active){this.active.push(a);const x=Math.floor(a.x/this.size),z=Math.floor(a.z/this.size);this.insert(this.x,x,a);this.insert(this.z,z,a);let cell=this.cells.get(a);if(cell){cell.x=x;cell.z=z;}else this.cells.set(a,{x,z});this.bounds(a);}
+  for(const bins of [this.x,this.z])for(const bucket of bins.values())bucket.length=0;for(const column of this.grid.values())for(const bucket of column.values())bucket.length=0;
+  this.diagonalReady=false;this.active.length=0;this.maxLength=.9;this.minX=this.minZ=Infinity;this.maxX=this.maxZ=-Infinity;
+  for(const a of agents)if(a.active){this.active.push(a);this.maxLength=Math.max(this.maxLength,a.length||.9);const x=Math.floor(a.x/this.size),z=Math.floor(a.z/this.size);this.insert(this.x,x,a);this.insert(this.z,z,a);this.gridInsert(x,z,a);let cell=this.cells.get(a);if(cell){cell.x=x;cell.z=z;}else this.cells.set(a,{x,z});this.bounds(a);}
  }
+ gridInsert(x,z,a){let column=this.grid.get(x);if(!column)this.grid.set(x,column=new Map());let bucket=column.get(z);if(!bucket)column.set(z,bucket=[]);bucket.push(a);}
  insert(bins,key,a){let bucket=bins.get(key);if(!bucket)bins.set(key,bucket=[]);bucket.push(a);}
  bounds(a){this.minX=Math.min(this.minX,a.x);this.maxX=Math.max(this.maxX,a.x);this.minZ=Math.min(this.minZ,a.z);this.maxZ=Math.max(this.maxZ,a.z);}
- move(a){if(!a.active)return;const cell=this.cells.get(a);if(!cell)return;for(const axis of ['x','z']){const key=Math.floor(a[axis]/this.size);if(key!==cell[axis]){const bucket=this[axis].get(cell[axis]);bucket.splice(bucket.indexOf(a),1);this.insert(this[axis],key,a);cell[axis]=key;}}if(this.diagonalReady){for(const axis of ['u','v']){const value=axis==='u'?(a.x+a.z)*Math.SQRT1_2:(a.z-a.x)*Math.SQRT1_2,key=Math.floor(value/this.size);if(key!==cell[axis]){const bucket=this[axis].get(cell[axis]);bucket.splice(bucket.indexOf(a),1);this.insert(this[axis],key,a);cell[axis]=key;}}this.diagonalBounds(a);}this.bounds(a);}
+ move(a){if(!a.active)return;const cell=this.cells.get(a);if(!cell)return;const gx=Math.floor(a.x/this.size),gz=Math.floor(a.z/this.size);if(gx!==cell.x||gz!==cell.z){const bucket=this.grid.get(cell.x).get(cell.z);bucket.splice(bucket.indexOf(a),1);this.gridInsert(gx,gz,a);}for(const axis of ['x','z']){const key=Math.floor(a[axis]/this.size);if(key!==cell[axis]){const bucket=this[axis].get(cell[axis]);bucket.splice(bucket.indexOf(a),1);this.insert(this[axis],key,a);cell[axis]=key;}}if(this.diagonalReady){for(const axis of ['u','v']){const value=axis==='u'?(a.x+a.z)*Math.SQRT1_2:(a.z-a.x)*Math.SQRT1_2,key=Math.floor(value/this.size);if(key!==cell[axis]){const bucket=this[axis].get(cell[axis]);bucket.splice(bucket.indexOf(a),1);this.insert(this[axis],key,a);cell[axis]=key;}}this.diagonalBounds(a);}this.bounds(a);}
  diagonalBounds(a){const u=(a.x+a.z)*Math.SQRT1_2,v=(a.z-a.x)*Math.SQRT1_2;this.minU=Math.min(this.minU,u);this.maxU=Math.max(this.maxU,u);this.minV=Math.min(this.minV,v);this.maxV=Math.max(this.maxV,v);}
  diagonal(a,f){
   if(!this.diagonalReady){for(const bins of [this.u,this.v])for(const bucket of bins.values())bucket.length=0;this.minU=this.minV=Infinity;this.maxU=this.maxV=-Infinity;for(const b of this.active){const c=this.cells.get(b);c.u=Math.floor((b.x+b.z)*Math.SQRT1_2/this.size);c.v=Math.floor((b.z-b.x)*Math.SQRT1_2/this.size);this.insert(this.u,c.u,b);this.insert(this.v,c.v,b);this.diagonalBounds(b);}this.diagonalReady=true;}
@@ -30,6 +31,13 @@ export class TrafficSpatial {
   const alongX=countX<=countZ,bins=alongX?this.x:this.z,first=alongX?firstX:firstZ,last=alongX?lastX:lastZ;
   for(let key=first;key<=last;key++)for(const b of bins.get(key)||EMPTY)if(b!==except&&b.active&&Math.hypot(b.x-point.x,b.z-point.z)<radius)return true;
   return false;
+ }
+ // A conservative swept rectangle visits nearby spatial cells. Narrow
+ // bounded queries avoid scanning distant cars on the same long avenue.
+ leaders(a,f,reach){
+  const margin=.650000001,x=a.x+f.x*reach,z=a.z+f.z*reach,loX=Math.min(a.x,x)-margin,hiX=Math.max(a.x,x)+margin,loZ=Math.min(a.z,z)-margin,hiZ=Math.max(a.z,z)+margin;
+  const x0=Math.floor(loX/this.size),x1=Math.floor(hiX/this.size),z0=Math.floor(loZ/this.size),z1=Math.floor(hiZ/this.size),result=this.candidates;result.length=0;
+  for(let x=x0;x<=x1;x++){const column=this.grid.get(x);if(!column)continue;for(let z=z0;z<=z1;z++)for(const b of column.get(z)||EMPTY)result.push(b);}return result;
  }
  nearby(point,radius){const result=this.candidates;result.length=0;for(let key=Math.floor((point.x-radius)/this.size);key<=Math.floor((point.x+radius)/this.size);key++)for(const b of this.x.get(key)||EMPTY)if(Math.abs(b.z-point.z)<=radius)result.push(b);return result;}
  corridor(a,forward){

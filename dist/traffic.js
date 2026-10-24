@@ -1,11 +1,12 @@
-import {roundaboutRoute} from './roundabout-geometry.js?v=118';
-import {moveToRoute} from './route-progress.js?v=118';
-import './building-entities.js?v=118';
+import {followingClearance} from './traffic-following.js?v=119';
+import {roundaboutRoute} from './roundabout-geometry.js?v=119';
+import {moveToRoute} from './route-progress.js?v=119';
+import './building-entities.js?v=119';
 const Buildings=globalThis.BoroughBuildings;
-import {laneOffset,transitionLaneOffsets} from './road-lanes.js?v=118';
-import {roadGeometry} from './road-junction-plan.js?v=118';
-import {TrafficSpatial} from './traffic-spatial.js?v=118';
-import {Junctions,smoothRoute} from './junctions.js?v=118';
+import {laneOffset,transitionLaneOffsets} from './road-lanes.js?v=119';
+import {roadGeometry} from './road-junction-plan.js?v=119';
+import {TrafficSpatial} from './traffic-spatial.js?v=119';
+import {Junctions,smoothRoute} from './junctions.js?v=119';
 // Car slots grow with population; saved road trips always have room to resume.
 export function carCapacity(world){const population=Buildings.entries(world).reduce((n,[,t])=>n+(t.type==='residential'&&!t.construction?(t.people||0):0),0),saved=world.citizens?.residents.filter(r=>r.trip).length||0;return Math.max(32,Math.min(512,Math.ceil(population/4)),saved);}
 // Destination-based road trips. No random placement or per-frame route searches.
@@ -63,10 +64,11 @@ export class Traffic {
  const p=a.points[a.segment],q=a.points[a.segment+1];if(!q){if(a.phase==='inbound')a.dwell=4;else{a.active=false;a.arrived=true;this.completed++;}continue;}
  const heading=Math.atan2(q.x-p.x,q.z-p.z),forward={x:Math.sin(heading),z:Math.cos(heading)};
  let clearance=this.junctions.limit(a,this.time,dt,this.world,this.agents,indexed?this.spatial:null);
- for(const b of (indexed?this.spatial.corridor(a,forward):this.agents)){if(b===a||!b.active||b.dwell)continue;const dx=b.x-a.x,dz=b.z-a.z,ahead=dx*forward.x+dz*forward.z,lateral=Math.abs(dx*forward.z-dz*forward.x);if(ahead>0&&lateral<.65&&Math.cos(b.heading-heading)>.3&&ahead-((a.length||.9)+(b.length||.9))*.5-.75<clearance){clearance=Math.max(0,ahead-((a.length||.9)+(b.length||.9))*.5-.75);a.waitReason='Vehicle queue';}}
+ const tile=this.world.tiles[Math.floor((a.z+96)/4)*48+Math.floor((a.x+96)/4)],cruise=tile?.roadType==='highway'?8:tile?.roadType==='gravel'?3:5;
+ clearance=followingClearance(a,forward,heading,clearance,cruise,dt,this.agents,indexed?this.spatial:null);
  // A car queued outside the junction must not reserve space ahead of its leader.
  if(a.waitReason==='Vehicle queue'&&clearance<.2)for(const gate of this.junctions.route(a.points).gates){const j=gate.junction;if(j.owner===a&&Math.hypot(a.x-j.x,a.z-j.z)>j.radius)j.owner=null;}
- const tile=this.world.tiles[Math.floor((a.z+96)/4)*48+Math.floor((a.x+96)/4)],cruise=tile?.roadType==='highway'?8:tile?.roadType==='gravel'?3:5;
+
  const target=Math.min(cruise,a.turnSpeed??Infinity,Math.sqrt(Math.max(0,clearance)*6));a.speed=Math.min(target,(a.speed||0)+dt*3);let move=Math.min(dt*a.speed,clearance);if(move>0.02)a.waitReason='';
  while(move>1e-8&&a.active){const p=a.points[a.segment],q=a.points[a.segment+1];if(!q){if(a.phase==='inbound')a.dwell=4;else{a.active=false;a.arrived=true;this.completed++;}break;}const length=Math.hypot(q.x-p.x,q.z-p.z);if(length<.001){a.segment++;continue;}const step=Math.min(move,length-a.distance);a.distance+=step;move-=step;const f=a.distance/length;a.x=p.x+(q.x-p.x)*f;a.z=p.z+(q.z-p.z)*f;a.heading=Math.atan2(q.x-p.x,q.z-p.z);if(a.distance>=length-1e-6){a.segment++;a.distance=0;}}
  if(indexed)this.spatial.move(a);

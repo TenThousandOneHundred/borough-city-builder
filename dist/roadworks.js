@@ -1,18 +1,18 @@
-import {roundaboutIsland,addYieldSign} from './roundabout-details.js?v=118';
-import {planBridges,bridgeHeight} from './bridge-spans.js?v=118';
-import {bridgeGeometry} from './bridge-geometry.js?v=118';
-import {approachMarkings,arrowPolygons} from './road-markings.js?v=118';
-import {roadFinishData,configureRoadFinish} from './road-finish.js?v=118';
-import {laneLayout} from './road-lanes.js?v=118';
-import {roadGeometry,transitionWidth,junctionCorners,junctionCuts,clearRanges,clearSections,signalPlacements} from './road-junction-plan.js?v=118';
-import {lotAccess} from './lot-access.js?v=118';
-import {streetStations,atDistance,distanceSection,streetSurface,pavementMaterial} from './street-geometry.js?v=118';
-import {signalPhase,junctionPolicy} from './junctions.js?v=118';
-import {addStopSign,stopSignMaterial} from './stop-sign.js?v=118';
-import {outsidePortals} from './traffic.js?v=118';
-import {batchStatic} from './static-batch.js?v=118';
+import {roundaboutIsland,addYieldSign} from './roundabout-details.js?v=119';
+import {planBridges,bridgeHeight} from './bridge-spans.js?v=119';
+import {bridgeGeometry} from './bridge-geometry.js?v=119';
+import {approachMarkings,arrowPolygons} from './road-markings.js?v=119';
+import {roadFinishData,configureRoadFinish} from './road-finish.js?v=119';
+import {laneLayout} from './road-lanes.js?v=119';
+import {roadGeometry,transitionWidth,junctionCorners,junctionCuts,clearRanges,clearSections,signalPlacements} from './road-junction-plan.js?v=119';
+import {lotAccess} from './lot-access.js?v=119';
+import {streetStations,atDistance,distanceSection,streetSurface,pavementMaterial} from './street-geometry.js?v=119';
+import {signalPhase,junctionPolicy} from './junctions.js?v=119';
+import {addStopSign,stopSignMaterial} from './stop-sign.js?v=119';
+import {outsidePortals} from './traffic.js?v=119';
+import {batchStatic} from './static-batch.js?v=119';
 import * as THREE from './vendor/three.module.js';
-import {floorHeight,groundHeight,wetness} from './landscape.js?v=118';
+import {floorHeight,groundHeight,wetness} from './landscape.js?v=119';
 export class Roadworks{
 constructor(v){this.v=v;this.group=new THREE.Group();v.scene.add(this.group);this.lamps=[];this.lampMaterial=new THREE.MeshStandardMaterial({color:'#e5e2ca',emissive:'#ffe2a0',emissiveIntensity:v.night?3:0,roughness:.3});this.walkMaterial=pavementMaterial();this.lightPoolMaterial=new THREE.MeshBasicMaterial({color:'#ffe0a0',transparent:true,opacity:.22,depthWrite:false,blending:THREE.AdditiveBlending});this.lightPoolMaterial.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 poolUV;').replace('#include <uv_vertex>','#include <uv_vertex>\npoolUV=uv;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 poolUV;').replace('#include <color_fragment>','#include <color_fragment>\ndiffuseColor.a*=pow(max(0.,1.-length(poolUV*2.-1.)),1.8);');};this.lightPoolMaterial.customProgramCacheKey=()=> 'street-light-pool-v1';this.signalGroup=new THREE.Group();v.scene.add(this.signalGroup);}
 clear(){this.group.traverse(o=>{if(o.geometry&&o.geometry!==this.v.unitBox)o.geometry.dispose()});this.group.clear();this.lamps=[];this.signalKey=null;this.bridgePlan=null;this.bridgeStats=null;}
