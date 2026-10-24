@@ -77,3 +77,54 @@ test('closed street loops terminate and return a bounded selection',()=>{
  const a=frontage(w,paths[0].id,1)[2],b=frontage(w,paths[2].id,1)[2],ids=E.fineZoneStrip(w,a,b,3);
  assert.ok(ids.length>20);assert.equal(ids.length,new Set(ids).size);assert.ok(ids.length<=E.fineZoningLayout(w).size);
 });
+
+test('rectangle and brush follow joined bends instead of cutting through the block',()=>{
+ for(const side of [-1,1]){
+  const {world:w,paths}=district(),layout=E.fineZoningLayout(w),a=frontage(w,paths[0].id,side)[3],b=frontage(w,paths[2].id,-side)[3];
+  const deep=layout.get(JSON.stringify([b.source,b.side,b.col,3]));assert.ok(deep);
+  const saved=JSON.stringify(w),rectangle=E.fineZoneRectangle(w,a,deep),strip=E.fineZoneStrip(w,a,b,4);
+  assert.deepEqual(new Set(rectangle),new Set(strip),'rectangle must follow the selected street, even where it leaves the world-axis rectangle');
+  assert.deepEqual(new Set(E.fineZoneRectangle(w,deep,a)),new Set(rectangle));
+  for(const size of [1,2,4]){
+   const stroke=E.fineZoneStroke(w,a,b,size),expected=new Set();
+   for(const id of E.fineZoneStrip(w,a,b,1))for(const cell of E.fineZoneBrush(w,layout.get(id),size))expected.add(cell);
+   assert.deepEqual(new Set(stroke),expected);
+   assert.deepEqual(new Set(E.fineZoneStroke(w,b,a,size)),expected,'reverse-drawn streets and reverse drags cover the same cells');
+   assert.ok(stroke.every(id=>layout.get(id).side===(layout.get(id).source===paths[2].id?-side:side)));
+  }
+  assert.equal(JSON.stringify(w),saved,'selection is read only');
+ }
+});
+
+test('block fill crosses a road drawing seam but stops at painted bands and crossing streets',()=>{
+ const w=E.createWorld('Fill joined blocks','plains',8);w.money=1e7;
+ const build=points=>{const r=E.buildRoadPath(w,points.map(([x,y])=>({x,y})));assert.ok(r.ok,r.reason);return r.path;};
+ const a=build([[19,24],[29,24]]),b=build([[39,24],[29,24]]);
+ for(const side of [-1,1]){
+  const first=frontage(w,a.id,side)[5],fill=E.fineZoneFill(w,first),layout=E.fineZoningLayout(w);
+  assert.ok(fill.some(id=>layout.get(id).source===b.id),'fill continues across reverse-drawn extension');
+  assert.ok(fill.every(id=>layout.get(id).side===(layout.get(id).source===b.id?-side:side)));
+ }
+ let layout=E.fineZoningLayout(w);const first=frontage(w,b.id,1).at(-2),barrier=frontage(w,b.id,1)[5];
+ E.fineZoneCells(w,[...layout.values()].filter(p=>p.source===b.id&&p.side===1&&p.col===barrier.col).map(p=>p.id),'commercial_low');
+ const blocked=E.fineZoneFill(w,first);assert.ok(blocked.every(id=>{const p=layout.get(id);return p.source!==b.id||p.col>barrier.col;}));
+ E.fineZoneCells(w,Object.keys(w.development.cells),'erase');
+ build([[29,24],[29,12]]);layout=E.fineZoningLayout(w);
+ const cut=E.fineZoneFill(w,frontage(w,a.id,-1)[3]);assert.ok(cut.every(id=>layout.get(id).source!==b.id),'fill must stop at the cross street');
+});
+
+test('joined rectangle produces varied multi-cell homes, retains all six housing forms, and saves exact footprints',()=>{
+ for(const zone of Object.keys(E.ZONES).filter(key=>key.startsWith('residential_'))){
+  const {world:w,paths}=district();E.place(w,1,23,'power');E.place(w,2,23,'water');
+  const layout=E.fineZoningLayout(w),a=frontage(w,paths[0].id,1)[2],end=frontage(w,paths[2].id,-1)[2],b=layout.get(JSON.stringify([end.source,end.side,end.col,5]));assert.ok(b);
+  const ids=E.fineZoneRectangle(w,a,b),preview=E.fineZonePreview(w,ids,zone);
+  assert.ok(preview.lots.length>4);assert.ok(preview.lots.every(p=>p.cells.length>1));
+  E.fineZoneCells(w,ids,zone);assert.deepEqual(E.fineZonePlan(w),preview.lots);
+  for(let n=0;n<140;n++)E.tick(w);
+  const lots=Object.values(w.development.parcels);assert.ok(lots.length>3);assert.ok(new Set(lots.map(p=>p.width+'x'+p.depth)).size>1);
+  assert.ok(lots.every(p=>p.zone===zone&&p.cells.length===p.width*p.depth&&p.frame.angle===layout.get(p.cells[0]).angle));
+  const storage={value:null,getItem(){return this.value;},setItem(key,value){this.value=value;}};
+  const store=new E.WorldStore(storage);store.save(w);const restored=new E.WorldStore(storage).get(w.id);
+  assert.deepEqual(restored.development,w.development);assert.ok(E.valid(restored));
+ }
+});

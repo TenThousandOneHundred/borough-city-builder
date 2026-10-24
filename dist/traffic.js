@@ -1,9 +1,9 @@
-import './building-entities.js?v=108';
+import './building-entities.js?v=109';
 const Buildings=globalThis.BoroughBuildings;
-import {laneOffset,transitionLaneOffsets} from './road-lanes.js?v=108';
-import {roadGeometry} from './road-junction-plan.js?v=108';
-import {TrafficSpatial} from './traffic-spatial.js?v=108';
-import {Junctions,smoothRoute} from './junctions.js?v=108';
+import {laneOffset,transitionLaneOffsets} from './road-lanes.js?v=109';
+import {roadGeometry} from './road-junction-plan.js?v=109';
+import {TrafficSpatial} from './traffic-spatial.js?v=109';
+import {Junctions,smoothRoute} from './junctions.js?v=109';
 // Car slots grow with population; saved road trips always have room to resume.
 export function carCapacity(world){const population=Buildings.entries(world).reduce((n,[,t])=>n+(t.type==='residential'&&!t.construction?(t.people||0):0),0),saved=world.citizens?.residents.filter(r=>r.trip).length||0;return Math.max(32,Math.min(512,Math.ceil(population/4)),saved);}
 // Destination-based road trips. No random placement or per-frame route searches.
@@ -54,7 +54,7 @@ export class Traffic {
  for(const a of this.agents){if(!a.active||a.hold)continue;if(a.dwell>0){a.dwell-=dt;if(a.dwell<=0){a.phase='outbound';a.points=a.trip.outbound;a.segment=0;a.distance=0;a.speed=0;}continue;}
  const p=a.points[a.segment],q=a.points[a.segment+1];if(!q){if(a.phase==='inbound')a.dwell=4;else{a.active=false;a.arrived=true;this.completed++;}continue;}
  const heading=Math.atan2(q.x-p.x,q.z-p.z),forward={x:Math.sin(heading),z:Math.cos(heading)};
- let clearance=this.junctions.limit(a,this.time,dt,this.world.trafficPolicy||'signals',this.agents);
+ let clearance=this.junctions.limit(a,this.time,dt,this.world,this.agents);
  for(const b of (indexed?this.spatial.corridor(a,forward):this.agents)){if(b===a||!b.active||b.dwell)continue;const dx=b.x-a.x,dz=b.z-a.z,ahead=dx*forward.x+dz*forward.z,lateral=Math.abs(dx*forward.z-dz*forward.x);if(ahead>0&&lateral<.65&&Math.cos(b.heading-heading)>.3&&ahead-((a.length||.9)+(b.length||.9))*.5-.75<clearance){clearance=Math.max(0,ahead-((a.length||.9)+(b.length||.9))*.5-.75);a.waitReason='Vehicle queue';}}
  // A car queued outside the junction must not reserve space ahead of its leader.
  if(a.waitReason==='Vehicle queue'&&clearance<.2)for(const gate of this.junctions.route(a.points).gates){const j=gate.junction;if(j.owner===a&&Math.hypot(a.x-j.x,a.z-j.z)>j.radius)j.owner=null;}

@@ -1,16 +1,17 @@
-import {planBridges,bridgeHeight} from './bridge-spans.js?v=108';
-import {bridgeGeometry} from './bridge-geometry.js?v=108';
-import {approachMarkings,arrowPolygons} from './road-markings.js?v=108';
-import {roadFinishData,configureRoadFinish} from './road-finish.js?v=108';
-import {laneLayout} from './road-lanes.js?v=108';
-import {roadGeometry,transitionWidth,junctionCorners,junctionCuts,clearRanges,clearSections,signalPlacements} from './road-junction-plan.js?v=108';
-import {lotAccess} from './lot-access.js?v=108';
-import {streetStations,atDistance,distanceSection,streetSurface,pavementMaterial} from './street-geometry.js?v=108';
-import {signalPhase} from './junctions.js?v=108';
-import {outsidePortals} from './traffic.js?v=108';
-import {batchStatic} from './static-batch.js?v=108';
+import {planBridges,bridgeHeight} from './bridge-spans.js?v=109';
+import {bridgeGeometry} from './bridge-geometry.js?v=109';
+import {approachMarkings,arrowPolygons} from './road-markings.js?v=109';
+import {roadFinishData,configureRoadFinish} from './road-finish.js?v=109';
+import {laneLayout} from './road-lanes.js?v=109';
+import {roadGeometry,transitionWidth,junctionCorners,junctionCuts,clearRanges,clearSections,signalPlacements} from './road-junction-plan.js?v=109';
+import {lotAccess} from './lot-access.js?v=109';
+import {streetStations,atDistance,distanceSection,streetSurface,pavementMaterial} from './street-geometry.js?v=109';
+import {signalPhase,junctionPolicy} from './junctions.js?v=109';
+import {addStopSign,stopSignMaterial} from './stop-sign.js?v=109';
+import {outsidePortals} from './traffic.js?v=109';
+import {batchStatic} from './static-batch.js?v=109';
 import * as THREE from './vendor/three.module.js';
-import {floorHeight,groundHeight,wetness} from './landscape.js?v=108';
+import {floorHeight,groundHeight,wetness} from './landscape.js?v=109';
 export class Roadworks{
 constructor(v){this.v=v;this.group=new THREE.Group();v.scene.add(this.group);this.lamps=[];this.lampMaterial=new THREE.MeshStandardMaterial({color:'#e5e2ca',emissive:'#ffe2a0',emissiveIntensity:v.night?3:0,roughness:.3});this.walkMaterial=pavementMaterial();this.lightPoolMaterial=new THREE.MeshBasicMaterial({color:'#ffe0a0',transparent:true,opacity:.22,depthWrite:false,blending:THREE.AdditiveBlending});this.lightPoolMaterial.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 poolUV;').replace('#include <uv_vertex>','#include <uv_vertex>\npoolUV=uv;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 poolUV;').replace('#include <color_fragment>','#include <color_fragment>\ndiffuseColor.a*=pow(max(0.,1.-length(poolUV*2.-1.)),1.8);');};this.lightPoolMaterial.customProgramCacheKey=()=> 'street-light-pool-v1';this.signalGroup=new THREE.Group();v.scene.add(this.signalGroup);}
 clear(){this.group.traverse(o=>{if(o.geometry&&o.geometry!==this.v.unitBox)o.geometry.dispose()});this.group.clear();this.lamps=[];this.signalKey=null;this.bridgePlan=null;this.bridgeStats=null;}
@@ -108,12 +109,30 @@ sharedJunction(w,j,asphalt,walk,curb){
  }
 }
 
-syncSignals(traffic){const placements=signalPlacements(this.junctionPlan?.junctions||[],traffic.junctions.items),key=placements.map(p=>[p.x,p.z,p.tx,p.tz,p.controller].join(':')).join(';');if(key===this.signalKey)return;this.signalKey=key;this.v.disposeGroup(this.signalGroup);this.signalEntries=[];this.signalBulbs?.material.dispose();this.signalBulbs?.dispose();this.signalBulbs=null;if(!placements.length)return;
-const dummy=new THREE.Object3D(),geometry=new THREE.SphereGeometry(.03,6,4),material=new THREE.MeshBasicMaterial({color:'#ffffff'}),bulbs=new THREE.InstancedMesh(geometry,material,placements.length*3);let instance=0;
-for(const p of placements){const {x,z}=p,y=this.height(this.world,x,z)+.14;this.v.box(this.signalGroup,x,y+.6,z,.03,1.2,.03,'#555d58');const head=this.v.box(this.signalGroup,x,y+1.1,z,.10,.27,.10,'#202b28');head.rotation.y=Math.atan2(p.tx,p.tz);const entry={axis:p.axis,indices:[]};for(let k=0;k<3;k++){dummy.position.set(x+p.tx*.06,y+1.18-k*.08,z+p.tz*.06);dummy.updateMatrix();bulbs.setMatrixAt(instance,dummy.matrix);bulbs.setColorAt(instance,new THREE.Color('#304139'));entry.indices.push(instance++);}this.signalEntries.push(entry);}
-batchStatic(this.signalGroup,this.v.unitBox);this.signalGroup.add(bulbs);this.signalBulbs=bulbs;this.signalPhaseKey=null;this.updateSignals(traffic);}
+syncSignals(traffic){
+ this.signalPolicies=traffic.world.junctionControls;this.signalDefault=traffic.world.trafficPolicy;
+ const placements=signalPlacements(this.junctionPlan?.junctions||[],traffic.junctions.items).map(p=>({...p,policy:junctionPolicy(traffic.world,p.controller)}));
+ const key=placements.map(p=>[p.x,p.z,p.tx,p.tz,p.controller,p.policy].join(':')).join(';');if(key===this.signalKey)return;
+ this.signalKey=key;this.v.disposeGroup(this.signalGroup);this.signalEntries=[];this.signalBulbs?.material.dispose();this.signalBulbs?.dispose();this.signalBulbs=null;
+ this.controlStats={signals:0,stops:0};if(!placements.length)return;
+ const lights=placements.filter(p=>p.policy==='signals'),dummy=new THREE.Object3D();
+ const bulbs=lights.length?new THREE.InstancedMesh(new THREE.SphereGeometry(.03,6,4),new THREE.MeshBasicMaterial({color:'#ffffff'}),lights.length*3):null;let instance=0;
+ for(const p of placements){const {x,z}=p,y=this.height(this.world,x,z)+.14;
+  if(p.policy==='stop'){this.stopMaterial ||= stopSignMaterial();addStopSign(this.v,this.signalGroup,p,y,this.stopMaterial);this.controlStats.stops++;continue;}
+  this.controlStats.signals++;this.v.box(this.signalGroup,x,y+.6,z,.03,1.2,.03,'#555d58');const head=this.v.box(this.signalGroup,x,y+1.1,z,.10,.27,.10,'#202b28');head.rotation.y=Math.atan2(p.tx,p.tz);const entry={axis:p.axis,controller:p.controller,indices:[]};
+  for(let k=0;k<3;k++){dummy.position.set(x+p.tx*.06,y+1.18-k*.08,z+p.tz*.06);dummy.updateMatrix();bulbs.setMatrixAt(instance,dummy.matrix);bulbs.setColorAt(instance,new THREE.Color('#304139'));entry.indices.push(instance++);}this.signalEntries.push(entry);
+ }
+ batchStatic(this.signalGroup,this.v.unitBox);if(bulbs)this.signalGroup.add(bulbs);this.signalBulbs=bulbs;this.signalPhaseKey=null;this.updateSignals(traffic);
+}
 
-updateSignals(traffic){if(!this.signalBulbs)return;const policy=traffic.world.trafficPolicy||'signals',key=policy+':'+signalPhase(traffic.time,'x')+':'+signalPhase(traffic.time,'z');if(key===this.signalPhaseKey)return;this.signalPhaseKey=key;const colors=['#ff4938','#ffc64d','#42f6a4'];for(const entry of this.signalEntries){const phase=policy==='stop'?'red':signalPhase(traffic.time,entry.axis),on=['red','amber','green'].indexOf(phase);entry.indices.forEach((i,k)=>this.signalBulbs.setColorAt(i,new THREE.Color(k===on?colors[k]:'#22312c')));}this.signalBulbs.instanceColor.needsUpdate=true;}
+updateSignals(traffic){
+ // Policy edits rebuild only the small signs group, even while paused. Road
+ // geometry, vehicles and routing are retained; normal frames compare references.
+ if(this.signalPolicies!==traffic.world.junctionControls||this.signalDefault!==traffic.world.trafficPolicy){this.syncSignals(traffic);return;}
+ if(!this.signalBulbs)return;const key=signalPhase(traffic.time,'x')+':'+signalPhase(traffic.time,'z');if(key===this.signalPhaseKey)return;this.signalPhaseKey=key;
+ const colors=['#ff4938','#ffc64d','#42f6a4'];for(const entry of this.signalEntries){const on=['red','amber','green'].indexOf(signalPhase(traffic.time,entry.axis));entry.indices.forEach((i,k)=>this.signalBulbs.setColorAt(i,new THREE.Color(k===on?colors[k]:'#22312c')));}this.signalBulbs.instanceColor.needsUpdate=true;
+}
+
 lamp(x,y,z,horizontal,inward){const direction=inward||{x:horizontal?0:-1,z:horizontal?-1:0},yaw=Math.atan2(-direction.z,direction.x),g=new THREE.Group();const pole=new THREE.Mesh(new THREE.CylinderGeometry(.025,.055,3,8),this.v.mat('#757d7c'));pole.position.set(x,y+1.5,z);g.add(pole);const arm=this.v.box(g,x+direction.x*.25,y+3,z+direction.z*.25,.6,.035,.045,'#7e8784');arm.rotation.y=yaw;const bulb=new THREE.Mesh(new THREE.BoxGeometry(.31,.035,.13),this.lampMaterial);bulb.position.set(x+direction.x*.55,y+2.98,z+direction.z*.55);bulb.rotation.y=yaw;g.add(bulb);pole.castShadow=true;this.group.add(g);this.lamps.push(bulb);if(this.world){const cx=x+direction.x*.9,cz=z+direction.z*.9,geometry=new THREE.CircleGeometry(2.4,24);geometry.rotateX(-Math.PI/2);const pos=geometry.attributes.position;for(let i=0;i<pos.count;i++){const xx=cx+pos.getX(i),zz=cz+pos.getZ(i);pos.setXYZ(i,xx,this.height(this.world,xx,zz)+.24,zz);}geometry.computeVertexNormals();const pool=new THREE.Mesh(geometry,this.lightPoolMaterial);this.group.add(pool);}}
 night(on){this.lampMaterial.emissiveIntensity=on?3:0;for(const mesh of this.group.children)if(mesh.material===this.lightPoolMaterial)mesh.visible=on;}
 }

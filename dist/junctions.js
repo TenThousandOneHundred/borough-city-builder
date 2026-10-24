@@ -12,6 +12,16 @@ export function smoothRoute(points) {
  result.push(clean.at(-1));return result;
 }
 export function signalPhase(time,axis){const phase=((time%20)+20)%20,local=(phase+(axis==='x'?0:10))%20;return local<7?'green':local<9?'amber':'red';}
+export function junctionPolicy(world,id){return world?.junctionControls?.[id]||world?.trafficPolicy||'signals';}
+export function setJunctionPolicy(world,id,policy){
+ if(!/^junction\/-?\d{1,7}\/-?\d{1,7}$/.test(id)||!['default','signals','stop'].includes(policy))return false;
+ // Replace only the settings object. Roads, cached routes and an occupied
+ // intersection's reservation remain intact while its current vehicle clears.
+ if(policy!=='default'&&!world.junctionControls?.[id]&&Object.keys(world.junctionControls||{}).length>=2304)return false;
+ const settings={...world.junctionControls};if(policy==='default')delete settings[id];else settings[id]=policy;
+ if(Object.keys(settings).length)world.junctionControls=settings;else delete world.junctionControls;
+ return true;
+}
 export class Junctions {
  constructor(graph,point,geometry){this.items=[];
   if(geometry){this.routes=new WeakMap();this.items=geometry.filter(j=>j.arms.length>=3).map(j=>({id:'junction/'+Math.round(j.x*10000)+'/'+Math.round(j.z*10000),cells:[],x:j.x,z:j.z,radius:j.radius+1.2,owner:null}));return;}
@@ -33,9 +43,9 @@ export class Junctions {
    if(remaining>1){limit=Math.min(limit,remaining+2);continue;}
    agent.stopTime=(agent.stopJunction===j.id?agent.stopTime||0:0)+(remaining<.1&&(agent.speed||0)<.2?dt:0);agent.stopJunction=j.id;
    const blocked=agents.some(b=>b!==agent&&b.active&&Math.hypot(b.x-j.x,b.z-j.z)<j.radius-.05);
-   const phase=signalPhase(time,gate.axis),allowed=policy==='stop'?agent.stopTime>=.8:phase==='green';
+   const control=typeof policy==='string'?policy:junctionPolicy(policy,j.id),phase=signalPhase(time,gate.axis),allowed=control==='stop'?agent.stopTime>=.8:phase==='green';
    if(!j.owner&&!blocked&&allowed){j.owner=agent;agent.gatePoints=agent.points;agent.stopTime=0;}
-   else{limit=Math.min(limit,remaining);agent.waitReason=j.owner||blocked?'Intersection occupied':policy==='stop'?'Stop sign':phase==='amber'?'Amber signal':'Red signal';}
+   else{limit=Math.min(limit,remaining);agent.waitReason=j.owner||blocked?'Intersection occupied':control==='stop'?'Stop sign':phase==='amber'?'Amber signal':'Red signal';}
   }
   return limit;
  }

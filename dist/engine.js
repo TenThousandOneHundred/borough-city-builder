@@ -76,7 +76,8 @@ function validDevelopment(w){return w.development===undefined||FineZones.valid(w
 function validRide(t,w){return t===undefined||t&&Number.isSafeInteger(t.line)&&t.line>0&&['walk','wait','ride','lastWalk','return'].includes(t.phase)&&['work','shop','home'].includes(t.purpose)&&[t.from,t.to].every(i=>validDestination(w,i))&&[t.board,t.alight].every(i=>Number.isInteger(i)&&i>=0&&i<12)&&[t.x,t.z].every(n=>Number.isFinite(n)&&Math.abs(n)<10000)}
 function validTransit(s){if(s===undefined)return true;if(!s||s.version!==1||!Number.isSafeInteger(s.nextId)||s.nextId<1||!Array.isArray(s.lines)||s.lines.length>8)return false;const ids=new Set();return s.lines.every(l=>{if(!l||!Number.isSafeInteger(l.id)||l.id<1||l.id>=s.nextId||ids.has(l.id))return false;ids.add(l.id);const v=l.vehicle;return typeof l.name==='string'&&l.name.length<=40&&Number.isInteger(l.depot)&&l.depot>=0&&l.depot<SIZE*SIZE&&Array.isArray(l.stops)&&l.stops.length>=2&&l.stops.length<=12&&new Set(l.stops).size===l.stops.length&&l.stops.every(i=>Number.isInteger(i)&&i>=0&&i<SIZE*SIZE)&&[l.boardings,l.completed].every(n=>Number.isSafeInteger(n)&&n>=0)&&v&&['moving','dwell'].includes(v.phase)&&Number.isInteger(v.leg)&&v.leg>=-1&&v.leg<l.stops.length&&Number.isInteger(v.segment)&&v.segment>=0&&v.segment<100000&&[v.distance,v.dwell].every(n=>Number.isFinite(n)&&n>=0&&n<1000)&&[v.x,v.z,v.heading].every(n=>Number.isFinite(n)&&Math.abs(n)<10000);})}
 function validCitizens(c,w){if(c===undefined)return true;const index=n=>validDestination(w,n),number=n=>Number.isFinite(n)&&n>=0,ids=new Set();return c&&c.version===1&&number(c.time)&&Number.isInteger(c.nextId)&&c.nextId>0&&Array.isArray(c.residents)&&c.residents.length<=SIZE*SIZE*40&&c.residents.every(r=>{if(!r||!Number.isInteger(r.id)||r.id<=0||r.id>=c.nextId||ids.has(r.id))return false;ids.add(r.id);return index(r.home)&&index(r.location)&&(r.work===null||index(r.work))&&typeof r.household==='string'&&r.household.length<40&&typeof r.activity==='string'&&r.activity.length<80&&validRide(r.transit,w)&&validWalk(r.walk,w)&&[r.trip,r.transit,r.walk].filter(Boolean).length<=1&&number(r.nextAt)&&number(r.workdays)&&number(r.shopping)&&(!r.trip||index(r.trip.from)&&index(r.trip.to)&&['work','shop','home'].includes(r.trip.purpose)&&Number.isInteger(r.trip.segment)&&r.trip.segment>=0&&r.trip.segment<100000&&number(r.trip.distance)&&r.trip.distance<1000&&[r.trip.x,r.trip.z,r.trip.heading].every(Number.isFinite));});}
-function valid(w){return w&&w.version===1&&typeof w.id==='string'&&typeof w.name==='string'&&w.name.length<=40&&['river','islands','plains'].includes(w.terrain)&&(w.landformVersion===undefined||w.landformVersion===1||w.landformVersion===2)&&Number.isInteger(w.seed)&&Number.isFinite(w.money)&&Number.isFinite(w.day)&&Number.isInteger(w.tax)&&w.tax>=5&&w.tax<=25&&Number.isFinite(w.loans)&&w.loans>=0&&Number.isFinite(w.simStep)&&validFacilities(w)&&validZoneSites(w)&&validPaths(w)&&validWalkPaths(w)&&validDevelopment(w)&&validCitizens(w.citizens,w)&&validTransit(w.transit)&&(w.elevation===undefined||Array.isArray(w.elevation)&&w.elevation.length===9409&&w.elevation.every(v=>Number.isFinite(v)&&v>=-20&&v<=80))&&(w.elevationRevision===undefined||Number.isSafeInteger(w.elevationRevision)&&w.elevationRevision>=0)&&(w.trafficPolicy===undefined||['signals','stop'].includes(w.trafficPolicy))&&Array.isArray(w.tiles)&&w.tiles.length===SIZE*SIZE&&w.tiles.every(t=>t&&(!t.zone||Object.hasOwn(ZONES,t.zone))&&(t.construction===undefined||Number.isInteger(t.construction)&&t.construction>=1&&t.construction<=3)&&(!t.building||BUILDINGS[t.building]?.type===t.type)&&['land','water'].includes(t.ground)&&(t.type===null||Object.hasOwn(TOOLS,t.type)&&!['inspect','bulldoze'].includes(t.type))&&Number.isInteger(t.level)&&t.level>=0&&t.level<=5&&Number.isFinite(t.people)&&t.people>=0&&t.people<=40&&Number.isInteger(t.variant)&&t.variant>=0&&t.variant<=3)}
+function validJunctionControls(c){return c===undefined||!!c&&typeof c==='object'&&!Array.isArray(c)&&Object.keys(c).length<=2304&&Object.entries(c).every(([id,value])=>/^junction\/-?\d{1,7}\/-?\d{1,7}$/.test(id)&&['signals','stop'].includes(value));}
+function valid(w){return w&&w.version===1&&typeof w.id==='string'&&typeof w.name==='string'&&w.name.length<=40&&['river','islands','plains'].includes(w.terrain)&&(w.landformVersion===undefined||w.landformVersion===1||w.landformVersion===2)&&Number.isInteger(w.seed)&&Number.isFinite(w.money)&&Number.isFinite(w.day)&&Number.isInteger(w.tax)&&w.tax>=5&&w.tax<=25&&Number.isFinite(w.loans)&&w.loans>=0&&Number.isFinite(w.simStep)&&validFacilities(w)&&validZoneSites(w)&&validPaths(w)&&validWalkPaths(w)&&validDevelopment(w)&&validCitizens(w.citizens,w)&&validTransit(w.transit)&&validJunctionControls(w.junctionControls)&&(w.elevation===undefined||Array.isArray(w.elevation)&&w.elevation.length===9409&&w.elevation.every(v=>Number.isFinite(v)&&v>=-20&&v<=80))&&(w.elevationRevision===undefined||Number.isSafeInteger(w.elevationRevision)&&w.elevationRevision>=0)&&(w.trafficPolicy===undefined||['signals','stop'].includes(w.trafficPolicy))&&Array.isArray(w.tiles)&&w.tiles.length===SIZE*SIZE&&w.tiles.every(t=>t&&(!t.zone||Object.hasOwn(ZONES,t.zone))&&(t.construction===undefined||Number.isInteger(t.construction)&&t.construction>=1&&t.construction<=3)&&(!t.building||BUILDINGS[t.building]?.type===t.type)&&['land','water'].includes(t.ground)&&(t.type===null||Object.hasOwn(TOOLS,t.type)&&!['inspect','bulldoze'].includes(t.type))&&Number.isInteger(t.level)&&t.level>=0&&t.level<=5&&Number.isFinite(t.people)&&t.people>=0&&t.people<=40&&Number.isInteger(t.variant)&&t.variant>=0&&t.variant<=3)}
 class WorldStore{constructor(storage){this.storage=storage;this.worlds=[];this.currentId=null;this.load()}load(){const raw=this.storage.getItem(KEY);if(!raw)return;let d;try{d=JSON.parse(raw)}catch{throw Error('Saved worlds could not be read. Export or restore a backup before resetting browser storage.')}if(!Array.isArray(d.worlds)||!d.worlds.every(valid))throw Error('Saved data is invalid; existing storage was kept.');this.worlds=d.worlds;this.currentId=d.currentId}persist(){const payload=JSON.stringify({version:1,currentId:this.currentId,worlds:this.worlds});this.storage.setItem(KEY,payload);if(this.storage.getItem(KEY)!==payload)throw Error('Save verification failed')}save(w,now=Date.now()){if(!valid(w))throw Error('World could not be saved: invalid data');let old=w.savedAt;w.savedAt=now;const i=this.worlds.findIndex(x=>x.id===w.id),prev=i>=0?this.worlds[i]:null;const snapshot=JSON.parse(JSON.stringify(w));if(i<0)this.worlds.push(snapshot);else this.worlds[i]=snapshot;let oldId=this.currentId;this.currentId=w.id;try{this.persist()}catch(e){w.savedAt=old;this.currentId=oldId;if(i<0)this.worlds.pop();else this.worlds[i]=prev;throw e}return now}get(id){const w=this.worlds.find(x=>x.id===id);return w?JSON.parse(JSON.stringify(w)):null}remove(id){const prior=this.worlds;this.worlds=this.worlds.filter(w=>w.id!==id);try{this.persist()}catch(e){this.worlds=prior;throw e}}}
 class GameSession{constructor(store){this.store=store;this.world=null;this.screen='home';this.paused=true;this.speed=1}start(id){if(this.screen==='game')this.save();const w=this.store.get(id);if(!w)throw Error('World not found');this.world=migrateZones(w);this.screen='game';this.paused=false;this.speed=1;return w}save(now=Date.now()){if(!this.world)return null;return this.store.save(this.world,now)}exit(now=Date.now()){this.save(now);this.screen='home';this.paused=true}step(){if(this.screen!=='game'||this.paused)return false;for(let i=0;i<this.speed;i++)tick(this.world);return true}}
 function lineTiles(a,b){let x=a.x,y=a.y;const out=[{x,y}],dx=Math.abs(b.x-x),dy=Math.abs(b.y-y),sx=Math.sign(b.x-x),sy=Math.sign(b.y-y);let ix=0,iy=0;while(ix<dx||iy<dy){if(ix<dx&&(iy===dy||(ix+.5)/Math.max(1,dx)<(iy+.5)/Math.max(1,dy))){x+=sx;ix++}else{y+=sy;iy++}out.push({x,y})}return out}
@@ -167,13 +168,32 @@ function fineFrontages(layout){
  index={sources,order};fineFrontageCache.set(layout,index);return index;
 }
 function fineFrontage(layout,p){return fineFrontages(layout).sources.get(p.source)?.get(p.side)||[];}
-function fineZoneRectangle(w,a,b){const layout=fineZoningLayout(w),pa=layout.get(a.id),pb=layout.get(b.id);if(!pa||!pb)return [];const aligned=pa.source===pb.source&&pa.side===pb.side;return (aligned?fineFrontage(layout,pa):[...layout.values()]).filter(p=>aligned?p.col>=Math.min(pa.col,pb.col)&&p.col<=Math.max(pa.col,pb.col)&&p.row>=Math.min(pa.row,pb.row)&&p.row<=Math.max(pa.row,pb.row):p.cx>=Math.min(pa.cx,pb.cx)-.01&&p.cx<=Math.max(pa.cx,pb.cx)+.01&&p.cz>=Math.min(pa.cz,pb.cz)-.01&&p.cz<=Math.max(pa.cz,pb.cz)+.01).map(p=>p.id);}
+function fineZoneRectangle(w,a,b){
+ const layout=fineZoningLayout(w),pa=layout.get(a.id),pb=layout.get(b.id);if(!pa||!pb)return [];
+ const street=fineStreetGrid(w,layout,pa),ua=street.position.get(pa.id),ub=street.position.get(pb.id);
+ if(ub!==undefined)return street.cells.filter(p=>{const u=street.position.get(p.id);return u>=Math.min(ua,ub)&&u<=Math.max(ua,ub)&&p.row>=Math.min(pa.row,pb.row)&&p.row<=Math.max(pa.row,pb.row);}).map(p=>p.id);
+ // Separate streets still support an area selection; connected bends use
+ // street coordinates so the rectangle cannot cut across the inside land.
+ return [...layout.values()].filter(p=>p.cx>=Math.min(pa.cx,pb.cx)-.01&&p.cx<=Math.max(pa.cx,pb.cx)+.01&&p.cz>=Math.min(pa.cz,pb.cz)-.01&&p.cz<=Math.max(pa.cz,pb.cz)+.01).map(p=>p.id);
+}
 const fineStreetCache=new WeakMap();
 function fineStreetSections(w,layout,first){
  let cached=fineStreetCache.get(layout);if(!cached){cached=new Map();fineStreetCache.set(layout,cached);}
  const key=JSON.stringify([first.source,first.side]);if(cached.has(key))return cached.get(key);
  const raw=FineZones.grid(w,ROADS),sections=Streets.corridor(w,raw,first).map(section=>({...section,cells:fineFrontage(layout,section)}));
  cached.set(key,sections);return sections;
+}
+const fineStreetGridCache=new WeakMap();
+function fineStreetGrid(w,layout,first){
+ const sections=fineStreetSections(w,layout,first);let grid=fineStreetGridCache.get(sections);if(grid)return grid;
+ const cells=[],position=new Map(),lookup=new Map();let offset=0;
+ for(const section of sections){
+  if(!section.cells.length)continue;
+  const columns=section.cells.map(p=>p.col),lo=Math.min(...columns),hi=Math.max(...columns);
+  for(const p of section.cells){const u=offset+(section.dir===1?p.col-lo:hi-p.col);cells.push(p);position.set(p.id,u);lookup.set(u+','+p.row,p);}
+  offset+=hi-lo+1;
+ }
+ grid={cells,position,lookup};fineStreetGridCache.set(sections,grid);return grid;
 }
 // Roadside strip stays on the physical side where the drag began, even when
 // the next section was drawn in the opposite direction.
@@ -208,6 +228,14 @@ function fineZoneBrush(w,start,size=1){return fineBrushCells(fineZoningLayout(w)
 function fineBrushCells(layout,start,size){const first=layout.get(start.id);if(!first)return [];size=Math.max(1,Math.min(6,Math.floor(size)||1));return fineFrontage(layout,first).filter(p=>p.col>=first.col&&p.col<first.col+size&&p.row>=first.row&&p.row<first.row+size).map(p=>p.id);}
 function fineZoneStroke(w,a,b,size=1){
  const layout=fineZoningLayout(w),pa=layout.get(a.id),pb=layout.get(b.id);if(!pa||!pb)return [];
+ if(pa.source!==pb.source){
+  const street=fineStreetGrid(w,layout,pa),ua=street.position.get(pa.id),ub=street.position.get(pb.id);
+  if(ub!==undefined){
+   const steps=Math.max(1,Math.abs(ub-ua),Math.abs(pb.row-pa.row)),ids=new Set();
+   for(let n=0;n<=steps;n++){const p=street.lookup.get(Math.round(ua+(ub-ua)*n/steps)+','+Math.round(pa.row+(pb.row-pa.row)*n/steps));if(p)for(const id of fineBrushCells(layout,p,size))ids.add(id);}
+   return [...ids];
+  }
+ }
  const aligned=pa.source===pb.source&&pa.side===pb.side,steps=Math.max(1,aligned?Math.max(Math.abs(pb.col-pa.col),Math.abs(pb.row-pa.row)):Math.ceil(Math.hypot(pb.cx-pa.cx,pb.cz-pa.cz)/.6)),ids=new Set();
  for(let n=0;n<=steps;n++){
   // Stay in the street's own coordinates around bends. World interpolation
@@ -216,7 +244,23 @@ function fineZoneStroke(w,a,b,size=1){
   if(p)for(const id of fineBrushCells(layout,p,size))ids.add(id);
  }return [...ids];
 }
-function fineZoneFill(w,start){const layout=fineZoningLayout(w),first=layout.get(start.id);if(!first)return [];const state=w.development,zone=state?.cells[first.id]?.zone;if(state?.cells[first.id]?.owner)return [];const lookup=new Map(fineFrontage(layout,first).filter(p=>!state?.cells[p.id]?.owner&&state?.cells[p.id]?.zone===zone).map(p=>[p.col+','+p.row,p])),queue=[first],seen=new Set([first.id]);for(let n=0;n<queue.length;n++){const p=queue[n];for(const [x,y]of [[1,0],[-1,0],[0,1],[0,-1]]){const q=lookup.get((p.col+x)+','+(p.row+y));if(q&&!seen.has(q.id)){seen.add(q.id);queue.push(q);}}}return [...seen];}
+function fineZoneFill(w,start){
+ const layout=fineZoningLayout(w),first=layout.get(start.id);if(!first)return [];
+ const state=w.development,zone=state?.cells[first.id]?.zone;if(state?.cells[first.id]?.owner)return [];
+ const street=fineStreetGrid(w,layout,first),queue=[first],seen=new Set([first.id]);
+ for(let n=0;n<queue.length;n++){
+  const p=queue[n],u=street.position.get(p.id);
+  for(const [x,y]of [[1,0],[-1,0],[0,1],[0,-1]]){
+   const q=street.lookup.get((u+x)+','+(p.row+y));
+   if(!q||seen.has(q.id)||state?.cells[q.id]?.owner||state?.cells[q.id]?.zone!==zone)continue;
+   // Join adjacent road sections, but do not jump across an intersection,
+   // service site or a missing strip of land at the section boundary.
+   if(q.source!==p.source&&Math.hypot(p.cx-q.cx,p.cz-q.cz)>3.4)continue;
+   seen.add(q.id);queue.push(q);
+  }
+ }
+ return [...seen];
+}
 function demolishFineParcel(w,id){const p=Buildings.parcel(w,id);if(!p?.occupant)return {ok:false,reason:'Nothing to remove'};if(w.money<10)return {ok:false,reason:'Not enough funds'};w.money-=10;FineZones.release(w.development,id);return {ok:true,cost:10};}
 function playerZoneCells(w,cells,zone){const fine=cells.filter(c=>typeof c==='string'),legacy=cells.filter(c=>typeof c==='object'&&c&&w.tiles[c.y*48+c.x]?.zone),a=fine.length?fineZoneCells(w,fine,zone):{changed:0,blocked:0},b=legacy.length?zoneCells(w,legacy,zone):{changed:0,skipped:0};const changed=a.changed+b.changed,blocked=(a.blocked||0)+(b.skipped||0);return {ok:changed>0,changed,blocked,reason:changed?'':a.reason||b.reason||'No zoning changed'};}
 function playerZoneRectangle(w,a,b){return a.legacy||b.legacy?zoneRectangle(w,a,b).filter(p=>w.tiles[p.y*48+p.x].zone):fineZoneRectangle(w,a,b);}
