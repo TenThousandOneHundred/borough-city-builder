@@ -1,6 +1,24 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 120 — Sidewalk routes and usable crossings
+
+Walking now follows both sidewalks along the actual street geometry. Residents use the marked approach crossings and corner pavements at ordinary junctions, and the outer sidewalks at roundabouts. Door-to-sidewalk links cannot shortcut through driving lanes. Curved streets, road widths and tapers share the rendered road plan. Explicit pedestrian paths remain usable. Saved walkers keep their position and find a new route after a road edit or reload; an old saved position inside a driving lane can leave it without teleporting.
+
+Bus stops now receive a shared crossing when there is no nearby junction crossing. Stops shared by several lines use one crossing, and removing the last line removes it. Their markings, median openings, walking connections and lowered curb ramps use the same geometry. Junction crossings also have ramps while the outer pavement stays at its normal height. These are automatic stop-access crossings; a manual per-crossing control and pedestrian signals/driver yielding remain future work.
+
+The intersection and roundabout pictures in the official [Road Tools feature](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/road-tools) were inspected before this rebuild. Their continuous sidewalks, approach crossings and road-edge transitions informed the changes. Reference pictures are not shipped. Existing building models, terrain, vegetation, detail settings, saved lot frames and the Edition 119 vehicle-following optimization are unchanged.
+
+The two-sided network has more routes to consider, so it uses cached road plans, a spatial pavement mask, retained curve points and a destination bound for shortest-path searches. In the 624-node legacy-grid fixture, the complete sidewalks use 4,206 nodes. Across 120 uncached routes, median CPU cost increases from 3.84 to 32.90 ms; a repeated cached batch remains about 0.055 ms. Rebuilding its walking links increases from 1.95 to 11.72 ms. These costs occur when preparing roads or planning new journeys; they are not per-frame costs. Reproduce with `node scripts/benchmark-pedestrian-network.mjs` and set `GIT_BIN` if needed.
+
+In a static browser comparison of the same 216-resident city, the junction ramps add 320 rendered triangles and no draw calls. Two alternating comparisons measured GPU medians of 9.74/10.04 ms and 9.24/8.91 ms before/after, with median frame intervals at 33.3 ms in all four runs. This covers that scene and device, not every possible city.
+
+All 459 regression tests pass, together with module syntax, complete model/texture integrity and lossless-compression checks. New cases cover both sides of streets, curved lanes, crossing detours, bus-stop additions/removal, two-arm bends, ramps on slopes, shortest-path optimality and saved walking progress.
+
+The full-game browser check retained 226 residents, 82 households, 131 job assignments, 56 travelling residents, day 39 and ₡990,721 through manual save, Save & Exit, page reload and Continue. The city retained its medium roundabout and two bus-stop crossings. No browser warnings or errors were recorded.
+
+This is feature update one after optimization 119. Updates 121 and 122 precede the next dedicated optimization in Edition 123.
+
 ## Edition 119 — Less traffic work per simulation step
 
 This is the scheduled optimization after feature updates 116–118. Profiling the 4,872-resident city identified vehicle-following scans as the largest simulation cost. Drivers now query a conservative nearby rectangle through small spatial cells, bounded by the distance that can affect braking, movement or intersection clearance during the step. Vehicle lengths, long buses, turning speed limits and sequential movement remain accounted for. Starting drivers retain the previous distant-queue diagnostic through an unbounded fallback when necessary. Signals, yielding, routes, acceleration, movement and offscreen simulation are unchanged.
