@@ -1,0 +1,118 @@
+{
+  "wood": {
+    "tree_small_02_branches": {
+      "POSITION": "63c025b0fe9767237118c7baed06a47fe34be76d01a71dda6418ecb4ee4ad6a0",
+      "NORMAL": "2a3376608c732a156852372b2b4b336cb34986232bfc45c66ecb038a5d60e2cf",
+      "TEXCOORD_0": "c326f8a6c22698bc8608499c709eda0f3af1b5cf96e579e24334df03f71f923e",
+      "TEXCOORD_1": "cd31f0527ab9c0d55858507db09dc8e817d09e6e75967f2f8e8d49acb3c73ab5",
+      "indices": "a78f6955b6a63dfa9019ce08e62468c4f0e3fb4f0a6ea5d5e8d298aa26c04554"
+    },
+    "tree_small_02_trunk": {
+      "POSITION": "d7fdf7dc1f4c8929ee3340f5f97edef965006cb5a2ccaa6b472ca87bab4e4c9f",
+      "NORMAL": "7b8859ecd7236bef39ee1710b35966ebee5bf8022c5b92e7758d6291b8fd3e2c",
+      "TEXCOORD_0": "c9388fed63c6bd7f5a553e190ed39abf1d94d72db4eafcfc2244e898ea1dba6d",
+      "TEXCOORD_1": "af55deb9a1d4df98079a3c9138a3596f2eef4fbce498d629cbf74590e9a6a599",
+      "indices": "285d1794c19d838394299cb4b320cb0fb3ba13c86f58be36dfd3ce0ba449d53e"
+    }
+  },
+  "images": [
+    "e55f64281159ec235661665741334277ff36d36c1495403cad36502891c71300",
+    "18fa4251661f8752f12c7d590203987c7e8d695ae17fb81cf8da22c999ba7c06",
+    "3cc0d6bec28192c8acaf29fac5f76168c2cb68a382ce41cc46c8c6c20a44f966",
+    "e9d706f13781c042825d1dd884c78ea9b73871392254269969c3a7b7422f8421",
+    "8a68e7db9da2139fea06ef6e4f11b99244ac7843dad7c01850920ba5a9c10283",
+    "b7ad08eafc2fc1a7f19416956b565c2f430e385d98716329fb1ac3ef2114e81f",
+    "545a5db43359f3cc1e342968b117c34e05eb4f43eb2f7b0f86e55d948512b4a7",
+    "dd4089cc852414cc46de5f4569c8cd02580b782e7d7e75a9bc8d06429538e3d8",
+    "c36d7568c22f73e9c81da74017cbb2c88d42d2d79d4647fdbf1e86cf9183639c"
+  ],
+  "materials": [
+    {
+      "name": "tree_small_02_branches",
+      "doubleSided": true,
+      "pbrMetallicRoughness": {
+        "metallicFactor": 0,
+        "baseColorTexture": {
+          "index": 0,
+          "texCoord": 1,
+          "extensions": {
+            "KHR_texture_transform": {
+              "offset": [
+                0,
+                0.40000009536743164
+              ],
+              "scale": [
+                3,
+                0.5999999046325684
+              ]
+            }
+          }
+        },
+        "metallicRoughnessTexture": {
+          "index": 2,
+          "texCoord": 1,
+          "extensions": {
+            "KHR_texture_transform": {
+              "offset": [
+                0,
+                0.40000009536743164
+              ],
+              "scale": [
+                3,
+                0.5999999046325684
+              ]
+            }
+          }
+        }
+      },
+      "normalTexture": {
+        "index": 1,
+        "texCoord": 1,
+        "extensions": {
+          "KHR_texture_transform": {
+            "offset": [
+              0,
+              0.40000009536743164
+            ],
+            "scale": [
+              3,
+              0.5999999046325684
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "tree_small_02_leaves",
+      "doubleSided": true,
+      "pbrMetallicRoughness": {
+        "metallicFactor": 0,
+        "baseColorTexture": {
+          "index": 3
+        },
+        "metallicRoughnessTexture": {
+          "index": 5
+        }
+      },
+      "normalTexture": {
+        "index": 4
+      }
+    },
+    {
+      "name": "tree_small_02_trunk",
+      "doubleSided": true,
+      "pbrMetallicRoughness": {
+        "metallicFactor": 0,
+        "baseColorTexture": {
+          "index": 6
+        },
+        "metallicRoughnessTexture": {
+          "index": 8
+        }
+      },
+      "normalTexture": {
+        "index": 7
+      }
+    }
+  ]
+}

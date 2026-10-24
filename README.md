@@ -1,6 +1,22 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 117 — Fuller tree canopies
+
+Broadleaf trees now keep all 30,250 leaf pieces from the original CC0 model. The earlier whole-tree reduction had removed or severely shrunk much of the canopy. Reconstructing each piece from its texture-space outline restores the crown while reducing it to two triangles per piece. Original positions, bark geometry and all nine texture images remain intact. The matching four-elevation atlas has 43–57% more nontransparent canopy pixels than Edition 116, with the same distant instancing, view transitions and near-tree selection limit.
+
+The Lakeland landscape picture in the official [Maps & Themes feature](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/maps-themes) and the [Poly Haven source tree](https://polyhaven.com/a/tree_small_02) were inspected before rebuilding. These informed the fuller foliage and forest silhouettes. Reference pictures and the full-resolution source are not shipped.
+
+The model has 60,500 leaf triangles and uses opaque depth for its opaque JPEG foliage, avoiding the old double transparency pass. Leaf normals and UVs use compact normalized attributes; unused secondary leaf UVs are omitted. The original 4 MiB model budget is retained. The compressed model is 2,464,093 bytes, an increase of 444,988 bytes; the new atlas remains below 650 KiB. All 84 building assets and the resident, traffic, zoning and save logic are unchanged. Only the changed tree downloads receive new asset version URLs; building assets remain pinned to Edition 114.
+
+All 433 regression tests pass, along with module syntax, asset integrity and lossless compression checks. The new tests verify every leaf component, lighting orientation, unchanged bark and textures, and fuller coverage at all four elevations. Rebuilding from the original source and Edition 116 model reproduces the shipped GLB byte for byte using `scripts/rebuild-tree-canopy.mjs`; `scripts/bake-tree-atlas.html` renders the matching distant views.
+
+A local full-game check verified manual saving, reload, Continue, Save & Exit and the persisted world card: 412 residents, day 147 and ₡1,005,633. A separate 24-property fixture retained identical lots, models, garden layouts and 288 residents through save/reload. Neither browser reported errors or warnings.
+
+In that fixture's close-up view at a 1600×900 drawing resolution, ordinary geometry fell from 2,630,893 to 2,221,117 triangles and from 169 to 168 draws. Two alternating comparisons measured GPU medians of 24.99/26.28 ms and 25.24/26.27 ms before/after. The fuller screen coverage still adds about 1 ms of GPU time on this host; frame intervals varied substantially and this is not an FPS-improvement claim. Distant trees retain the same geometry cost. The less efficient draft models were discarded before publication.
+
+This is feature update two after optimization 115. Edition 118 is the third feature update; Edition 119 is the next dedicated optimization.
+
 ## Edition 116 — Complete private gardens
 
 Detached and attached homes now receive complete private grounds: full-height side and rear privacy fences, optional continuous rear hedges, low street fences with entrance openings, rounded shrubs, and individual rear patios. Where a yard has enough space it can grow a weatherboard shed with a pitched roof and its own access path, or an open timber pergola with a table and benches. Attached homes keep separate gardens aligned with their party walls. Narrow yards omit furniture that cannot fit. Driveways retain clear access, and grounds follow the saved road-facing property instead of the global grid.
