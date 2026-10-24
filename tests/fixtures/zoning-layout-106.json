@@ -1,0 +1,473 @@
+{
+  "commit": "841b4e885a4ac27290cfcf2c58433bd28f1bb25d",
+  "reports": [
+    {
+      "fixture": "starter",
+      "options": {},
+      "cells": 160,
+      "sha256": "8a39779415f8d43d5f4d156d1c701084e1737f0b57c7897fbc6e94faf89f9249"
+    },
+    {
+      "fixture": "starter",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 6,
+        "independent": true
+      },
+      "cells": 600,
+      "sha256": "dc0112b536f5e127ac99751f7b110409611364ab6843e547a8974b905de7e58f"
+    },
+    {
+      "fixture": "starter",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 2,
+        "independent": true
+      },
+      "cells": 200,
+      "sha256": "1f9fc39959187f171304591ef6102cc0b60bf0e898de505134f93bfb9bb71357"
+    },
+    {
+      "fixture": "diagonal-gravel",
+      "options": {},
+      "cells": 323,
+      "sha256": "84db222735b6833579ca971cedf5e128287111a83f37ade37a1ffd313ac81cea"
+    },
+    {
+      "fixture": "diagonal-gravel",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 6,
+        "independent": true
+      },
+      "cells": 1362,
+      "sha256": "a57f80e59d82626a6d8666ef1df09c9e052c6e3d138f3d5d3e01329c4324ab92"
+    },
+    {
+      "fixture": "diagonal-gravel",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 2,
+        "independent": true
+      },
+      "cells": 456,
+      "sha256": "ea9e8fcc0e04a6f99548b1556900fd22b5128da821a02bb810b36e17cd4ec005"
+    },
+    {
+      "fixture": "diagonal-alley",
+      "options": {},
+      "cells": 323,
+      "sha256": "84db222735b6833579ca971cedf5e128287111a83f37ade37a1ffd313ac81cea"
+    },
+    {
+      "fixture": "diagonal-alley",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 6,
+        "independent": true
+      },
+      "cells": 1363,
+      "sha256": "00df18c2e60152382a427ba1c2bf1111ffe5eda0d25628f4cb56f65cded04bfd"
+    },
+    {
+      "fixture": "diagonal-alley",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 2,
+        "independent": true
+      },
+      "cells": 456,
+      "sha256": "8b7c25f222bdd76611fe08de7f81f5f42d619b143fbb35b699b624dbb8d6b101"
+    },
+    {
+      "fixture": "diagonal-street",
+      "options": {},
+      "cells": 324,
+      "sha256": "634d018b979eff0b90c31a6f4751500f3facc7fc846833955221bf6fe3ca27c3"
+    },
+    {
+      "fixture": "diagonal-street",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 6,
+        "independent": true
+      },
+      "cells": 1368,
+      "sha256": "7d0ace82f4cdd5248f8cb3548a3e2f0a7c544137439f31de0abec99e075749c6"
+    },
+    {
+      "fixture": "diagonal-street",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 2,
+        "independent": true
+      },
+      "cells": 459,
+      "sha256": "812d1079a9f3c0b7ed6cb6834709399d2a2253403508b4231da5b3ffd6e73afb"
+    },
+    {
+      "fixture": "diagonal-oneway",
+      "options": {},
+      "cells": 324,
+      "sha256": "634d018b979eff0b90c31a6f4751500f3facc7fc846833955221bf6fe3ca27c3"
+    },
+    {
+      "fixture": "diagonal-oneway",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 6,
+        "independent": true
+      },
+      "cells": 1368,
+      "sha256": "7d0ace82f4cdd5248f8cb3548a3e2f0a7c544137439f31de0abec99e075749c6"
+    },
+    {
+      "fixture": "diagonal-oneway",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 2,
+        "independent": true
+      },
+      "cells": 459,
+      "sha256": "812d1079a9f3c0b7ed6cb6834709399d2a2253403508b4231da5b3ffd6e73afb"
+    },
+    {
+      "fixture": "diagonal-avenue",
+      "options": {},
+      "cells": 324,
+      "sha256": "267d8d0654078b532c81323177fb3dfe1e5dc6527d3f1b0eb9986cd5e22d9ec9"
+    },
+    {
+      "fixture": "diagonal-avenue",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 6,
+        "independent": true
+      },
+      "cells": 1368,
+      "sha256": "0a70eb1cb949d56295ca9b47c27813df0339475ad1d0193e0d377a0376113ce4"
+    },
+    {
+      "fixture": "diagonal-avenue",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 2,
+        "independent": true
+      },
+      "cells": 459,
+      "sha256": "134097b160e51c41943c93df5261faa7a6ecae5dd9b412dde28188654e02b340"
+    },
+    {
+      "fixture": "diagonal-green",
+      "options": {},
+      "cells": 322,
+      "sha256": "a1ace2725864ea210601fd256b9e922fe6432cfbb294f78c5a9bbf5612d87cfc"
+    },
+    {
+      "fixture": "diagonal-green",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 6,
+        "independent": true
+      },
+      "cells": 1368,
+      "sha256": "1778388f1840900462b227b62720db8f60d24c64c28d5b61daf6fd4672451479"
+    },
+    {
+      "fixture": "diagonal-green",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 2,
+        "independent": true
+      },
+      "cells": 459,
+      "sha256": "246e364ef7509bd0fa0cf28eb922783bf31eb3a02df27eb6f0229ef6581b9535"
+    },
+    {
+      "fixture": "diagonal-boulevard",
+      "options": {},
+      "cells": 328,
+      "sha256": "23c334631d5872cedcb10d3669c89ab085c9720bdccfe71f8c178f37b0bfc5f6"
+    },
+    {
+      "fixture": "diagonal-boulevard",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 6,
+        "independent": true
+      },
+      "cells": 1366,
+      "sha256": "5d23860e0b967f3a214c64680c5859d5e7b6d15ea2620884f9a1bcbf9fdeafc2"
+    },
+    {
+      "fixture": "diagonal-boulevard",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 2,
+        "independent": true
+      },
+      "cells": 458,
+      "sha256": "fc838aaf06238890e32918c9791cc032a9ea730aa1c9da59641841feaae1dc2c"
+    },
+    {
+      "fixture": "diagonal-highway",
+      "options": {},
+      "cells": 150,
+      "sha256": "36168e54cf23da2172e4ffdbc034fb69c0db9224838799c581cd86480067cb8b"
+    },
+    {
+      "fixture": "diagonal-highway",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 6,
+        "independent": true
+      },
+      "cells": 564,
+      "sha256": "85fce09882459fdad2c7ac1cb35b4dd55452c0f95137432ab3286e42375912e3"
+    },
+    {
+      "fixture": "diagonal-highway",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 2,
+        "independent": true
+      },
+      "cells": 188,
+      "sha256": "4c3681e2462109eedb7e30399088bc1c145b87c173cd52aacc9b3f05a0033d92"
+    },
+    {
+      "fixture": "wide-curves",
+      "options": {},
+      "cells": 1040,
+      "sha256": "df4a6e8258fd7a945a61484dbd81b3dc02acae4851dc4e67e1a300cfc69e3ab1"
+    },
+    {
+      "fixture": "wide-curves",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 6,
+        "independent": true
+      },
+      "cells": 5181,
+      "sha256": "e6b497d9d23a04dbf87922dbd2ffb90b38b026a0bc71d46d3d6a9081677e0c10"
+    },
+    {
+      "fixture": "wide-curves",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 2,
+        "independent": true
+      },
+      "cells": 1768,
+      "sha256": "b6b5a489c3de1df86188961679fe0847070f242d9b8290b79343b7b1e4aae2d3"
+    },
+    {
+      "fixture": "crossings",
+      "options": {},
+      "cells": 653,
+      "sha256": "bcf1f099e1c371e0ac6776853b3b2a98deb7f3ea14091df562aec53a20b11d38"
+    },
+    {
+      "fixture": "crossings",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 6,
+        "independent": true
+      },
+      "cells": 2948,
+      "sha256": "76a4f30efa22615cfd6fd1ef84efd131a0de9e1310e6340b997eddd8c9326a89"
+    },
+    {
+      "fixture": "crossings",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 2,
+        "independent": true
+      },
+      "cells": 1037,
+      "sha256": "7ceeb5582025785b800072bdebb39c2f2323eaacf07207f8073e48581a93510a"
+    },
+    {
+      "fixture": "joined-curves",
+      "options": {},
+      "cells": 320,
+      "sha256": "13d77f7e3896d72088dbaebe6b0ec27e22c560955014b58bd6d47c5c200749da"
+    },
+    {
+      "fixture": "joined-curves",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 6,
+        "independent": true
+      },
+      "cells": 1321,
+      "sha256": "8263f3b99266d7039b7836735d60d547502ac14691afd3c93cf5500a99e74515"
+    },
+    {
+      "fixture": "joined-curves",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 2,
+        "independent": true
+      },
+      "cells": 446,
+      "sha256": "f47f1b1349020d21f0eb57318a44d73536e08922a5f16f8835c4a0bc681dedf7"
+    },
+    {
+      "fixture": "boundary-bins",
+      "options": {},
+      "cells": 1128,
+      "sha256": "c8844966f8352214fc7c6f53a19ea24a1b604eea045b0be0f409e7ed8f635c34"
+    },
+    {
+      "fixture": "boundary-bins",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 6,
+        "independent": true
+      },
+      "cells": 5085,
+      "sha256": "10e8b23f8b976c162d81239efa0622284d30decb05d4e89f3c9c976f32cfedf3"
+    },
+    {
+      "fixture": "boundary-bins",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 2,
+        "independent": true
+      },
+      "cells": 2322,
+      "sha256": "703916e3f41372849f36ea78a570afd1abac2bcde6be0babd2012cc199951c25"
+    },
+    {
+      "fixture": "water-obstacles",
+      "options": {},
+      "cells": 765,
+      "sha256": "b56117b99c3e239a1d636bd33853c1c6a19f2aa6ed1a84f0c6a0ff872d9ef10b"
+    },
+    {
+      "fixture": "water-obstacles",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 6,
+        "independent": true
+      },
+      "cells": 3681,
+      "sha256": "5588528b8d1ec93960603d098104dc2b4a6367fe9dc2b401f00f5993b4105f08"
+    },
+    {
+      "fixture": "water-obstacles",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 2,
+        "independent": true
+      },
+      "cells": 1287,
+      "sha256": "7cbbe306572a895e4d0cbae817bf5d7cae3515503151f8c13826893e2b3e664b"
+    },
+    {
+      "fixture": "river-8",
+      "options": {},
+      "cells": 423,
+      "sha256": "5423912a6be1a50744871a0bf2c24be151397331d04db4c9da37d6bca739c911"
+    },
+    {
+      "fixture": "river-8",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 6,
+        "independent": true
+      },
+      "cells": 2015,
+      "sha256": "7ef43bef4ea96669f95294e92d44d97d8b1096b00da4fafa28f27c01c60e6e53"
+    },
+    {
+      "fixture": "river-8",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 2,
+        "independent": true
+      },
+      "cells": 710,
+      "sha256": "05d22824a6a150e88323e263d8885309bb780b99337d585d7129377cbcf45bb4"
+    },
+    {
+      "fixture": "river-431",
+      "options": {},
+      "cells": 423,
+      "sha256": "5423912a6be1a50744871a0bf2c24be151397331d04db4c9da37d6bca739c911"
+    },
+    {
+      "fixture": "river-431",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 6,
+        "independent": true
+      },
+      "cells": 2015,
+      "sha256": "7ef43bef4ea96669f95294e92d44d97d8b1096b00da4fafa28f27c01c60e6e53"
+    },
+    {
+      "fixture": "river-431",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 2,
+        "independent": true
+      },
+      "cells": 710,
+      "sha256": "05d22824a6a150e88323e263d8885309bb780b99337d585d7129377cbcf45bb4"
+    },
+    {
+      "fixture": "islands-8",
+      "options": {},
+      "cells": 334,
+      "sha256": "5af488c671f6c2f1faa8c420f074cf12d38e1b3d5fac35365b0a354bc1cb4243"
+    },
+    {
+      "fixture": "islands-8",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 6,
+        "independent": true
+      },
+      "cells": 1619,
+      "sha256": "1efeee753c2e05dd51b7f444afa055b02aa7bca9854a4d2da2d0776e9f735810"
+    },
+    {
+      "fixture": "islands-8",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 2,
+        "independent": true
+      },
+      "cells": 582,
+      "sha256": "860527d14ac4c10bc6a330133d00b66812f11d0ab5e09d6a0f4989e2c9bd3c40"
+    },
+    {
+      "fixture": "islands-431",
+      "options": {},
+      "cells": 354,
+      "sha256": "3d3bf4b2a371326b5f1a6faea9b3103ef6163c346e023f67a64bcd97d1e3e8e8"
+    },
+    {
+      "fixture": "islands-431",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 6,
+        "independent": true
+      },
+      "cells": 1663,
+      "sha256": "c33ed2e7ab8902fa3ece3eeac02a3aa1916090e2b226abd1ccecd27a1e729b3f"
+    },
+    {
+      "fixture": "islands-431",
+      "options": {
+        "cellSize": 1.6,
+        "rows": 2,
+        "independent": true
+      },
+      "cells": 588,
+      "sha256": "e614ae359eef75da4bd7463a2c08e2e757869110a86d7b15274ec1acc3fba0cf"
+    }
+  ]
+}

@@ -14,15 +14,33 @@ function tileSnapshot(tiles){return {grounds:tiles.map(t=>t.ground),roads:tiles.
 const indexAt=(x,z)=>{const a=Math.floor((x+96)/4),b=Math.floor((z+96)/4);return a<0||b<0||a>=48||b>=48?-1:b*48+a;};
 function corners(p,width=p.width||CELL,depth=p.depth||CELL){const c=Math.cos(p.angle),s=Math.sin(p.angle);return [[-1,-1],[1,-1],[1,1],[-1,1]].map(([x,z])=>({x:p.cx+x*width/2*c+z*depth/2*s,z:p.cz-x*width/2*s+z*depth/2*c}));}
 function overlaps(a,b){const ac=Math.cos(a.angle),as=Math.sin(a.angle),bc=Math.cos(b.angle),bs=Math.sin(b.angle),dx=b.cx-a.cx,dz=b.cz-a.cz;for(const [x,z]of [[ac,-as],[as,ac],[bc,-bs],[bs,bc]]){const ar=Math.abs(x*ac-z*as)*(a.width||4)/2+Math.abs(x*as+z*ac)*(a.depth||4)/2,br=Math.abs(x*bc-z*bs)*(b.width||4)/2+Math.abs(x*bs+z*bc)*(b.depth||4)/2;if(Math.abs(dx*x+dz*z)>=ar+br-.02)return false;}return true;}
+// Private collision records live only during a layout rebuild. Keep calculated
+// axes and extents out of the returned cells and persistent parcel data.
+function collisionRect(p){const c=Math.cos(p.angle),s=Math.sin(p.angle),w=(p.width||4)/2,d=(p.depth||4)/2;return {cx:p.cx,cz:p.cz,c,s,w,d,n:c*c+s*s,ex:Math.abs(c)*w+Math.abs(s)*d,ez:Math.abs(s)*w+Math.abs(c)*d,cell:p,visit:0};}
+function rectOverlaps(a,b){
+ const dx=b.cx-a.cx,dz=b.cz-a.cz;
+ // Conservative world-space rejection before the four exact local axes.
+ if(Math.abs(dx)>a.ex+b.ex+1e-9||Math.abs(dz)>a.ez+b.ez+1e-9)return false;
+ const dot=Math.abs(a.c*b.c+a.s*b.s),cross=Math.abs(a.c*b.s-a.s*b.c);
+ return Math.abs(dx*a.c-dz*a.s)<a.n*a.w+(dot*b.w+cross*b.d)-.02&&
+        Math.abs(dx*a.s+dz*a.c)<a.n*a.d+(cross*b.w+dot*b.d)-.02&&
+        Math.abs(dx*b.c-dz*b.s)<dot*a.w+cross*a.d+b.n*b.w-.02&&
+        Math.abs(dx*b.s+dz*b.c)<cross*a.w+dot*a.d+b.n*b.d-.02;
+}
 function layout(w,roads,options={}){
  const cellSize=options.cellSize??4,rows=options.rows??4,independent=options.independent===true;if(![1.6,4].includes(cellSize)||!Number.isInteger(rows)||rows<1||rows>6)throw Error('Unsupported zoning grid dimensions');const variant=cellSize+':'+rows+':'+independent;
  const paths=JSON.stringify(w.roadPaths||[]),variants=cache.get(w)||new Map(),old=variants.get(variant);
  // Hover and brush queries still detect in-place road/terrain edits, but an
  // unchanged map no longer allocates thousands of temporary strings.
  if(old?.paths===paths&&sameTiles(w.tiles,old.tiles))return old.cells;
- const candidates=[],sources=[],roadBins=new Map();
- function roadRectangle(a,b,width){const dx=b.x-a.x,dz=b.z-a.z,length=Math.hypot(dx,dz);if(length<1e-8)return;const p={cx:(a.x+b.x)/2,cz:(a.z+b.z)/2,angle:Math.atan2(-dz,dx),width:length+.05,depth:width+.8},points=corners(p,p.width,p.depth),minX=Math.floor(Math.min(...points.map(v=>v.x))/8),maxX=Math.floor(Math.max(...points.map(v=>v.x))/8),minZ=Math.floor(Math.min(...points.map(v=>v.z))/8),maxZ=Math.floor(Math.max(...points.map(v=>v.z))/8);for(let z=minZ;z<=maxZ;z++)for(let x=minX;x<=maxX;x++){const key=x+','+z;if(!roadBins.has(key))roadBins.set(key,[]);roadBins.get(key).push(p);}}
- function crossesRoad(p){const x=Math.floor(p.cx/8),z=Math.floor(p.cz/8),seen=new Set();for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++)for(const road of roadBins.get((x+dx)+','+(z+dz))||[]){if(seen.has(road))continue;seen.add(road);if(overlaps(p,road))return true;}return false;}
+ const candidates=[],sources=[],roadBins=new Map();let roadVisit=0;
+ function roadRectangle(a,b,width){const dx=b.x-a.x,dz=b.z-a.z,length=Math.hypot(dx,dz);if(length<1e-8)return;const p={cx:(a.x+b.x)/2,cz:(a.z+b.z)/2,angle:Math.atan2(-dz,dx),width:length+.05,depth:width+.8},rectangle=collisionRect(p),points=corners(p,p.width,p.depth),minX=Math.floor(Math.min(...points.map(v=>v.x))/8),maxX=Math.floor(Math.max(...points.map(v=>v.x))/8),minZ=Math.floor(Math.min(...points.map(v=>v.z))/8),maxZ=Math.floor(Math.max(...points.map(v=>v.z))/8);for(let z=minZ;z<=maxZ;z++)for(let x=minX;x<=maxX;x++){const key=x+','+z;if(!roadBins.has(key))roadBins.set(key,[]);roadBins.get(key).push(rectangle);}}
+ function crossesRoad(p){
+  const visit=++roadVisit,minX=Math.floor((p.cx-p.ex-1e-9)/8),maxX=Math.floor((p.cx+p.ex+1e-9)/8),minZ=Math.floor((p.cz-p.ez-1e-9)/8),maxZ=Math.floor((p.cz+p.ez+1e-9)/8);
+  // Road ribbons already occupy every bin touched by their bounds. Query only
+  // bins touched by this cell; a stamp avoids allocating a Set per candidate.
+  for(let z=minZ;z<=maxZ;z++)for(let x=minX;x<=maxX;x++)for(const road of roadBins.get(x+','+z)||[]){if(road.visit===visit)continue;road.visit=visit;if(rectOverlaps(p,road))return true;}return false;
+ }
 
  for(const path of w.roadPaths||[]){const [a,b,c]=path.controls,points=[],steps=Math.max(2,Math.ceil(path.controls.slice(1).reduce((n,p,i)=>n+Math.hypot(p.x-path.controls[i].x,p.y-path.controls[i].y),0)*8));let length=0;
   for(let j=0;j<=steps;j++){const t=j/steps,u=1-t,p={x:((c?u*u*a.x+2*u*t*b.x+t*t*c.x:a.x+(b.x-a.x)*t)+.5)*4-96,z:((c?u*u*a.y+2*u*t*b.y+t*t*c.y:a.y+(b.y-a.y)*t)+.5)*4-96};if(j)length+=Math.hypot(p.x-points[j-1].x,p.z-points[j-1].z);p.distance=length;points.push(p);}
@@ -46,12 +64,12 @@ function layout(w,roads,options={}){
   const source={x:cx,z:cz,tx:vertical?0:1,tz:vertical?1:0,col:vertical?y:x,source:vertical?'legacy-v-'+x:'legacy-h-'+y,roadIndex:i,offset:Math.max(independent?0:2,roadWidth/2+.45)};
   if(!independent)sources.push(source);else{const along=vertical?cz:cx;for(let col=Math.ceil((along-2)/cellSize-.5);(col+.5)*cellSize<along+2-1e-8;col++)sources.push({...source,col,...(vertical?{z:(col+.5)*cellSize}:{x:(col+.5)*cellSize})});}
  }
- for(const a of sources)for(const side of [-1,1])for(let row=0;row<rows;row++){const nx=-a.tz*side,nz=a.tx*side,d=(a.sideOffsets?.[side===-1?0:1]??a.offset)+cellSize/2+row*cellSize,cx=a.x+nx*d,cz=a.z+nz*d,index=indexAt(cx,cz);if(index<0||!independent&&w.tiles[index].type==='road'||w.tiles[index].ground==='water')continue;const p={index,...(independent?{id:JSON.stringify([a.source,side,a.col,row]),width:cellSize,depth:cellSize}:{}),cx,cz,angle:Math.atan2(-nx,-nz),source:a.source,side,col:a.col,row,roadIndex:a.roadIndex,frontage:{x:a.x,z:a.z,roadIndex:a.roadIndex,...(!a.source.startsWith('legacy-')?{pathId:a.source}:{})}};if(corners(p).some(v=>{const j=indexAt(v.x*.999999,v.z*.999999);return j<0||w.tiles[j].ground==='water';}))continue;if(crossesRoad(p))continue;candidates.push(p);}
- candidates.sort((a,b)=>a.row-b.row||a.source.localeCompare(b.source)||a.side-b.side||a.col-b.col);
- const cells=new Map(),bins=new Map();for(const p of candidates){const cellKey=independent?p.id:p.index;if(cells.has(cellKey))continue;
+ for(const a of sources)for(const side of [-1,1])for(let row=0;row<rows;row++){const nx=-a.tz*side,nz=a.tx*side,d=(a.sideOffsets?.[side===-1?0:1]??a.offset)+cellSize/2+row*cellSize,cx=a.x+nx*d,cz=a.z+nz*d,index=indexAt(cx,cz);if(index<0||!independent&&w.tiles[index].type==='road'||w.tiles[index].ground==='water')continue;const p={index,...(independent?{id:JSON.stringify([a.source,side,a.col,row]),width:cellSize,depth:cellSize}:{}),cx,cz,angle:Math.atan2(-nx,-nz),source:a.source,side,col:a.col,row,roadIndex:a.roadIndex,frontage:{x:a.x,z:a.z,roadIndex:a.roadIndex,...(!a.source.startsWith('legacy-')?{pathId:a.source}:{})}};if(corners(p).some(v=>{const j=indexAt(v.x*.999999,v.z*.999999);return j<0||w.tiles[j].ground==='water';}))continue;const rectangle=collisionRect(p);if(crossesRoad(rectangle))continue;candidates.push(rectangle);}
+ candidates.sort((a,b)=>a.cell.row-b.cell.row||a.cell.source.localeCompare(b.cell.source)||a.cell.side-b.cell.side||a.cell.col-b.cell.col);
+ const cells=new Map(),bins=new Map();for(const rectangle of candidates){const p=rectangle.cell,cellKey=independent?p.id:p.index;if(cells.has(cellKey))continue;
  // Only retain an unbroken column from the sidewalk. A rejected frontage
  // cell must not leave floating buildable cells behind a crossing or curve.
- if(independent&&p.row>0&&!cells.has(JSON.stringify([p.source,p.side,p.col,p.row-1])))continue;const x=Math.floor(p.cx/8),z=Math.floor(p.cz/8);let collision=false;for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++)for(const q of bins.get((x+dx)+','+(z+dz))||[])if(overlaps(p,q))collision=true;if(collision)continue;cells.set(cellKey,p);const key=x+','+z;if(!bins.has(key))bins.set(key,[]);bins.get(key).push(p);}
+ if(independent&&p.row>0&&!cells.has(JSON.stringify([p.source,p.side,p.col,p.row-1])))continue;const x=Math.floor(p.cx/8),z=Math.floor(p.cz/8);let collision=false;nearby:for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++)for(const q of bins.get((x+dx)+','+(z+dz))||[])if(rectOverlaps(rectangle,q)){collision=true;break nearby;}if(collision)continue;cells.set(cellKey,p);const key=x+','+z;if(!bins.has(key))bins.set(key,[]);bins.get(key).push(rectangle);}
  variants.set(variant,{paths,tiles:tileSnapshot(w.tiles),cells});cache.set(w,variants);return cells;
 }
 function hit(cells,x,z){for(const p of cells.values()){const dx=x-p.cx,dz=z-p.cz,c=Math.cos(p.angle),s=Math.sin(p.angle);if(Math.abs(dx*c-dz*s)<=(p.width||4)/2&&Math.abs(dx*s+dz*c)<=(p.depth||4)/2)return p;}return null;}
