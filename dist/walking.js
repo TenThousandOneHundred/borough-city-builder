@@ -1,8 +1,8 @@
-import './building-entities.js?v=104';
+import './building-entities.js?v=105';
 const Buildings=globalThis.BoroughBuildings;
-import {roadPoint} from './traffic.js?v=104';
-import {visualParcels} from './parcels.js?v=104';
-import {WalkingSearch} from './walking-search.js?v=104';
+import {roadPoint} from './traffic.js?v=105';
+import {visualParcels} from './parcels.js?v=105';
+import {WalkingSearch} from './walking-search.js?v=105';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const cell=p=>Math.floor((p.z+96)/4)*48+Math.floor((p.x+96)/4);
 export function sidewalkPosition(traffic,i){const p=traffic.positions.get(i)||roadPoint(i),neighbors=traffic.graph.get(i)||[],q=neighbors.map(j=>traffic.positions.get(j)||roadPoint(j)).find(q=>distance(p,q)>.01);if(!q)return p;let dx=q.x-p.x,dz=q.z-p.z;if(dx<0||Math.abs(dx)<.001&&dz<0){dx=-dx;dz=-dz;}const length=Math.hypot(dx,dz)||1,width=traffic.engine.ROADS[traffic.world.tiles[i].roadType]?.width||2.45,offset=width/2+.22;return {x:p.x-dz/length*offset,z:p.z+dx/length*offset};}

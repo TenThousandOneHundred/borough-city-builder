@@ -1,4 +1,4 @@
-import {floorHeight} from './landscape.js?v=104';
+import {floorHeight} from './landscape.js?v=105';
 import * as THREE from './vendor/three.module.js';
 // Gameplay pedestrians mirror saved simulation agents. Only the menu uses ambient walkers.
 export class StreetLife{
@@ -26,7 +26,7 @@ export class StreetLife{
   let count=0;const time=this.world.citizens?.time||0,dirty=this.parts.map(()=>({first:Infinity,last:0}));this.lastMatrixWrites=0;this.lastHeightSamples=0;
   const draw=(r,state)=>{if(count>=1024)return;const x=state.x,z=state.z;if(camera&&(x-camera.position.x)**2+(z-camera.position.z)**2>110*110)return;
    const i=Math.floor((z+96)/4)*48+Math.floor((x+96)/4),road=this.world.tiles[i]?.type==='road';
-   const revision=this.world.elevationRevision||0,ground=this.world.tiles[i]?.ground,previous=this.heights.get(state);let y;if(previous&&previous.x===x&&previous.z===z&&previous.road===road&&previous.ground===ground&&previous.revision===revision)y=previous.y;else{y=road?v.roadworks.height(this.world,x,z)+.08:floorHeight(this.world,x,z)+.08;this.heights.set(state,{x,z,road,ground,revision,y});this.lastHeightSamples++;}
+   const revision=this.world.elevationRevision||0,roadRevision=v.roadworks.heightRevision,ground=this.world.tiles[i]?.ground,previous=this.heights.get(state);let y;if(previous&&previous.x===x&&previous.z===z&&previous.road===road&&previous.ground===ground&&previous.revision===revision&&previous.roadRevision===roadRevision)y=previous.y;else{y=road?v.roadworks.height(this.world,x,z)+.08:floorHeight(this.world,x,z)+.08;this.heights.set(state,{x,z,road,ground,revision,roadRevision,y});this.lastHeightSamples++;}
    this.sphere.center.set(x,y+.2,z);if(camera&&!this.frustum.intersectsSphere(this.sphere))return;
    const heading=state.heading||0,walking=state.phase!=='wait'&&r.activity!=='Waiting for walking access',swing=walking?Math.sin(time*8+r.id)*.3:0;
    const pose=this.poses[count],same=pose&&pose.x===x&&pose.y===y&&pose.z===z&&pose.heading===heading;

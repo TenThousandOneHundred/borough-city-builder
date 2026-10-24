@@ -42,9 +42,11 @@ test('road material cache refreshes when asynchronous textures arrive, then reus
 });
 
 test('legacy bridge decks support the unified pavement height instead of floating below it',()=>{
- const v=view(),boxes=[],box=v.box;v.box=function(...args){boxes.push(args);return box.apply(this,args);};v.landscape={assets:{},material:()=>v.mat('#555555')};
+ const v=view();v.landscape={assets:{},material:()=>v.mat('#555555')};
  const r=new Roadworks(v),w=E.createWorld('Bridge support','plains',42);w.tiles[24*48+10].ground='water';r.outside=()=>{};r.build(w);
- const deck=boxes.find(([,x,y,z,width,height])=>width===4&&height===.55);assert.ok(deck);const [,x,y,z,,thickness]=deck;assert.ok(Math.abs(y+thickness/2-(r.height(w,x,z)+.075))<1e-8);
+ const x=-54,z=2,concrete=r.group.children.filter(m=>m.material===v.mat('#969c96'));r.group.updateMatrixWorld(true);
+ const deck=new THREE.Raycaster(new THREE.Vector3(x,10,z),new THREE.Vector3(0,-1,0)).intersectObjects(concrete)[0];assert.ok(deck,'the bridge has a solid concrete deck beneath its pavement');assert.ok(Math.abs(deck.point.y-(r.height(w,x,z)+.06))<.001);assert.ok(deck.face.normal.y>.9);
+
 });
 
 

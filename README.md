@@ -719,3 +719,19 @@ A matched browser district contains 24 offices, six of each form, on the same ro
 All 359 automated tests pass. They include facade depth, non-emissive floor panels, open roof screens at both detail levels, unchanged model hashes, varied office selection and the existing distant-geometry budget. Asset integrity and lossless compression checks also pass.
 
 This is feature update one after the Edition 103 optimization. The next dedicated optimization follows updates 104–106.
+
+## Edition 105 — Continuous river bridges
+
+Road crossings now have continuous concrete decks, longitudinal beams, piers with crossheads, shore abutments and open edge railings. The structure follows straight and curved roads, including existing grid roads, and adapts to the road's width and sidewalk. Compatible end-to-end segments are joined before planning a crossing, so extending a road or loading an old grid bridge does not create a separate arch and support at every segment. Railings stop at intersection openings.
+
+The elevated-road picture in the official [Road Tools diary](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/road-tools) was inspected before implementation. Its continuous concrete slab, supporting piers and open roadside barriers guided the original bridge geometry. The [reference picture](https://images.ctfassets.net/u73tyf0fa8v1/RLQU0m7sInUxQVu3TRolN/402a675022ffcb1196de4872c64937a2/cities-skylines-ii-road-tools-6-stacked-roads.jpg?w=1920&q=75&fm=webp) is not shipped with the game.
+
+A single graded crossing profile now supplies the pavement, sidewalk, structure and vehicle/pedestrian display heights. It removes the shoreline dips from the previous water-dependent road height. The grade is derived again from road controls and terrain when the city loads or its roads change. Bridge plans and height indexes are transient; world data, road paths, zoning ownership and resident journeys are retained. Stationary vehicles and waiting pedestrians invalidate their cached display height when a road is rebuilt.
+
+The deck and rails share two material buffers before joining the existing spatial road batches. Nearby height samples use a small spatial index instead of scanning every bridge. Building models, textures, terrain geometry and independent simulation are retained. No new image or model downloads are required; existing model asset URLs remain pinned to Edition 104.
+
+Regression checks cover reversed street extensions, curve edges, approach endpoints, open driving lanes, deck/soffit face orientation, piers, intersection openings, width transitions, all road styles, restored cities, demolition and stationary vehicle/pedestrian height invalidation. Asset integrity, compression and module syntax checks pass. The release workflow verifies the complete regression suite before publishing.
+
+In the matched river scene, ordinary draw calls decrease from 35 to 34 and triangles increase from 459,249 to 467,509. Alternating old/new GPU medians were 9.22/9.38 ms and 9.23/9.90 ms. Frame intervals varied between 55.7 and 72.4 ms, so this is not evidence of consistently smooth frame rates. The added structure costs about 0.2–0.7 ms of GPU time in these runs. CPU height queries for 400 moving vehicles over 60 frames measured 29.14 ms before and 32.72 ms after, an increase of about 0.06 ms per frame. Warm bridge planning measured 1.88 ms. These figures cover this fixture and test device, not every city or computer.
+
+This is feature update two after the Edition 103 optimization. Edition 106 is the third feature update; Edition 107 remains the next dedicated optimization pass.

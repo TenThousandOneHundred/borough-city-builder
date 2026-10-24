@@ -1,6 +1,6 @@
-import {districtBuilding} from './districts.js?v=104';
+import {districtBuilding} from './districts.js?v=105';
 import * as THREE from './vendor/three.module.js';
-import {floorHeight} from './landscape.js?v=104';
+import {floorHeight} from './landscape.js?v=105';
 export class Architecture{
 constructor(view){this.v=view;this.cache=new Map();this.roof=this.roofMaterial();this.roofs=new Map();this.ready=Promise.resolve();}
 // Window detail is authored locally; it does not depend on downloaded kits.
