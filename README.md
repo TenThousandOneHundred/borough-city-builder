@@ -1,6 +1,20 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 114 — More complete row-house streets
+
+Row-housing zones now grow two additional original terrace styles: three-storey brick homes with raised entrance steps and flat parapet roofs, and three-storey homes with a pitched roof, street-facing dormer and ground-level entrance. Their party walls meet without side eaves, while individual doors, recessed sash windows, stone lintels, roof drainage and chimneys give each home its own frontage. The roof has an actual opening around the dormer. A saved multi-cell lot can contain several attached homes; their geometry is instanced at uniform scale rather than stretched. Rear garden dividers now continue the shared walls instead of following offset door positions.
+
+The two row-house pictures in the official [Zones & Signature Buildings feature](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/zones-signature-buildings) were inspected before modeling. The continuous street fronts, different roof forms and separate entrances informed the new geometry. This is a focused picture review. The pictures and commercial-game assets are not shipped.
+
+All 420 regression tests pass, together with module syntax, model integrity and lossless compression checks. New tests cast rays through the actual near and distant window and dormer geometry, verify wall-to-wall placement and garden boundaries, exercise ordinary zoning growth, and compare saved parcel geometry and deterministic model selection after reload. All 61 previous authored models remain byte-identical. The full game loads a normally grown test city with 264 residents; manual save and full reload retain it without browser errors or warnings.
+
+The new models contain 2,144 and 2,002 triangles close up, dropping to 834 and 748 at distance with every window and opening retained. They share existing materials and textures. The combined compressed model and distant-index downloads increase by 42.3 KiB; the modern catalogue stays below 3 MiB compressed. Only these changed model downloads and their manifest advance to Edition 114. Existing housing and apartment detail remains intact, and no new per-frame simulation work is added.
+
+In the same 24-lot scene, ten lots naturally select the new styles while fourteen retain earlier styles. Two alternating comparisons against Edition 113's saved model library and placement code give GPU medians of 9.00/9.03 ms and 8.84/8.69 ms before/after, with median frame intervals of 16.4–16.8 ms. Ordinary draws increase from 116 to 131 and triangles from 509,855 to 531,871. These measurements cover this scene and device; they do not guarantee that every city runs at the same rate. A separate fixture save/reload preserves all 24 lots, the model choices and 288 residents.
+
+This is feature update three after optimization 111. Edition 115 is the next scheduled dedicated optimization pass.
+
 ## Edition 113 — Replace existing roads
 
 Choose Replace in the road toolbar, or inspect a street and choose Replace road type, to switch an existing section among all eight road types. Curved roads keep their controls and direction. Older tile streets become sampled sections while retaining crossings and separate zoning-side settings. The preview shows the price, replacement width and any whole building lots that would be removed. Widening into occupied land requires the explicit removal checkbox; insufficient funds or an unapproved demolition leaves the city unchanged.

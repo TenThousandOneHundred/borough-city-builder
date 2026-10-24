@@ -514,6 +514,102 @@ def historic_terrace(name,stepped):
 
 historic_terrace('stepped-gable-brick-terrace',True)
 historic_terrace('bell-gable-brick-terrace',False)
+
+def street_terrace(name,dormered):
+ # Reference: official Zones & Signature Buildings row-street pictures.
+ # Original party-wall homes: three full storeys, narrow individual entries,
+ # recessed sash windows, and either a raised stoop or a street-facing dormer.
+ w,d,fh=7.6,12,2.95;base=.12 if dormered else 1.0;h=base+3*fh
+ tint=(.75,.60,.48) if dormered else (.61,.40,.31)
+ m=Model(name,'residential-low',3);m.houseForm='terrace';m.roofForm='street-ridge-dormer' if dormered else 'corniced-flat'
+ def face(l,r,lo,hi,z,mat=BRICK,color=tint):
+  if r<=l or hi<=lo:return
+  q=[(l,lo,z),(r,lo,z),(r,hi,z),(l,hi,z)]
+  m.quad(*(q if z>0 else q[::-1]),mat,color,uvs=[(x/2,y/2) for x,y,_ in (q if z>0 else q[::-1])] if mat==BRICK else None)
+ def trim(x,y,z,width,height,depth,sign=1,mat=PAINT,color=(.82,.80,.72)):
+  # Keep the outward frame face at distance; omit its tiny side returns.
+  part=m.parts[mat];start=len(part['i']);m.detail=True;m.box(x,y,z,width,height,depth,mat,color);m.detail=False
+  start+=0 if sign>0 else 6;part['far']+=part['i'][start:start+6]
+ def opening(x,lo,hi,width,z,door=False):
+  s=1 if z>0 else -1;l=x-width/2;r=x+width/2
+  face(l,r,lo,hi,z-s*.20,WOOD if door else OCCUPIED if round(x+lo)%3==0 else GLASS,(.40,.50,.48) if door else (.78,.85,.84))
+  for a in [l,r]:m.quad((a,lo,z),(a,hi,z),(a,hi,z-s*.20),(a,lo,z-s*.20),CONCRETE,(.68,.67,.61))
+  for a in [l-.055,r+.055]:trim(a,lo-.06,z+s*.025,.11,hi-lo+.12,.18,s)
+  for y in [lo-.055,hi]:trim(x,y,z+s*.025,width+.22,.10,.21,s)
+  if door:
+   face(l+.15,r-.15,hi-.65,hi-.12,z-s*.17,GLASS,(.80,.85,.81))
+   for y in [lo+.16,lo+.79]:trim(x,y,z-s*.15,width-.26,.48,.045,s,PAINT,(.36,.46,.42))
+   m.detail=True;m.box(r-.16,lo+.98,z-s*.10,.04,.23,.06,FRAME);m.detail=False
+   if s>0:m.streetFronts.append({'kind':'entrance','position':[x,lo,z+.10],'normal':[0,1],'width':width})
+  else:
+   trim(x,lo,z-s*.12,.045,hi-lo,.055,s,FRAME)
+   trim(x,lo+(hi-lo)*.55,z-s*.12,width,.065,.055,s,PAINT)
+  trim(x,lo-.14,z+s*.06,width+.36,.085,.36,s,CONCRETE,(.83,.79,.69))
+  trim(x,hi+.10,z+s*.03,width+.38,.15,.22,s,CONCRETE,(.80,.77,.68))
+ # No side windows, overhanging eaves or other protrusions at party walls.
+ for side in [-1,1]:
+  x=side*w/2;q=[(x,0,-d/2),(x,h,-d/2),(x,h,d/2),(x,0,d/2)]
+  m.quad(*(q if side>0 else q[::-1]),BRICK,tint,uvs=[(z/2,y/2) for _,y,z in (q if side>0 else q[::-1])])
+ for sign in [-1,1]:
+  z=sign*d/2
+  face(-w/2,w/2,0,base,z,CONCRETE,(.69,.67,.59))
+  for floor in range(3):
+   y=base+floor*fh
+   for bay in range(3):
+    x=(bay-1)*w/3;door=floor==0 and bay==0;width=1.10 if door else 1.40
+    lo=y+(.04 if door else .61);hi=y+2.36;l=x-width/2;r=x+width/2
+    for rect in [(x-w/6,l,y,y+fh),(r,x+w/6,y,y+fh),(l,r,y,lo),(l,r,hi,y+fh)]:face(*rect,z)
+    opening(x,lo,hi,width,z,door)
+  for y in [base-.06,base+fh-.05,base+2*fh-.05,h-.16]:
+   m.box(0,max(.02,y),z,w,.12,.18,CONCRETE,(.76,.72,.63))
+ # Individual entrance stairs and open metal railings leave the door visible.
+ entryX=-w/3;stepCount=1 if dormered else 5;rise=(base+.04)/stepCount
+ for k in range(stepCount):m.box(entryX,.02,d/2+.2+(stepCount-1-k)*.30,1.48,rise*(k+1),.32,CONCRETE,(.71,.70,.64))
+ if not dormered:
+  for side in [-1,1]:
+   x=entryX+side*.76
+   for k in range(6):
+    z=d/2+.12+k*.30;y=base+.04-k*rise
+    m.detail=True;m.box(x,max(.02,y),z,.045,.85,.045,FRAME);m.detail=False
+   for height in [.28,.82]:
+    a=(x-.025,base+height,d/2+.10);b=(x-.025,.02+height,d/2+1.65)
+    m.quad(a,b,(x+.025,b[1],b[2]),(x+.025,a[1],a[2]),FRAME)
+ if dormered:
+  rise=2.45;front=d/2+.24;back=-d/2-.24
+  def ry(z):return h+rise*(1-abs(z)/front)
+  def roof(l,r,z0,z1):
+   q=[(l,ry(z1),z1),(r,ry(z1),z1),(r,ry(z0),z0),(l,ry(z0),z0)]
+   m.quad(*q,ROOF,(.63,.65,.63),uvs=[(x/2,z/2) for x,_,z in q])
+  # Cut a real dormer opening from the slope; no roof passes through its glass.
+  roof(-w/2,w/2,back,0);roof(-w/2,-1.30,0,front);roof(1.30,w/2,0,front)
+  roof(-1.30,1.30,0,1.55);roof(-1.30,1.30,5.25,front)
+  z=5.25;lo=ry(z);top=h+2.27
+  face(-1.30,1.30,lo,lo+.25,z,PAINT,(.51,.58,.58))
+  face(-1.30,-1.12,lo+.25,top,z,PAINT,(.51,.58,.58));face(1.12,1.30,lo+.25,top,z,PAINT,(.51,.58,.58))
+  face(-1.12,1.12,top-.13,top,z,PAINT,(.51,.58,.58));opening(0,lo+.25,top-.13,2.24,z)
+  for s in [-1,1]:
+   q=[(s*1.3,ry(1.55),1.55),(s*1.3,top,1.55),(s*1.3,top,z),(s*1.3,lo,z)]
+   m.quad(*(q if s>0 else q[::-1]),PAINT,(.51,.58,.58))
+  m.box(0,top,3.40,2.6,.10,3.9,ROOF,(.54,.57,.56))
+  m.box(0,h+rise-.025,0,w,.12,.16,ROOF)
+  for s in [-1,1]:
+   q=[(s*w/2,h,back),(s*w/2,h+rise,0),(s*w/2,h,front),(s*w/2,h,back)]
+   m.quad(*(q if s>0 else q[::-1]),BRICK,tint)
+ else:
+  m.surface(m.ring(w-.24,d-.24,0),h,ROOF,(.67,.68,.63))
+  for z in [-d/2,d/2]:
+   m.box(0,h,z,w,.32,.18,BRICK,tint);m.box(0,h+.32,z,w,.13,.34,CONCRETE,(.76,.73,.65))
+   m.box(0,h-.12,z,w,.16,.42,FRAME,(.62,.67,.65))
+  for s in [-1,1]:m.box(s*(w/2-.08),h,0,.16,.32,d,BRICK,tint)
+  m.box(1.6,h,-2.8,1.1,.48,.8,FRAME);m.box(1.6,h+.48,-2.8,1.18,.08,.88,CONCRETE)
+ # Chimney, rainwater pipe and gutters are shared-material static geometry.
+ m.box(w/2-.52,h+.55,-2,.55,1.25,.72,BRICK,tint);m.box(w/2-.52,h+1.8,-2,.72,.12,.88,CONCRETE)
+ for s in [-1,1]:m.box(0,h-.05,s*(d/2+.12),w,.12,.14,FRAME)
+ m.detail=True;m.cylinder(w/2-.15,.04,d/2+.12,.045,h-.04,FRAME,6);m.detail=False
+ m.finish()
+
+street_terrace('raised-stoop-brick-terrace',False)
+street_terrace('dormer-roof-brick-terrace',True)
 m=dwelling('garden-wing-bungalow',9,10,1,tint=(.83,.86,.77),siding=True);domestic_block(m,5,7,1,x=5.5,z=-1.5,tint=(.7,.76,.78),siding=True);pitched_roof(m,5.5,-1.5,5,7,2.85,1.5,hip=1.1);m.finish()
 
 # Reference: the official CS2 high-density office district. These original

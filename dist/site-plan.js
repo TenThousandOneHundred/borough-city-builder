@@ -20,7 +20,7 @@ export function sitePlan(plan,footprint){
    let edge=left;for(const [a,b]of reserved){rect('garden',edge,frontStart,a,front);edge=Math.max(edge,b);}rect('garden',edge,frontStart,right,front);
   }
   // Rear and side fences stop before the front entrance and driveway.
-  if(rear>.28){for(let i=1;i<(plan.rowEntrances?.length||0);i++){const x=(plan.rowEntrances[i-1]+plan.rowEntrances[i])/2;rect('fence',x-.015,back,x+.015,rearEnd,{axis:'z'});}rect('fence',left,back,right,back+.03,{axis:'x'});rect('fence',left,back,left+.03,rearEnd,{axis:'z'});rect('fence',right-.03,back,right,rearEnd,{axis:'z'});}
+  if(rear>.28){const divisions=plan.rowDividers??(plan.rowEntrances||[]).slice(1).map((x,i)=>(plan.rowEntrances[i]+x)/2);for(const x of divisions)rect('fence',x-.015,back,x+.015,rearEnd,{axis:'z'});rect('fence',left,back,right,back+.03,{axis:'x'});rect('fence',left,back,left+.03,rearEnd,{axis:'z'});rect('fence',right-.03,back,right,rearEnd,{axis:'z'});}
  }else if(business){
   // Parking bays need a full 6 m manoeuvring aisle behind their 5 m depth.
   // Shallow setbacks remain loading/entrance space instead of fake stalls.
