@@ -516,10 +516,90 @@ historic_terrace('stepped-gable-brick-terrace',True)
 historic_terrace('bell-gable-brick-terrace',False)
 m=dwelling('garden-wing-bungalow',9,10,1,tint=(.83,.86,.77),siding=True);domestic_block(m,5,7,1,x=5.5,z=-1.5,tint=(.7,.76,.78),siding=True);pitched_roof(m,5.5,-1.5,5,7,2.85,1.5,hip=1.1);m.finish()
 
-m=Model('glass-podium-offices','office',21);h=m.shell(25,21,3,curtain=True);h=m.shell(16,14,18,x=-2,z=-1,y=h,bevel=2,curtain=True);m.roofwork(-2,h,-1);m.plant(9,9.85,6,3,4);m.entrance(11);m.finish()
-m=Model('stepped-concrete-offices','office',18);h=m.shell(24,20,3);h=m.shell(21,17,7,y=h,curtain=True);h=m.shell(16,13,5,x=-2,y=h,curtain=True);h=m.shell(11,9,3,x=-3,y=h,curtain=True);m.roofwork(-3,h,0,4,2);m.plant(8,32.3,4,2,5);m.entrance(10.5);m.finish()
-m=Model('elliptic-glass-offices','office',19);h=m.shell(23,19,2,bevel=3);h=m.shell(19,15,17,y=h,curtain=True,oval=True);m.roofwork(0,h,0);m.entrance(10);m.finish()
-m=Model('slender-glass-offices','office',23);h=m.shell(11,13,23,bevel=1.3,curtain=True);m.roofwork(0,h,0,4,2);m.entrance(7);m.finish()
+# Reference: the official CS2 high-density office district. These original
+# facades use separate vision glass, spandrels, projecting mullions and roof
+# screens. Reuse existing materials; only small returns leave distant topology.
+def office_skin(m,w,d,floors,x=0,z=0,y=0,bevel=.7,oval=False,ribs=False):
+ inset=.19 if ribs else .015
+ points=([(x+(w/2-inset)*math.cos(j*math.tau/32),z+(d/2-inset)*math.sin(j*math.tau/32)) for j in range(32)] if oval else m.ring(w-inset*2,d-inset*2,bevel,x,z))
+ fh=3.2;top=y+floors*fh;metal=(.53,.58,.59)
+ for side,(a,b) in enumerate(zip(points,points[1:]+points[:1])):
+  dx,dz=b[0]-a[0],b[1]-a[1];length=math.hypot(dx,dz);tx,tz=dx/length,dz/length;nx,nz=tz,-tx
+  def p(u,v,out=0):return(a[0]+tx*u+nx*out,v,a[1]+tz*u+nz*out)
+  def panel(l,r,lo,hi,out,mat,color=(1,1,1)):
+   m.quad(p(r,lo,out),p(l,lo,out),p(l,hi,out),p(r,hi,out),mat,color)
+  bays=max(1,round(length/1.6));bay=length/bays;front=nz>.9 and length>3 and y==0
+  for f in range(floors):
+   level=y+f*fh;lo=level+(.12 if f==0 and y==0 else .72);hi=level+fh-.09
+   # The floor-edge insulation is behind dark glass, never a glowing room.
+   panel(0,length,max(y,level-.09),lo,-.10,GLASS,(.52,.61,.64))
+   for j in range(bays):
+    l=j*bay+.035;r=(j+1)*bay-.035;door=front and f==0 and j==bays//2
+    shade=.90+((j*17+f*31+side*11)%13)/130
+    panel(l,r,level+.08 if door else lo,hi,-.12,GLASS,(shade,shade,min(1,shade+.025)))
+    if door:
+     centre=(l+r)/2;m.streetFronts.append({'kind':'entrance','position':list(p(centre,level+.08,.08)),'normal':[nx,nz],'width':r-l})
+     panel(centre-.025,centre+.025,level+.08,hi,.07,PAINT,metal)
+     m.detail=True
+     for u in [centre-.15,centre+.15]:panel(u-.018,u+.018,level+1,level+1.45,.13,PAINT)
+     m.detail=False
+  # Adjacent upper/lower frame strips form one coplanar transom. The
+  # opaque spandrel continues behind it, so sub-pixel strips can drop out
+  # at distance without opening a slit through the building.
+  for f in range(floors+1):
+   m.detail=0<f<floors
+   level=y+f*fh;panel(0,length,max(y,level-.09),min(top,level+.045),.065,PAINT,metal)
+  m.detail=False
+  # One continuous profile per bay, rather than a stack of heavy floor boxes.
+  for j in range(bays+1):
+   u=j*bay;half=.035;l=max(0,u-half);r=min(length,u+half)
+   panel(l,r,y,top,.075,PAINT,metal)
+   m.detail=True
+   m.quad(p(l,y,-.12),p(l,y,.075),p(l,top,.075),p(l,top,-.12),PAINT,metal)
+   m.quad(p(r,y,.075),p(r,y,-.12),p(r,top,-.12),p(r,top,.075),PAINT,metal)
+   m.detail=False
+  # Substantial vertical fins distinguish the slender and stepped towers.
+  if ribs and length>4:
+   for u in [.28,length-.28]:
+    panel(u-.12,u+.12,y,top+.4,.25,PAINT,(.69,.71,.68))
+    for edge,reverse in [(u-.12,False),(u+.12,True)]:
+     q=[p(edge,y,.025),p(edge,y,.25),p(edge,top+.4,.25),p(edge,top+.4,.025)]
+     m.quad(*(q[::-1] if reverse else q),PAINT,(.57,.60,.59))
+ # Hollow roof rim: parapet and coping expose the membrane and roof plant.
+ inner=[(x+(px-x)*(1-.5/w),z+(pz-z)*(1-.5/d)) for px,pz in points]
+ m.surface(inner,top+.04,ROOF)
+ for i,(a,b) in enumerate(zip(points,points[1:]+points[:1])):
+  c,e=inner[i],inner[(i+1)%len(inner)]
+  m.quad((b[0],top,b[1]),(a[0],top,a[1]),(a[0],top+.45,a[1]),(b[0],top+.45,b[1]),FRAME)
+  m.quad((c[0],top,c[1]),(e[0],top,e[1]),(e[0],top+.45,e[1]),(c[0],top+.45,c[1]),FRAME)
+  m.quad((a[0],top+.45,a[1]),(c[0],top+.45,c[1]),(e[0],top+.45,e[1]),(b[0],top+.45,b[1]),PAINT,metal)
+ return top
+
+def office_roof(m,x,y,z,w=7,d=5):
+ m.roofwork(x,y,z,w*.65,d*.55)
+ # Open-top ventilation screen leaves the actual equipment visible overhead.
+ points=[(x-w/2,z-d/2),(x+w/2,z-d/2),(x+w/2,z+d/2),(x-w/2,z+d/2)]
+ for a,b in zip(points,points[1:]+points[:1]):
+  dx,dz=b[0]-a[0],b[1]-a[1];length=math.hypot(dx,dz);nx,nz=dz/length,-dx/length
+  m.quad((b[0],y+.05,b[1]),(a[0],y+.05,a[1]),(a[0],y+1.7,a[1]),(b[0],y+1.7,b[1]),RECESS)
+  m.detail=True
+  for j in range(7):
+   lo=y+.12+j*.22;hi=lo+.10
+   m.quad((b[0]+nx*.05,lo,b[1]+nz*.05),(a[0]+nx*.05,lo,a[1]+nz*.05),(a[0]+nx*.09,hi,a[1]+nz*.09),(b[0]+nx*.09,hi,b[1]+nz*.09),PAINT,(.37,.41,.42))
+  m.detail=False
+  m.quad((b[0],y+1.7,b[1]),(b[0]+nx*.12,y+1.7,b[1]+nz*.12),(a[0]+nx*.12,y+1.7,a[1]+nz*.12),(a[0],y+1.7,a[1]),PAINT,(.48,.51,.51))
+
+def office_entry(m,canopy_z):
+ front=min(m.streetFronts,key=lambda f:abs(f['position'][0]))
+ x,_,z=front['position'];m.entrance(canopy_z,x=x)
+ # Paired stone piers and a slim canopy give the tower a readable street entry.
+ for dx in [-2.05,2.05]:m.box(x+dx,0,z+.10,.32,3.2,.50,PAINT,(.61,.62,.57))
+ m.box(x,3.15,z+.35,4.55,.18,1.8,PAINT,(.65,.66,.62))
+
+m=Model('glass-podium-offices','office',21);h=office_skin(m,25,21,3);h=office_skin(m,16,14,18,x=-2,z=-1,y=h,bevel=2);office_roof(m,-2,h,-1);m.plant(9,9.85,6,3,4);office_entry(m,11);m.finish()
+m=Model('stepped-concrete-offices','office',18);h=m.shell(24,20,3);h=office_skin(m,21,17,7,y=h,ribs=True);h=office_skin(m,16,13,5,x=-2,y=h,ribs=True);h=office_skin(m,11,9,3,x=-3,y=h,ribs=True);office_roof(m,-3,h,0,6,4);m.plant(8,32.3,4,2,5);office_entry(m,10.5);m.finish()
+m=Model('elliptic-glass-offices','office',19);h=office_skin(m,23,19,2,bevel=3);h=office_skin(m,19,15,17,y=h,oval=True);office_roof(m,0,h,0);office_entry(m,10);m.finish()
+m=Model('slender-glass-offices','office',23);h=office_skin(m,11,13,23,bevel=1.3,ribs=True);office_roof(m,0,h,0,6,4);office_entry(m,7);m.finish()
 
 # Small workplaces use their own metre-scale forms, not scaled-down towers.
 # Reference: the official CS2 low-density-office district image, reviewed

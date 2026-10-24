@@ -1,6 +1,6 @@
-import {waterHeightTexture,writeWaterHeights} from './water-depth.js?v=103';
+import {waterHeightTexture,writeWaterHeights} from './water-depth.js?v=104';
 import * as THREE from './vendor/three.module.js';
-import {waterRippleTexture} from './water-ripples.js?v=103';
+import {waterRippleTexture} from './water-ripples.js?v=104';
 import {Reflector} from './vendor/Reflector.js';
 export function reflectedWater(view,ground,far){
  const nearHeight=waterHeightTexture(ground),farHeight=waterHeightTexture(far),ripples=waterRippleTexture();

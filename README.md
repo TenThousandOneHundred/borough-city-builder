@@ -705,3 +705,17 @@ All 356 tests pass. Six new checks cover local and distant road edits, curved fr
 A separate browser comparison includes the complete refresh, with real textures, trees, roads, access paving and traffic. In alternating runs of the same 100-building independent district, a distant road edit takes 1,754.9/198.6 ms and 1,785.9/192.6 ms before/after. Building roots recreated per edit fall from 100 to zero; all four runs retain the same 7,394 component meshes and vertex/index counts. The interval through the edit's next frame drops from 1,852.8 to 306.5 ms and from 1,882.4 to 269.8 ms. This measures an editing interruption in this test scene, not steady-state FPS or every city's performance. Removing a complete street in the browser retains all 100 occupied model roots while removing its traffic nodes and the disconnected access paving.
 
 This is the scheduled optimization after feature updates 100–102. The feature-update counter resets to zero; the next dedicated optimization follows updates 104–106.
+
+## Edition 104 — Curtain-wall office facades and screened roofs
+
+The glass podium, stepped, elliptic and slender office towers now have separate recessed vision panes and dark floor-edge glass panels. Continuous projecting metal mullions and thin horizontal transoms give the facades a finer structural grid. The stepped and slender towers also have vertical edge fins. Entrances have paired piers, a canopy and doors at the saved access points. Open-top roof screens surround the mechanical equipment, with angled louvres at close range and the same rim and silhouette at a distance.
+
+The high-density office district picture in the official [Zones & Signature Buildings diary](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/zones-signature-buildings) was inspected before implementation. Its slender facade grids, dark floor bands, vertical edges and screened roof equipment guided these original models. The reference picture is not included in the game.
+
+The four rebuilt models share the existing material catalogue and add 2,548 triangles in total, or 1.3% of the authored-model catalogue. Adjacent transom strips share geometry. Internal transoms, small mullion returns and roof louvres are omitted from distant topology, with closed floor panels behind the omitted trim. Window openings, floor panels and facade profiles remain. Compressed model and distant-geometry downloads increase by 39,313 bytes. The geometry, UVs, material assignments and metadata of the other 55 authored models match the Edition 103 baseline hashes.
+
+A matched browser district contains 24 offices, six of each form, on the same road-facing lots. Ordinary-frame draw calls decrease from 149 to 145, while triangles increase from 487,797 to 493,273 (1.1%). The browser-loaded counts match the final generated assets. Alternating old/new GPU medians were 40.12/26.22 ms and 25.47/36.30 ms; frame intervals were 45.5/33.4 ms and 33.5/41.4 ms. This variation prevents a reliable FPS comparison. Geometry and draw-call costs are bounded, but these measurements do not establish lag-free play or equal performance for every city.
+
+All 359 automated tests pass. They include facade depth, non-emissive floor panels, open roof screens at both detail levels, unchanged model hashes, varied office selection and the existing distant-geometry budget. Asset integrity and lossless compression checks also pass.
+
+This is feature update one after the Edition 103 optimization. The next dedicated optimization follows updates 104–106.
