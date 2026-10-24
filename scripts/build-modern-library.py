@@ -791,6 +791,48 @@ apartment_cornice(m,18.4,12.4,h-.16,.18)
 m.roofwork(0,h,-2,3,1.6)
 apartment_lobby(m,0,6)
 finish_apartment(m)
+# Mid-sized urban blocks fit the 32-40 metre frontages of four-cell-deep
+# apartment zoning. Wings enclose real outdoor space at their authored scale.
+# Based on the massing, separate balconies and masonry openings in the official
+# Zones & Signature Buildings pictures; every vertex here is original.
+def neighborhood_court(name,width,paired):
+ m=Model(name,'residential',5 if paired else 6)
+ front_depth=9;depth=26;front_z=(depth-front_depth)/2
+ tint=(.66,.43,.32) if paired else (.80,.75,.62)
+ cladding=BRICK if paired else PAINT
+ floors=5 if paired else 6
+ # Full-width street frontage and lower perpendicular garden wings.
+ h=m.shell(width,front_depth,floors,z=front_z,bevel=.12,
+  tint=tint,cladding=cladding,windowWidth=1.65,framed=True,
+  baySpacing=4.6,balconyDoors=(1,round((width-.24)/4.6)-2),frameOut=.10,compactFar=True)
+ bays=round((width-.24)/4.6);bay=(width-.24)/bays
+ for f in range(1,floors):
+  for j in [1,bays-2]:apartment_balcony(m,width/2-.12-(j+.5)*bay,f*3.2+.12,depth/2+.55,3)
+ wing=7 if paired else 9
+ for side in ([-1,1] if paired else [-1]):
+  x=side*(width-wing)/2;z=-front_depth/2
+  top=m.shell(wing,depth-front_depth,4,x=x,z=z,bevel=.12,
+   tint=(.84,.77,.63),cladding=PAINT,windowWidth=1.45,framed=True,baySpacing=4.6,frameOut=.10,compactFar=True)
+  # Roof equipment and projecting stair head stay visible in distant views.
+  m.box(x,top+.08,z-3,2.5,1.7,3.2,PAINT,(.67,.67,.62))
+  m.box(x,top+1.78,z-3,2.7,.10,3.4,PAINT,(.78,.77,.71))
+ m.roofwork(-width*.23,h,front_z,3.6,2.2)
+ # A furnished court occupies the space between the building wings. The
+ # ground is open to the sky and uses the shared lot lawn below this asset.
+ garden_x=0 if paired else wing/2;garden_w=width-2*wing if paired else width-wing
+ m.box(garden_x,.025,-3,garden_w,.08,1.5,ROOF)
+ m.plant(garden_x,0,-8,max(3,garden_w-4),3)
+ m.box(garden_x,0,1,3,.45,.65,PAINT,(.80,.78,.71))
+ m.detail=True
+ for x in [garden_x-3,garden_x+3]:
+  m.box(x,.42,-3.8,1.8,.12,.5,WOOD)
+  m.box(x,.55,-4.02,1.8,.65,.08,WOOD)
+  for dx in [-.65,.65]:m.box(x+dx,0,-3.8,.08,.42,.4,FRAME)
+ m.detail=False
+ finish_apartment(m)
+neighborhood_court('neighborhood-u-court-apartments',28,True)
+neighborhood_court('neighborhood-l-court-apartments',36,False)
+
 m=Model('modern-courtyard-house','residential-low',2);h=m.shell(8,10,2,x=-3);m.shell(5,6,1,x=3,z=-2,curtain=True);m.box(3,0,4,4,.15,5,WOOD);m.plant(5,0,6,1,3);m.roofwork(-3,h,-2,1,.8);m.entrance(5.5,-3);m.finish()
 m=Model('modern-rowhouse','residential-low',3);h=m.shell(7,11,3,balconies=True);m.box(-2,0,5.55,.8,9.3,.16,WOOD);m.plant(2,0,6,1,2);m.roofwork(0,h,-2,1.2,1);m.entrance(6);m.finish()
 

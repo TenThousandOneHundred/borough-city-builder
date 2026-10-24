@@ -757,3 +757,16 @@ All 54 layouts compared against the frozen Edition 106 implementation match fiel
 All 371 local checks pass. In alternating complete-zoning rebuild benchmarks, the empty curved district improves from 54.98 to 18.86 ms and a district with 241 occupied parcels improves from 57.83 to 22.66 ms. Cached queries stay around 0.05 ms. The browser fixture improves from 16.2 to 5.0 ms over 20 measured samples with identical returned cells and world data. These measurements cover zoning CPU work, not complete frame rate. Repeat the comparison with `GIT_BIN=/path/to/git node scripts/benchmark-zoning-collisions.mjs`.
 
 This completes the optimization pass following feature updates 104–106. The next three feature updates are 108–110, followed by optimization 111.
+
+
+## Edition 108 — Apartments with neighborhood-sized courtyards
+
+Medium-density zoning can now select two original apartment blocks sized for common four-cell-deep sites. A 28-metre U-shaped building and a 36-metre L-shaped building have broad five- or six-storey street wings, lower four-storey garden wings, recessed framed windows, separate balconies, rooftop equipment and open planted courts. They fill the gap between compact walk-ups and the existing large perimeter blocks. The normal deterministic model selector chooses them from the same saved parcel dimensions; no zoning, population, household journeys or save format changes are required.
+
+The broad masonry fronts, separate balconies and window proportions were compared with the [official mixed-use picture](https://images.ctfassets.net/u73tyf0fa8v1/6hxkmLpCK8YFmCE7JdecpV/2475f2f3e512f2de35d227928b9c34b8/4_Mixed_use.png?fm=webp&q=75&w=1920) in the [Zones & Signature Buildings diary](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/zones-signature-buildings), alongside the previously reviewed developer-video apartment frame. Reference pictures are not shipped. These are original models, not game assets.
+
+All 374 local checks pass, including both new models' open courts, connected wings, visible entrances, natural selection on rotated lots, uniform metre scale, deterministic reloads and unchanged fingerprints for all 59 previous authored models. The library now contains 82 complete building assets. The new forms use 4,618 and 4,752 triangles close up, dropping to 2,912 and 2,952 at distance while retaining their windows and silhouettes. They share the existing materials and textures. The compressed model and distant-index downloads together increase by 104.6 KiB; the modern catalogue remains below 3 MiB compressed.
+
+In the browser comparison, the same 24 saved apartment lots select eight of the new buildings and retain seven other apartment forms. Two alternating before/after comparisons measured GPU medians of 9.95/9.31 ms and 10.15/9.32 ms. Median frame intervals remained 16.6–16.7 ms. Ordinary triangles decreased from 685,064 to 608,236, while draws increased from 149 to 158. These measurements cover this scene and test device, not every city.
+
+This is the first feature update after optimization 107. Feature updates 109 and 110 precede the next scheduled optimization, Edition 111.

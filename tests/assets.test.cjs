@@ -26,7 +26,7 @@ for(const file of ['buildings/urban.glb','buildings/industry.glb','buildings/mod
  const data=fs.readFileSync(path.join(root,'assets',file));
  assert.equal(data.toString('utf8',0,4),'glTF');assert.equal(data.readUInt32LE(4),2);assert.equal(data.readUInt32LE(8),data.length);
  const gltf=JSON.parse(data.toString('utf8',20,20+data.readUInt32LE(12)));
- assert.ok(data.length<(file==='buildings/modern.glb'?13.5:12)*1024*1024,file+' download budget');
+ assert.ok(data.length<(file==='buildings/modern.glb'?14.5:12)*1024*1024,file+' download budget');
  for(const buffer of gltf.buffers)assert.equal(buffer.uri,undefined,'self contained GLB');
  for(const view of gltf.bufferViews)assert.ok((view.byteOffset||0)+view.byteLength<=gltf.buffers[view.buffer].byteLength);
  for(const image of gltf.images||[])assert.ok(gltf.bufferViews[image.bufferView],'embedded texture');
@@ -38,7 +38,7 @@ for(const file of ['buildings/urban.glb','buildings/industry.glb','buildings/mod
    assert.equal(colors.componentType,5121);assert.equal(colors.normalized,true);assert.equal(colors.type,'VEC4','byte vertex colors stay four-byte aligned');
    assert.equal(indices.componentType,5123,'modern parts fit compact lossless indices');
   }
-  assert.ok(data.length<13.5*1024*1024,'full modern geometry uses compact vertex encoding');
+  assert.ok(data.length<14.5*1024*1024,'full modern geometry uses compact vertex encoding');
  }
  if(file.startsWith('buildings/')){
   const roots=gltf.scenes[gltf.scene||0].nodes;buildingCount+=roots.length;
@@ -46,8 +46,8 @@ for(const file of ['buildings/urban.glb','buildings/industry.glb','buildings/mod
   for(const index of roots){assert.ok(gltf.nodes[index].extras.category);assert.ok(triangles(index)<200000,'complete building triangle budget');}
  }
 }
-assert.equal(buildingCount,80);assert.ok(fs.statSync(path.join(root,'assets/buildings/modern.glb.gz')).size<3*1024*1024,'modern catalogue compressed transfer stays below 3 MiB');
-console.log('80 complete GLB buildings and scanned coast verified');
+assert.equal(buildingCount,82);assert.ok(fs.statSync(path.join(root,'assets/buildings/modern.glb.gz')).size<3*1024*1024,'modern catalogue compressed transfer stays below 3 MiB');
+console.log('82 complete GLB buildings and scanned coast verified');
 const coastData=fs.readFileSync(path.join(root,'assets/coast.glb')),coast=JSON.parse(coastData.toString('utf8',20,20+coastData.readUInt32LE(12)));
 assert.ok(coast.meshes.reduce((total,m)=>total+m.primitives.reduce((n,p)=>n+coast.accessors[p.indices??p.attributes.POSITION].count/3,0),0)<5000,'coastal patch triangle budget');
 assert.ok(fs.statSync(path.join(root,'assets/buildings/lod.bin')).size<10*1024*1024,'distant geometry download budget');
