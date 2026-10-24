@@ -1,6 +1,20 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 116 — Complete private gardens
+
+Detached and attached homes now receive complete private grounds: full-height side and rear privacy fences, optional continuous rear hedges, low street fences with entrance openings, rounded shrubs, and individual rear patios. Where a yard has enough space it can grow a weatherboard shed with a pitched roof and its own access path, or an open timber pergola with a table and benches. Attached homes keep separate gardens aligned with their party walls. Narrow yards omit furniture that cannot fit. Driveways retain clear access, and grounds follow the saved road-facing property instead of the global grid.
+
+The neighborhood and residential-construction pictures in the official [Zones & Signature Buildings feature](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/zones-signature-buildings) were inspected before implementation. Their enclosed properties, boundary planting, outbuildings and rear outdoor space informed this work. This was a focused picture review; the reference pictures and game assets are not shipped.
+
+All props use a small shared geometry and material catalogue, including individual fence planks, continuous clipped hedge profiles, shed doors and windows, and open pergola rafters. No new model or texture downloads are needed. The existing 84 building models, terrain, building detail and independent resident simulation are unchanged. New gardens are deterministic when an existing city is reloaded.
+
+All 429 regression tests pass, together with module syntax, asset integrity and lossless compression checks. Tests cover rotated bounds, clear entrances and driveways, separate row-house gardens, tiny yards, geometry sharing, demolition and ordinary zoning growth on straight and curved streets. The full game retained 406 residents, day 141 and exactly ₡1,004,640 through manual save and reload, then returned home through Save & Exit. A separate 24-property browser fixture retained identical building choices and garden layouts and all 288 residents. No browser errors or warnings were recorded.
+
+Two alternating comparisons in the same 24-property scene measured GPU medians of 9.02/9.64 ms and 8.78/9.33 ms before/after; median frame intervals stayed at 16.6–16.7 ms. Ordinary rendering increased from 151 to 159 draws and 460,439 to 736,047 triangles. These are measurements for this scene and device, not a guarantee for every city. In a separate 40-property CPU fixture, planning rose from 0.0019 to 0.0078 ms per lot; the complete shared grounds use 13 material/geometry batches. Reproduce that comparison with `node scripts/benchmark-private-gardens.mjs f7c413e` (set `GIT_BIN` if needed).
+
+This is feature update one after optimization 115. Updates 117 and 118 precede the next dedicated optimization in Edition 119.
+
 ## Edition 115 — Faster city preparation without reducing detail
 
 Shared garden-tree geometry now has its local bounds calculated once, then transformed separately for each tree. Previously, each building clone rescanned every tree vertex. A weak cache avoids keeping removed geometry alive, and revisions or replacements of ordinary and interleaved position buffers invalidate the cached bounds. Geometry, textures, material identities, instance positions, distant detail and full shadow geometry remain unchanged. No resident, traffic, zoning or save logic changes.

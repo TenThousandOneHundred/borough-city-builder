@@ -1,4 +1,4 @@
-import './building-entities.js?v=115';
+import './building-entities.js?v=116';
 const Buildings=globalThis.BoroughBuildings;
 // Save-owned elevation offsets on a two-world-unit grid. Rendering and simulation
 // read the same surface; old saves with no elevation edits retain their terrain.
