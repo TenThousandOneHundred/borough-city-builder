@@ -797,3 +797,16 @@ All 387 regression tests pass, including six new checks covering density-specifi
 In an alternating 100-sample benchmark of a 241-parcel district, complete city-analysis CPU time measures 0.231 ms before and 0.200 ms after (95th percentiles 0.711 and 0.540 ms). Existing world data and non-demand metrics match. This measures analysis during simulation/UI updates, not rendering or overall FPS. No per-frame work, geometry, texture or model downloads were added; model assets remain pinned to Edition 108.
 
 This is feature update three after optimization 107. Edition 111 is the next scheduled dedicated optimization pass.
+
+
+## Edition 111 — Faster traffic at busy intersections
+
+The scheduled optimization after updates 108–110 reduces repeated junction occupancy scans. Approaching drivers use the existing, sequentially updated vehicle index to search the less crowded coordinate axis, then apply the same strict circular clearance test. Held buses, dwelling cars and newly arrived vehicles still block crossings. Vehicles that have become inactive no longer update stale index entries. Small fleets keep their direct scan. Signal timing, stop waits, crossing ownership, lane following, acceleration, routes and simulation scheduling are unchanged.
+
+A profile of a 4,872-resident city with 512 vehicle slots identified traffic as the main simulation CPU cost. The final alternating benchmark compares against the frozen Edition 110 traffic, junction and spatial-index source in the same runtime. Across three trials, the 128-slot city decreases from 767.8 to 476.0 ms and the 512-slot city from 6,163.6 to 3,637.9 ms for 1,800 simulation steps (90 simulated seconds), reductions of 38% and 41%. The benchmark includes traffic, transit, walking and resident scheduling; it excludes rendering, GPU work and engine growth ticks. These are CPU-operation measurements, not an overall FPS guarantee. The 32-slot case retains the direct-scan behavior and is reported in the benchmark without attributing its timing variation to the new junction search.
+
+All 390 regression tests pass, plus the separate asset integrity, lossless compression and module syntax checks. New tests cover random positions and sequential movement, strict circle and bucket boundaries, inactive slots, held buses, dwell periods, signal/stop changes and road removal in an occupied city. The frozen-release comparison preserves every vehicle state, resident journey, queue summary, completed trip count and world field. The comparisons run without rendering, so offscreen simulation remains independent of camera visibility.
+
+Only traffic and spatial-query behavior changes; all other changed game sources contain version updates only. Building and terrain geometry, textures, detail settings and visual source bodies are unchanged. Model asset URLs remain pinned to Edition 108. This pass preserves the previously reviewed visual references and adds no new visual feature. Browser playtesting remains unverified because the Mac was locked during the work.
+
+Reproduce the CPU comparison with `node scripts/benchmark-junction-occupancy.mjs d194293` (set `GIT_BIN` if a particular Git executable is needed). This completes the scheduled optimization; the feature counter resets to zero. The next dedicated optimization follows updates 112–114, in Edition 115.

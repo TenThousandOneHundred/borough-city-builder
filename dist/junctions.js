@@ -34,7 +34,7 @@ export class Junctions {
    if(Number.isFinite(entry))gates.push({junction,entry,exit,axis});}
   const result={distances,gates:gates.sort((a,b)=>a.entry-b.entry)};this.routes.set(points,result);return result;
  }
- limit(agent,time,dt,policy,agents){const route=this.route(agent.points),position=(route.distances[agent.segment]??route.distances.at(-1))+(agent.distance||0);let limit=Infinity;agent.waitReason='';
+ limit(agent,time,dt,policy,agents,spatial){const route=this.route(agent.points),position=(route.distances[agent.segment]??route.distances.at(-1))+(agent.distance||0);let limit=Infinity;agent.waitReason='';
   for(const gate of route.gates){const j=gate.junction;if(j.owner&&(!j.owner.active||j.owner.points!==j.owner.gatePoints))j.owner=null;
    if(position>gate.exit){if(position>gate.exit+1.4&&j.owner===agent)j.owner=null;continue;}
    if(position<gate.entry-9)break;
@@ -42,7 +42,7 @@ export class Junctions {
    const remaining=Math.max(0,gate.entry-position-.3);
    if(remaining>1){limit=Math.min(limit,remaining+2);continue;}
    agent.stopTime=(agent.stopJunction===j.id?agent.stopTime||0:0)+(remaining<.1&&(agent.speed||0)<.2?dt:0);agent.stopJunction=j.id;
-   const blocked=agents.some(b=>b!==agent&&b.active&&Math.hypot(b.x-j.x,b.z-j.z)<j.radius-.05);
+   const blocked=spatial?.occupied?spatial.occupied(j,j.radius-.05,agent):agents.some(b=>b!==agent&&b.active&&Math.hypot(b.x-j.x,b.z-j.z)<j.radius-.05);
    const control=typeof policy==='string'?policy:junctionPolicy(policy,j.id),phase=signalPhase(time,gate.axis),allowed=control==='stop'?agent.stopTime>=.8:phase==='green';
    if(!j.owner&&!blocked&&allowed){j.owner=agent;agent.gatePoints=agent.points;agent.stopTime=0;}
    else{limit=Math.min(limit,remaining);agent.waitReason=j.owner||blocked?'Intersection occupied':control==='stop'?'Stop sign':phase==='amber'?'Amber signal':'Red signal';}

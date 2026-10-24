@@ -10,7 +10,7 @@ export class TrafficSpatial {
  }
  insert(bins,key,a){let bucket=bins.get(key);if(!bucket)bins.set(key,bucket=[]);bucket.push(a);}
  bounds(a){this.minX=Math.min(this.minX,a.x);this.maxX=Math.max(this.maxX,a.x);this.minZ=Math.min(this.minZ,a.z);this.maxZ=Math.max(this.maxZ,a.z);}
- move(a){const cell=this.cells.get(a);if(!cell)return;for(const axis of ['x','z']){const key=Math.floor(a[axis]/this.size);if(key!==cell[axis]){const bucket=this[axis].get(cell[axis]);bucket.splice(bucket.indexOf(a),1);this.insert(this[axis],key,a);cell[axis]=key;}}if(this.diagonalReady){for(const axis of ['u','v']){const value=axis==='u'?(a.x+a.z)*Math.SQRT1_2:(a.z-a.x)*Math.SQRT1_2,key=Math.floor(value/this.size);if(key!==cell[axis]){const bucket=this[axis].get(cell[axis]);bucket.splice(bucket.indexOf(a),1);this.insert(this[axis],key,a);cell[axis]=key;}}this.diagonalBounds(a);}this.bounds(a);}
+ move(a){if(!a.active)return;const cell=this.cells.get(a);if(!cell)return;for(const axis of ['x','z']){const key=Math.floor(a[axis]/this.size);if(key!==cell[axis]){const bucket=this[axis].get(cell[axis]);bucket.splice(bucket.indexOf(a),1);this.insert(this[axis],key,a);cell[axis]=key;}}if(this.diagonalReady){for(const axis of ['u','v']){const value=axis==='u'?(a.x+a.z)*Math.SQRT1_2:(a.z-a.x)*Math.SQRT1_2,key=Math.floor(value/this.size);if(key!==cell[axis]){const bucket=this[axis].get(cell[axis]);bucket.splice(bucket.indexOf(a),1);this.insert(this[axis],key,a);cell[axis]=key;}}this.diagonalBounds(a);}this.bounds(a);}
  diagonalBounds(a){const u=(a.x+a.z)*Math.SQRT1_2,v=(a.z-a.x)*Math.SQRT1_2;this.minU=Math.min(this.minU,u);this.maxU=Math.max(this.maxU,u);this.minV=Math.min(this.minV,v);this.maxV=Math.max(this.maxV,v);}
  diagonal(a,f){
   if(!this.diagonalReady){for(const bins of [this.u,this.v])for(const bucket of bins.values())bucket.length=0;this.minU=this.minV=Infinity;this.maxU=this.maxV=-Infinity;for(const b of this.active){const c=this.cells.get(b);c.u=Math.floor((b.x+b.z)*Math.SQRT1_2/this.size);c.v=Math.floor((b.z-b.x)*Math.SQRT1_2/this.size);this.insert(this.u,c.u,b);this.insert(this.v,c.v,b);this.diagonalBounds(b);}this.diagonalReady=true;}
@@ -18,6 +18,18 @@ export class TrafficSpatial {
   if(last-first+1>Math.max(4,this.active.length/12))return this.active;
   const bins=alongU?this.v:this.u;if(first===last)return bins.get(first)||EMPTY;
   const result=this.candidates;result.length=0;for(let key=first;key<=last;key++){const bucket=bins.get(key);if(bucket)for(const b of bucket)result.push(b);}return result;
+ }
+ // Junction occupancy uses the same sequentially updated positions as lane
+ // following. Scan the less crowded axis, then keep the original circle test.
+ occupied(point,radius,except){
+  if(!(radius>0))return false;
+  const firstX=Math.floor((point.x-radius)/this.size),lastX=Math.floor((point.x+radius)/this.size),firstZ=Math.floor((point.z-radius)/this.size),lastZ=Math.floor((point.z+radius)/this.size);
+  let countX=0,countZ=0;
+  for(let key=firstX;key<=lastX;key++)countX+=this.x.get(key)?.length||0;
+  for(let key=firstZ;key<=lastZ;key++)countZ+=this.z.get(key)?.length||0;
+  const alongX=countX<=countZ,bins=alongX?this.x:this.z,first=alongX?firstX:firstZ,last=alongX?lastX:lastZ;
+  for(let key=first;key<=last;key++)for(const b of bins.get(key)||EMPTY)if(b!==except&&b.active&&Math.hypot(b.x-point.x,b.z-point.z)<radius)return true;
+  return false;
  }
  corridor(a,forward){
   if(this.active.length<48)return this.active;
