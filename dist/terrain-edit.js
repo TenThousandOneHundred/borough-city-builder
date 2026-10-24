@@ -1,4 +1,5 @@
-import './building-entities.js?v=117';
+import './roundabout-state.js?v=118';
+import './building-entities.js?v=118';
 const Buildings=globalThis.BoroughBuildings;
 // Save-owned elevation offsets on a two-world-unit grid. Rendering and simulation
 // read the same surface; old saves with no elevation edits retain their terrain.
@@ -11,6 +12,7 @@ export function terrainOffset(world,x,z){
 }
 function protection(world,x,z){
  let weight=ease(clamp((96-Math.max(Math.abs(x),Math.abs(z)))/4,0,1));
+ for(const circle of globalThis.BoroughRoundabouts.circles(world))weight=Math.min(weight,ease(clamp((Math.hypot(x-circle.x,z-circle.z)-circle.radius-1)/4,0,1)));
  const gx=Math.floor((x+96)/4),gz=Math.floor((z+96)/4);
  for(let y=Math.max(0,gz-3);y<=Math.min(47,gz+3);y++)for(let xx=Math.max(0,gx-3);xx<=Math.min(47,gx+3);xx++){
   const tile=world.tiles[y*48+xx];if(!tile.type&&!tile.construction&&tile.zoneOwner===undefined)continue;

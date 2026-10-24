@@ -1,5 +1,6 @@
 (function(root){
 'use strict';
+const Roundabouts=typeof module!=='undefined'?require('./roundabout-state.js'):root.BoroughRoundabouts;
 const cache=new WeakMap(),SIZE=48,CELL=4;
 function sameTiles(tiles,previous){
  if(tiles.length!==previous.grounds.length)return false;
@@ -29,7 +30,7 @@ function rectOverlaps(a,b){
 }
 function layout(w,roads,options={}){
  const cellSize=options.cellSize??4,rows=options.rows??4,independent=options.independent===true;if(![1.6,4].includes(cellSize)||!Number.isInteger(rows)||rows<1||rows>6)throw Error('Unsupported zoning grid dimensions');const variant=cellSize+':'+rows+':'+independent;
- const paths=JSON.stringify(w.roadPaths||[]),variants=cache.get(w)||new Map(),old=variants.get(variant);
+ const paths=JSON.stringify([w.roadPaths||[],w.roundabouts||{}]),variants=cache.get(w)||new Map(),old=variants.get(variant);
  // Hover and brush queries still detect in-place road/terrain edits, but an
  // unchanged map no longer allocates thousands of temporary strings.
  if(old?.paths===paths&&sameTiles(w.tiles,old.tiles))return old.cells;
@@ -64,7 +65,7 @@ function layout(w,roads,options={}){
   const source={zoneSides:t.zoneSides,x:cx,z:cz,tx:vertical?0:1,tz:vertical?1:0,col:vertical?y:x,source:vertical?'legacy-v-'+x:'legacy-h-'+y,roadIndex:i,offset:Math.max(independent?0:2,roadWidth/2+.45)};
   if(!independent)sources.push(source);else{const along=vertical?cz:cx;for(let col=Math.ceil((along-2)/cellSize-.5);(col+.5)*cellSize<along+2-1e-8;col++)sources.push({...source,col,...(vertical?{z:(col+.5)*cellSize}:{x:(col+.5)*cellSize})});}
  }
- for(const a of sources)for(const side of [-1,1])for(let row=0;row<rows;row++){if(a.zoneSides==='none'||a.zoneSides==='left'&&side===1||a.zoneSides==='right'&&side===-1)continue;const nx=-a.tz*side,nz=a.tx*side,d=(a.sideOffsets?.[side===-1?0:1]??a.offset)+cellSize/2+row*cellSize,cx=a.x+nx*d,cz=a.z+nz*d,index=indexAt(cx,cz);if(index<0||!independent&&w.tiles[index].type==='road'||w.tiles[index].ground==='water')continue;const p={index,...(independent?{id:JSON.stringify([a.source,side,a.col,row]),width:cellSize,depth:cellSize}:{}),cx,cz,angle:Math.atan2(-nx,-nz),source:a.source,side,col:a.col,row,roadIndex:a.roadIndex,frontage:{x:a.x,z:a.z,roadIndex:a.roadIndex,...(!a.source.startsWith('legacy-')?{pathId:a.source}:{})}};if(corners(p).some(v=>{const j=indexAt(v.x*.999999,v.z*.999999);return j<0||w.tiles[j].ground==='water';}))continue;const rectangle=collisionRect(p);if(crossesRoad(rectangle))continue;candidates.push(rectangle);}
+ for(const a of sources)for(const side of [-1,1])for(let row=0;row<rows;row++){if(a.zoneSides==='none'||a.zoneSides==='left'&&side===1||a.zoneSides==='right'&&side===-1)continue;const nx=-a.tz*side,nz=a.tx*side,d=(a.sideOffsets?.[side===-1?0:1]??a.offset)+cellSize/2+row*cellSize,cx=a.x+nx*d,cz=a.z+nz*d,index=indexAt(cx,cz);if(index<0||!independent&&w.tiles[index].type==='road'||w.tiles[index].ground==='water')continue;const p={index,...(independent?{id:JSON.stringify([a.source,side,a.col,row]),width:cellSize,depth:cellSize}:{}),cx,cz,angle:Math.atan2(-nx,-nz),source:a.source,side,col:a.col,row,roadIndex:a.roadIndex,frontage:{x:a.x,z:a.z,roadIndex:a.roadIndex,...(!a.source.startsWith('legacy-')?{pathId:a.source}:{})}};if(corners(p).some(v=>{const j=indexAt(v.x*.999999,v.z*.999999);return j<0||w.tiles[j].ground==='water';}))continue;const rectangle=collisionRect(p);if(crossesRoad(rectangle)||Roundabouts.blocked(w,p,.55))continue;candidates.push(rectangle);}
  candidates.sort((a,b)=>a.cell.row-b.cell.row||a.cell.source.localeCompare(b.cell.source)||a.cell.side-b.cell.side||a.cell.col-b.cell.col);
  const cells=new Map(),bins=new Map();for(const rectangle of candidates){const p=rectangle.cell,cellKey=independent?p.id:p.index;if(cells.has(cellKey))continue;
  // Only retain an unbroken column from the sidewalk. A rejected frontage

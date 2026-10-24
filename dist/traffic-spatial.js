@@ -31,6 +31,7 @@ export class TrafficSpatial {
   for(let key=first;key<=last;key++)for(const b of bins.get(key)||EMPTY)if(b!==except&&b.active&&Math.hypot(b.x-point.x,b.z-point.z)<radius)return true;
   return false;
  }
+ nearby(point,radius){const result=this.candidates;result.length=0;for(let key=Math.floor((point.x-radius)/this.size);key<=Math.floor((point.x+radius)/this.size);key++)for(const b of this.x.get(key)||EMPTY)if(Math.abs(b.z-point.z)<=radius)result.push(b);return result;}
  corridor(a,forward){
   if(this.active.length<48)return this.active;
   const alongZ=Math.abs(forward.z)>=Math.abs(forward.x),axis=alongZ?'x':'z',other=alongZ?'z':'x';

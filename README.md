@@ -1,6 +1,18 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 118 — Working roundabouts
+
+Roads now includes a Roundabout tool: select an existing crossing, preview a small, medium or large island, then build or resize it. Inspect also opens these controls. The previous signal/stop choice returns when the roundabout is removed. The tool checks funds, road angles, dry and sufficiently level land, nearby junctions, occupied lots, footpaths and bus stops. Existing homes are never demolished by this operation. Connecting roads must have the roundabout removed before they can be replaced or deleted.
+
+The official [Road Tools roundabout reference picture](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/road-tools) was inspected before implementation. The new geometry has smooth perimeter curb transitions, textured grass islands, raised concrete aprons, yield signs, circulating arrows and approach crossings. Reference images are not shipped. This release supports one circulating lane on two-way streets with sidewalks; it does not implement multilane spiral roundabouts or highway/one-way connections.
+
+Cars, residents and buses use the same clockwise lane geometry, yield to circulating vehicles and keep spacing around bends. Several separated entries can operate together. Walking routes follow perimeter sidewalks and cross the approach roads. Zoning excludes the footprint. Road-edit rebuilding reprojects active resident trips and bus services while retaining destinations, passengers and saved progress. Roundabouts persist with ordinary manual saves, five-minute autosaves, backup exports and save-on-exit. Old worlds remain compatible.
+
+All 443 regression tests pass, plus module syntax, asset integrity and lossless compression checks. New coverage includes all sizes, three/four-arm junctions, invalid saves, placement conflicts, road/path protections, clockwise turns, multiple simultaneous vehicles, walking connectivity, bus routes, spatial yield queries, active residents and buses, and finite shared geometry. Browser testing verified resizing through the actual road tool, manual save, home-screen exit and reload with 224 residents and the selected size retained.
+
+An alternating static browser comparison in the same 216-resident, 21-building test city measured GPU medians of 10.84/9.52 ms without a roundabout and 11.79/10.44 ms with one. Median frame intervals remained 16.6–16.7 ms. The circle added 304 rendered triangles and 15 draw calls in that view. This is a small-scene comparison, not an overall performance guarantee: the actual game at its wider camera view reported about 30 FPS. The 84 building assets, textures and detail settings are unchanged, with building asset URLs retained at Edition 114 and tree assets at Edition 117. Edition 119 is the optimization pass after feature updates 116–118.
+
 ## Edition 117 — Fuller tree canopies
 
 Broadleaf trees now keep all 30,250 leaf pieces from the original CC0 model. The earlier whole-tree reduction had removed or severely shrunk much of the canopy. Reconstructing each piece from its texture-space outline restores the crown while reducing it to two triangles per piece. Original positions, bark geometry and all nine texture images remain intact. The matching four-elevation atlas has 43–57% more nontransparent canopy pixels than Edition 116, with the same distant instancing, view transitions and near-tree selection limit.

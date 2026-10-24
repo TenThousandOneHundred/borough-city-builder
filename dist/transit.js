@@ -1,8 +1,9 @@
-import {moveToRoute} from './route-progress.js?v=117';
-import './building-entities.js?v=117';
+import './roundabout-state.js?v=118';
+import {moveToRoute} from './route-progress.js?v=118';
+import './building-entities.js?v=118';
 const Buildings=globalThis.BoroughBuildings;
-import {Walking,sidewalkPosition} from './walking.js?v=117';
-import {roadPoint} from './traffic.js?v=117';
+import {Walking,sidewalkPosition} from './walking.js?v=118';
+import {roadPoint} from './traffic.js?v=118';
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const nearby=(engine,i)=>engine.neighbors(i);
 export const stopPosition=sidewalkPosition;
@@ -12,6 +13,7 @@ export function transitLeg(traffic,from,to,fromDepot=false){
 }
 export function planBusLine(world,traffic,stops){
  if(!Array.isArray(stops)||stops.length<2||stops.length>12||new Set(stops).size!==stops.length||stops.some(i=>!Number.isInteger(i)||!traffic.graph.has(i)))return {ok:false,reason:'Choose 2–12 different road stops.'};
+ if(stops.some(i=>globalThis.BoroughRoundabouts.blocked(world,{cx:(i%48+.5)*4-96,cz:(Math.floor(i/48)+.5)*4-96,width:.01,depth:.01},3.05)))return {ok:false,reason:'Place bus stops beyond the roundabout approaches.'};
  const legs=stops.map((s,i)=>transitLeg(traffic,s,stops[(i+1)%stops.length]));if(legs.some(l=>!l))return {ok:false,reason:'Every stop must connect to the next, including the return to the first stop.'};
  let depot=-1,entry=null;for(let i=0;i<world.tiles.length;i++)if(world.tiles[i].type==='bus'&&world.tiles[i].level){const route=transitLeg(traffic,i,stops[0],true);if(route){depot=i;entry=route;break;}}
  if(!entry)return {ok:false,reason:'Build a bus depot with road access to the first stop.'};return {ok:true,legs,entry,depot,cost:500+stops.length*100};

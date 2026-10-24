@@ -1,26 +1,26 @@
-import './building-entities.js?v=117';
+import './building-entities.js?v=118';
 const Buildings=globalThis.BoroughBuildings;
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {ZonePlaneBatch} from './zoning-render-batch.js?v=117';
-import {trackAssetGroups} from './asset-transfer.js?v=117';
-import {buildFootpaths} from './footpaths.js?v=117';
-import {Transit,transitLeg,stopPosition} from './transit.js?v=117';
-import {SimulationClock} from './simulation-clock.js?v=117';
-import {Residents} from './residents.js?v=117';
-import {Traffic,carCapacity} from './traffic.js?v=117';
-import {Vehicles} from './vehicles.js?v=117';
-import {BuildingFactory} from './building-factory.js?v=117';
-import {StreetLife} from './street-life.js?v=117';
-import {changedRoadCells,frontageTouches} from './road-frontage.js?v=117';
-import {visualParcels} from './parcels.js?v=117';
-import {Graphics} from './graphics.js?v=117';
-import {Vegetation} from './vegetation.js?v=117';
+import {ZonePlaneBatch} from './zoning-render-batch.js?v=118';
+import {trackAssetGroups} from './asset-transfer.js?v=118';
+import {buildFootpaths} from './footpaths.js?v=118';
+import {Transit,transitLeg,stopPosition} from './transit.js?v=118';
+import {SimulationClock} from './simulation-clock.js?v=118';
+import {Residents} from './residents.js?v=118';
+import {Traffic,carCapacity} from './traffic.js?v=118';
+import {Vehicles} from './vehicles.js?v=118';
+import {BuildingFactory} from './building-factory.js?v=118';
+import {StreetLife} from './street-life.js?v=118';
+import {changedRoadCells,frontageTouches} from './road-frontage.js?v=118';
+import {visualParcels} from './parcels.js?v=118';
+import {Graphics} from './graphics.js?v=118';
+import {Vegetation} from './vegetation.js?v=118';
 import {RGBELoader} from './vendor/RGBELoader.js';
 import * as THREE from './vendor/three.module.js';
 import {OrbitControls} from './vendor/OrbitControls.js';
-import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=117';
-import {Architecture} from './architecture.js?v=117';
-import {Roadworks} from './roadworks.js?v=117';
+import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=118';
+import {Architecture} from './architecture.js?v=118';
+import {Roadworks} from './roadworks.js?v=118';
 const N=48,T=4,HALF=96,zoneColors={residential:'#54b663',commercial:'#5bb1d8',industrial:'#cdb268',office:'#aa87c9'};
 export class CityView{
 constructor(canvas){this.assetsReady=false;this.loadingElement=document.getElementById('sceneLoading');this.canvas=canvas;this.scene=new THREE.Scene();this.scene.background=new THREE.Color('#aebfca');this.scene.fog=new THREE.FogExp2('#b7c6cc',.00105);
@@ -95,6 +95,7 @@ if(zones||roads||force)this.updateZones();if(this.roadZoningTarget&&(zones||road
 
 drawFootpaths(){if(!this.pathGroup){if(!(this.world.walkPaths?.length))return;this.pathGroup=new THREE.Group();this.scene.add(this.pathGroup);}this.disposeGroup(this.pathGroup);buildFootpaths(this.world,this.pathGroup);}
 terrainChanged(bounds,finish=false){this.landscape.refreshTerrain(this.world,bounds,finish);this.renderer.shadowMap.needsUpdate=true;if(finish){this.makeGrid();this.updateZones();this.drawFootpaths();}for(const car of this.cars)car.heightWorld=null;}
+showRoundabout(q){this.clearLine();if(!q.shape)return;const s=q.shape;for(const radius of [s.outer,s.island||.75]){const points=[];for(let i=0;i<=64;i++){const a=i/64*Math.PI*2,x=s.x+Math.cos(a)*radius,z=s.z+Math.sin(a)*radius;points.push(new THREE.Vector3(x,this.roadworks.height(this.world,x,z)+.25,z));}this.previewGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points),new THREE.LineBasicMaterial({color:q.ok?'#7edcea':'#eea370',depthTest:false,transparent:true,opacity:.95})));}}
 showTerrainBrush(x,z,radius){this.clearLine();const points=[];for(let i=0;i<=64;i++){const a=i/64*Math.PI*2,px=x+Math.cos(a)*radius,pz=z+Math.sin(a)*radius;points.push(new THREE.Vector3(px,Math.max(.05,groundHeight(this.world,px,pz))+.2,pz));}const geometry=new THREE.BufferGeometry().setFromPoints(points);this.previewGroup.add(new THREE.Line(geometry,new THREE.LineBasicMaterial({color:'#7edcea',depthTest:false,transparent:true,opacity:.9})));}
 setZoning(on){this.zoning=on;this.updateZones()}
 zonePlane(x,y,color,opacity=.3,frame=null){const geo=new THREE.PlaneGeometry((frame?.width||4)-.18,(frame?.depth||4)-.18,2,2);geo.rotateX(-Math.PI/2);const a=geo.attributes.position;for(let j=0;j<a.count;j++){const c=Math.cos(frame?.angle||0),s=Math.sin(frame?.angle||0),xx=(frame?.cx??((x+.5)*4-96))+a.getX(j)*c+a.getZ(j)*s,zz=(frame?.cz??((y+.5)*4-96))-a.getX(j)*s+a.getZ(j)*c;a.setXYZ(j,xx,floorHeight(this.world,xx,zz)+.12,zz)}geo.computeVertexNormals();return new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color,transparent:true,opacity,depthWrite:false,side:THREE.DoubleSide}))}

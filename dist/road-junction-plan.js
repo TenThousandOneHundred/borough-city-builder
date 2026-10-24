@@ -1,4 +1,5 @@
-import {streetStations,atDistance,distanceSection} from './street-geometry.js?v=117';
+import {roundaboutCorners} from './roundabout-geometry.js?v=118';
+import {streetStations,atDistance,distanceSection} from './street-geometry.js?v=118';
 const cross=(a,b)=>a.x*b.z-a.z*b.x;
 const point=(j,a,d,offset=0)=>({x:j.x+a.tx*d-a.tz*offset,z:j.z+a.tz*d+a.tx*offset});
 
@@ -7,9 +8,9 @@ const point=(j,a,d,offset=0)=>({x:j.x+a.tx*d-a.tz*offset,z:j.z+a.tz*d+a.tx*offse
 // in-place edits and imported worlds cannot reuse stale controls.
 const geometryCache=new WeakMap();
 export function roadGeometry(world,engine){
- const signature=JSON.stringify([world.roadPaths||[],world.tiles.map((t,i)=>t.type==='road'?[i,t.roadType,t.roadWidth,t.legacyRoad,t.pathIds]:null).filter(Boolean)]),cached=geometryCache.get(world);
+ const signature=JSON.stringify([world.roundabouts||{},world.roadPaths||[],world.tiles.map((t,i)=>t.type==='road'?[i,t.roadType,t.roadWidth,t.legacyRoad,t.pathIds]:null).filter(Boolean)]),cached=geometryCache.get(world);
  if(cached?.engine===engine&&cached.signature===signature)return cached.value;
- const roads=roadDescriptors(world,engine),value={roads,...planJunctions(roads)};value.tapers=planWidthTransitions(roads,value.junctions);geometryCache.set(world,{engine,signature,value});return value;
+ const roads=roadDescriptors(world,engine),value={roads,...planJunctions(roads)};for(const j of value.junctions){const saved=world.roundabouts?.[globalThis.BoroughRoundabouts.key(j)];if(saved&&j.arms.length>=3){j.roundabout={...saved,island:globalThis.BoroughRoundabouts.SIZES[saved.size].island,ring:(globalThis.BoroughRoundabouts.SIZES[saved.size].island+.3+saved.outer)/2,radius:saved.outer+1.05};j.radius=j.roundabout.radius;}}value.tapers=planWidthTransitions(roads,value.junctions);geometryCache.set(world,{engine,signature,value});return value;
 }
 
 // Use the same sampled centerlines as pavement rendering. Grid roads participate
@@ -94,7 +95,7 @@ export function planJunctions(descriptors){
 }
 
 // Curbs follow only the perimeter between arms; the end caps are open road.
-export function junctionCorners(j){return j.corners.map(({a,b,corner,ta,tb})=>{
+export function junctionCorners(j){if(j.roundabout)return roundaboutCorners(j);return j.corners.map(({a,b,corner,ta,tb})=>{
  const start=point(j,a,j.radius,a.width/2),end=point(j,b,j.radius,-b.width/2),points=[start];
  if(corner){const da=Math.min(j.radius,ta+.65),db=Math.min(j.radius,tb+.65),p=point(j,a,da,a.width/2),q=point(j,b,db,-b.width/2);points.push(p);
   for(let n=1;n<=12;n++){const t=n/12,u=1-t;points.push({x:u*u*p.x+2*u*t*corner.x+t*t*q.x,z:u*u*p.z+2*u*t*corner.z+t*t*q.z});}

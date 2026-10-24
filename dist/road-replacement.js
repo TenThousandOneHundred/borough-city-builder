@@ -1,5 +1,6 @@
 (function(root){
 'use strict';
+const Roundabouts=typeof module!=='undefined'?require('./roundabout-state.js'):root.BoroughRoundabouts;
 const Z=typeof module!=='undefined'?require('./zoning-layout.js'):root.BoroughZoning;
 const B=typeof module!=='undefined'?require('./building-entities.js'):root.BoroughBuildings;
 const F=typeof module!=='undefined'?require('./fine-zoning-state.js'):root.BoroughFineZones;
@@ -36,7 +37,7 @@ function quote(world,key,type,engine,{demolish=false}={}){
   if(intersects(frame)||typeof id==='number'&&(t.zoneSite?.members||engine.facilityCells(world,id)).some(i=>affected.has(i)))conflicts.push({id,frame,people:t.people||0,name:engine.BUILDINGS[t.building]?.name||engine.TOOLS[t.type]?.name||'Construction site'});
  }
  const length=points.slice(1).reduce((n,p,i)=>n+Math.hypot(p.x-points[i].x,p.y-points[i].y),0),bridge=tiles.filter(i=>world.tiles[i].ground==='water').length/Math.max(1,tiles.length),rate=Math.max(10,spec.cost*.25+Math.max(0,spec.cost-engine.ROADS[road.type].cost)),roadCost=Math.ceil(length*rate*(1+3*bridge)),cost=roadCost+conflicts.length*10;
- const unchanged=road.type===type,walkway=tiles.some(i=>world.tiles[i].type==='path'),reason=unchanged?'This section already uses that road type.':walkway?'Remove the pedestrian path crossing this section first.':conflicts.length&&!demolish?'Replacement needs space occupied by '+conflicts.length+' building lot'+(conflicts.length===1?'':'s')+'.':world.money<cost?'Not enough funds for this replacement.':'';
+ const roundabout=Roundabouts.hits(world,points),unchanged=road.type===type,walkway=tiles.some(i=>world.tiles[i].type==='path'),reason=roundabout?'Remove the roundabout before replacing this connecting road.':unchanged?'This section already uses that road type.':walkway?'Remove the pedestrian path crossing this section first.':conflicts.length&&!demolish?'Replacement needs space occupied by '+conflicts.length+' building lot'+(conflicts.length===1?'':'s')+'.':world.money<cost?'Not enough funds for this replacement.':'';
  return {ok:!reason,reason,target:road,type,controls:road.controls,points,tiles,conflicts,roadCost,cost,residentsAffected:conflicts.reduce((n,c)=>n+c.people,0)};
 }
 function replace(world,key,type,engine,options={}){
