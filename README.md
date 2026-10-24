@@ -1,6 +1,16 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 115 — Faster city preparation without reducing detail
+
+Shared garden-tree geometry now has its local bounds calculated once, then transformed separately for each tree. Previously, each building clone rescanned every tree vertex. A weak cache avoids keeping removed geometry alive, and revisions or replacements of ordinary and interleaved position buffers invalidate the cached bounds. Geometry, textures, material identities, instance positions, distant detail and full shadow geometry remain unchanged. No resident, traffic, zoning or save logic changes.
+
+A comparison against Edition 114 using the actual shipped models, 168 buildings and 4,985 instanced parts reduced median building-preparation CPU time from 386.7 ms to 14.1 ms across seven measured trials. Every resulting bound, visible transform and shadow transform matched exactly. Two alternating browser comparisons of the same full city gave 877.7/431.8 ms and 803.3/453.7 ms before/after. These measure city preparation with assets already loaded; they are not network-download timings or a claim about overall frame rate. Reproduce the targeted comparison with `node scripts/benchmark-detail-bounds.mjs b55a24d` (set `GIT_BIN` if needed).
+
+All 424 regression tests pass, together with module syntax, model integrity and lossless compression checks. New tests cover shared scans, moved and rotated instances, changed buffers, camera movement, reflection and quality settings, demolition and unchanged full shadows. A local full-game check retained 264 residents, day 147 and exactly ₡1,002,184 through manual save and reload, then verified Save & Exit returns home. No browser errors or warnings were recorded. All asset files are unchanged; building downloads remain pinned to Edition 114.
+
+This completes the scheduled optimization after feature updates 112–114. The next dedicated optimization follows updates 116–118, in Edition 119.
+
 ## Edition 114 — More complete row-house streets
 
 Row-housing zones now grow two additional original terrace styles: three-storey brick homes with raised entrance steps and flat parapet roofs, and three-storey homes with a pitched roof, street-facing dormer and ground-level entrance. Their party walls meet without side eaves, while individual doors, recessed sash windows, stone lintels, roof drainage and chimneys give each home its own frontage. The roof has an actual opening around the dormer. A saved multi-cell lot can contain several attached homes; their geometry is instanced at uniform scale rather than stretched. Rear garden dividers now continue the shared walls instead of following offset door positions.

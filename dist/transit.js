@@ -1,8 +1,8 @@
-import {moveToRoute} from './route-progress.js?v=114';
-import './building-entities.js?v=114';
+import {moveToRoute} from './route-progress.js?v=115';
+import './building-entities.js?v=115';
 const Buildings=globalThis.BoroughBuildings;
-import {Walking,sidewalkPosition} from './walking.js?v=114';
-import {roadPoint} from './traffic.js?v=114';
+import {Walking,sidewalkPosition} from './walking.js?v=115';
+import {roadPoint} from './traffic.js?v=115';
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const nearby=(engine,i)=>engine.neighbors(i);
 export const stopPosition=sidewalkPosition;

@@ -1,15 +1,27 @@
-import {ModelLibrary} from './model-library.js?v=114';
-import {buildHouse} from './house-architecture.js?v=114';
-import {buildUrban} from './city-architecture.js?v=114';
+import {ModelLibrary} from './model-library.js?v=115';
+import {buildHouse} from './house-architecture.js?v=115';
+import {buildUrban} from './city-architecture.js?v=115';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import * as THREE from './vendor/three.module.js';
-import {MeshBuilder} from './mesh-builder.js?v=114';
-import {BuildingMaterials} from './building-materials.js?v=114';
-import {lotPlan} from './building-plan.js?v=114';
-import {floorHeight} from './landscape.js?v=114';
+import {MeshBuilder} from './mesh-builder.js?v=115';
+import {BuildingMaterials} from './building-materials.js?v=115';
+import {lotPlan} from './building-plan.js?v=115';
+import {floorHeight} from './landscape.js?v=115';
 
 export class BuildingFactory{
  constructor(view){this.view=view;this.library=view.renderer?new ModelLibrary(view):null;this.ready=this.library?.ready||Promise.resolve();this.materials=new BuildingMaterials(view);this.batchRoot=new THREE.Group();view.scene.add(this.batchRoot);}
+ detailGeometryBounds(geometry){
+  // Lot trees reuse a small set of detailed meshes. Scan their local vertices
+  // once, then transform the exact same box for each independent instance.
+  // Attribute replacement and GPU-buffer revisions invalidate the local box.
+  this.detailBoundsCache ||= new WeakMap();
+  const position=geometry.attributes.position,data=position.isInterleavedBufferAttribute?position.data:position,array=data.array,version=data.version;
+  let cached=this.detailBoundsCache.get(geometry);
+  if(!cached||cached.position!==position||cached.array!==array||cached.version!==version||cached.count!==position.count||cached.itemSize!==position.itemSize||cached.normalized!==position.normalized||cached.stride!==data.stride||cached.offset!==position.offset){
+   cached={position,array,version,count:position.count,itemSize:position.itemSize,normalized:position.normalized,stride:data.stride,offset:position.offset,box:new THREE.Box3().setFromBufferAttribute(position)};this.detailBoundsCache.set(geometry,cached);
+  }
+  return cached.box;
+ }
  collectBuilding(root){
   const immutable=root.userData.renderImmutable,pose=immutable?[...root.position.toArray(),...root.quaternion.toArray(),...root.scale.toArray(),root.userData.renderVersion||0].join(','):null;
   const cached=immutable&&this.renderCache.get(root);
@@ -21,7 +33,7 @@ export class BuildingFactory{
   root.traverse(o=>{
    if(!o.isMesh)return;
    if(root.userData.asset&&o.userData.sharedAsset){
-    const detailBounds=o.userData.siteRange?new THREE.Box3().setFromBufferAttribute(o.geometry.attributes.position).applyMatrix4(o.matrixWorld).getBoundingSphere(new THREE.Sphere()):null;
+    const detailBounds=o.userData.siteRange?this.detailGeometryBounds(o.geometry).clone().applyMatrix4(o.matrixWorld).getBoundingSphere(new THREE.Sphere()):null;
     entry.instances.push({key:o.geometry.uuid+':'+o.material.uuid,geometry:o.geometry,material:o.material,transform:{matrix:o.matrixWorld.clone(),sphere,detailBounds,renderRange:o.userData.siteRange,rangeOrigin:o.userData.siteRange?new THREE.Vector3().setFromMatrixPosition(o.matrixWorld):null}});
    }else entry.statics.push({material:o.material,geometry:o.geometry.clone().applyMatrix4(o.matrixWorld)});
   });
