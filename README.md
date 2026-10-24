@@ -810,3 +810,18 @@ All 390 regression tests pass, plus the separate asset integrity, lossless compr
 Only traffic and spatial-query behavior changes; all other changed game sources contain version updates only. Building and terrain geometry, textures, detail settings and visual source bodies are unchanged. Model asset URLs remain pinned to Edition 108. This pass preserves the previously reviewed visual references and adds no new visual feature. Browser playtesting remains unverified because the Mac was locked during the work.
 
 Reproduce the CPU comparison with `node scripts/benchmark-junction-occupancy.mjs d194293` (set `GIT_BIN` if a particular Git executable is needed). This completes the scheduled optimization; the feature counter resets to zero. The next dedicated optimization follows updates 112–114, in Edition 115.
+
+
+## Edition 112 — Choose which side of a road can develop
+
+Road construction now has Both sides, Left side, Right side and No zoning settings. Inspect an existing road to change its setting, with a direction arrow and a preview of its available cells. Where drawn segments cross, choose the segment in the inspector. Older tile roads apply the change to one continuous straight section, stopping at crossings, gaps and road-type changes. Highways remain unzoneable.
+
+Disabling a side removes its candidates before zoning-grid collision resolution, allowing neighboring streets to reclaim usable frontage. It does not demolish homes, relocate occupants or cancel reserved construction. Existing multi-cell lots keep their saved geometry and road access. Unused painted fine cells remain saved and return when that frontage is available again. Side choices survive manual save, exit and reload; older worlds default to both sides. The inspector and road-build controls remain usable in smaller viewports through scrolling and measured hint placement.
+
+The two official before/after roadside-zoning pictures in [City Corner #3 — Anniversary Free Update](https://steamcommunity.com/games/949230/announcements/detail/523118649476645035) were reviewed before implementation. They illustrate removing competing zoning beside a curved street. Reference pictures are not shipped. This is a focused picture review, not a claim of watching the whole accompanying video.
+
+All 403 regression tests pass, plus asset integrity, lossless compression and module syntax checks. Tests cover curves, reversed directions, independent crossing segments, legacy sections, recovering neighboring frontage, disabled paint, occupied parcels, construction, save restoration and inspector controls. The 54 frozen-layout comparisons still reproduce unmodified-world cell geometry and order. Changing zoning retains building roots, batches, road surfaces and traffic setup; a simulation comparison retains exact resident journeys and vehicle states without rendering.
+
+In an alternating CPU benchmark against Edition 111, cached available-grid queries remain about 0.05 ms. Complete curved-city rebuild medians change from 20.6 to 21.8 ms without buildings and 22.6 to 23.9 ms with 241 parcels. In a separate district, changing a side costs a median 25.3 ms for the grid and 5.0 ms for the preview. The selection overlay uses two draw calls and updates on changes, not each frame. These are operation timings, not overall FPS measurements. Building and terrain assets are unchanged and model downloads stay pinned to Edition 108. Live browser clicks and visual layout remain unverified because the Mac is locked.
+
+This is feature update one after optimization 111. Updates 113 and 114 precede the next dedicated optimization in Edition 115.

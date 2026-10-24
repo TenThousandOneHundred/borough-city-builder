@@ -6,11 +6,11 @@ function sameTiles(tiles,previous){
  for(let i=0;i<tiles.length;i++){
   const t=tiles[i],road=previous.roads[i];if(t.ground!==previous.grounds[i]||(t.type==='road')!==!!road)return false;
   if(!road)continue;
-  if(t.roadType!==road.type||t.roadWidth!==road.width||t.legacyRoad!==road.legacy||(t.pathIds?.length||0)!==road.paths.length)return false;
+  if(t.roadType!==road.type||t.roadWidth!==road.width||t.legacyRoad!==road.legacy||t.zoneSides!==road.zoneSides||(t.pathIds?.length||0)!==road.paths.length)return false;
   for(let j=0;j<road.paths.length;j++)if(t.pathIds[j]!==road.paths[j])return false;
  }return true;
 }
-function tileSnapshot(tiles){return {grounds:tiles.map(t=>t.ground),roads:tiles.map(t=>t.type==='road'?{type:t.roadType,width:t.roadWidth,legacy:t.legacyRoad,paths:t.pathIds?.slice()||[]}:null)};}
+function tileSnapshot(tiles){return {grounds:tiles.map(t=>t.ground),roads:tiles.map(t=>t.type==='road'?{type:t.roadType,width:t.roadWidth,legacy:t.legacyRoad,zoneSides:t.zoneSides,paths:t.pathIds?.slice()||[]}:null)};}
 const indexAt=(x,z)=>{const a=Math.floor((x+96)/4),b=Math.floor((z+96)/4);return a<0||b<0||a>=48||b>=48?-1:b*48+a;};
 function corners(p,width=p.width||CELL,depth=p.depth||CELL){const c=Math.cos(p.angle),s=Math.sin(p.angle);return [[-1,-1],[1,-1],[1,1],[-1,1]].map(([x,z])=>({x:p.cx+x*width/2*c+z*depth/2*s,z:p.cz-x*width/2*s+z*depth/2*c}));}
 function overlaps(a,b){const ac=Math.cos(a.angle),as=Math.sin(a.angle),bc=Math.cos(b.angle),bs=Math.sin(b.angle),dx=b.cx-a.cx,dz=b.cz-a.cz;for(const [x,z]of [[ac,-as],[as,ac],[bc,-bs],[bs,bc]]){const ar=Math.abs(x*ac-z*as)*(a.width||4)/2+Math.abs(x*as+z*ac)*(a.depth||4)/2,br=Math.abs(x*bc-z*bs)*(b.width||4)/2+Math.abs(x*bs+z*bc)*(b.depth||4)/2;if(Math.abs(dx*x+dz*z)>=ar+br-.02)return false;}return true;}
@@ -58,13 +58,13 @@ function layout(w,roads,options={}){
     for(let j=k;j<points.length&&points[j].distance<=d+half+offset+2;j++){const q=points[j],u=(q.x-px)*tx+(q.z-pz)*tz;if(Math.abs(u)<=half+.1){const n=-(q.x-px)*tz+(q.z-pz)*tx;clearance[0]=Math.max(clearance[0],offset-n);clearance[1]=Math.max(clearance[1],offset+n);}}
     blockOffsets.set(section,clearance);
    }
-   sources.push({x:a.x+vx*f+vx/l*along,z:a.z+vz*f+vz/l*along,tx:vx/l,tz:vz/l,col,source:path.id,roadIndex:path.tiles[Math.min(path.tiles.length-1,Math.floor(col/Math.max(1,columns)*path.tiles.length))],offset,sideOffsets:blockOffsets.get(section)});}
+   sources.push({zoneSides:path.zoneSides,x:a.x+vx*f+vx/l*along,z:a.z+vz*f+vz/l*along,tx:vx/l,tz:vz/l,col,source:path.id,roadIndex:path.tiles[Math.min(path.tiles.length-1,Math.floor(col/Math.max(1,columns)*path.tiles.length))],offset,sideOffsets:blockOffsets.get(section)});}
  }
  for(let i=0;i<w.tiles.length;i++){const t=w.tiles[i];if(t.type!=='road'||t.pathIds?.length&&!t.legacyRoad)continue;const x=i%48,y=Math.floor(i/48),horizontal=(x>0&&w.tiles[i-1].type==='road')||(x<47&&w.tiles[i+1].type==='road'),vertical=(y>0&&w.tiles[i-48].type==='road')||(y<47&&w.tiles[i+48].type==='road');const cx=(x+.5)*4-96,cz=(y+.5)*4-96,roadWidth=roads[t.roadType]?.width||(t.roadWidth===2?3.15:2.45);if(horizontal||!vertical)roadRectangle({x:cx-2,z:cz},{x:cx+2,z:cz},roadWidth);if(vertical)roadRectangle({x:cx,z:cz-2},{x:cx,z:cz+2},roadWidth);if(horizontal&&vertical||t.roadType==='highway')continue;
-  const source={x:cx,z:cz,tx:vertical?0:1,tz:vertical?1:0,col:vertical?y:x,source:vertical?'legacy-v-'+x:'legacy-h-'+y,roadIndex:i,offset:Math.max(independent?0:2,roadWidth/2+.45)};
+  const source={zoneSides:t.zoneSides,x:cx,z:cz,tx:vertical?0:1,tz:vertical?1:0,col:vertical?y:x,source:vertical?'legacy-v-'+x:'legacy-h-'+y,roadIndex:i,offset:Math.max(independent?0:2,roadWidth/2+.45)};
   if(!independent)sources.push(source);else{const along=vertical?cz:cx;for(let col=Math.ceil((along-2)/cellSize-.5);(col+.5)*cellSize<along+2-1e-8;col++)sources.push({...source,col,...(vertical?{z:(col+.5)*cellSize}:{x:(col+.5)*cellSize})});}
  }
- for(const a of sources)for(const side of [-1,1])for(let row=0;row<rows;row++){const nx=-a.tz*side,nz=a.tx*side,d=(a.sideOffsets?.[side===-1?0:1]??a.offset)+cellSize/2+row*cellSize,cx=a.x+nx*d,cz=a.z+nz*d,index=indexAt(cx,cz);if(index<0||!independent&&w.tiles[index].type==='road'||w.tiles[index].ground==='water')continue;const p={index,...(independent?{id:JSON.stringify([a.source,side,a.col,row]),width:cellSize,depth:cellSize}:{}),cx,cz,angle:Math.atan2(-nx,-nz),source:a.source,side,col:a.col,row,roadIndex:a.roadIndex,frontage:{x:a.x,z:a.z,roadIndex:a.roadIndex,...(!a.source.startsWith('legacy-')?{pathId:a.source}:{})}};if(corners(p).some(v=>{const j=indexAt(v.x*.999999,v.z*.999999);return j<0||w.tiles[j].ground==='water';}))continue;const rectangle=collisionRect(p);if(crossesRoad(rectangle))continue;candidates.push(rectangle);}
+ for(const a of sources)for(const side of [-1,1])for(let row=0;row<rows;row++){if(a.zoneSides==='none'||a.zoneSides==='left'&&side===1||a.zoneSides==='right'&&side===-1)continue;const nx=-a.tz*side,nz=a.tx*side,d=(a.sideOffsets?.[side===-1?0:1]??a.offset)+cellSize/2+row*cellSize,cx=a.x+nx*d,cz=a.z+nz*d,index=indexAt(cx,cz);if(index<0||!independent&&w.tiles[index].type==='road'||w.tiles[index].ground==='water')continue;const p={index,...(independent?{id:JSON.stringify([a.source,side,a.col,row]),width:cellSize,depth:cellSize}:{}),cx,cz,angle:Math.atan2(-nx,-nz),source:a.source,side,col:a.col,row,roadIndex:a.roadIndex,frontage:{x:a.x,z:a.z,roadIndex:a.roadIndex,...(!a.source.startsWith('legacy-')?{pathId:a.source}:{})}};if(corners(p).some(v=>{const j=indexAt(v.x*.999999,v.z*.999999);return j<0||w.tiles[j].ground==='water';}))continue;const rectangle=collisionRect(p);if(crossesRoad(rectangle))continue;candidates.push(rectangle);}
  candidates.sort((a,b)=>a.cell.row-b.cell.row||a.cell.source.localeCompare(b.cell.source)||a.cell.side-b.cell.side||a.cell.col-b.cell.col);
  const cells=new Map(),bins=new Map();for(const rectangle of candidates){const p=rectangle.cell,cellKey=independent?p.id:p.index;if(cells.has(cellKey))continue;
  // Only retain an unbroken column from the sidewalk. A rejected frontage

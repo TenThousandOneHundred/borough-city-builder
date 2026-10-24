@@ -60,3 +60,9 @@ test('nearby road upgrades, service buildings and construction retain their exis
  w.tiles[building].construction=5;v.refresh();assert.notEqual(v.buildings.get(building),before.get(building));const construction=v.buildings.get(building);delete w.tiles[building].construction;v.refresh();assert.notEqual(v.buildings.get(building),construction);
  const day=roots(v);v.night=true;v.refresh();for(const [id,g]of day)assert.notEqual(v.buildings.get(id),g);
 });
+
+test('zoning-side edits leave building batches, road surfaces and active traffic untouched',()=>{
+ const w=world();w.money=1e6;const p=E.buildRoadPath(w,[{x:5,y:20},{x:40,y:20}]).path;home(w,10,17);home(w,30,17);const v=view(w),before=roots(v),calls={...v.calls};
+ for(const mode of ['left','right','none','both']){E.setRoadZoning(w,JSON.stringify(['path',p.id]),mode);v.refresh();assertRetained(v,before);assert.deepEqual(v.calls,calls);}
+ for(let x=4;x<20;x++)road(w,x,36);v.refresh();const current={...v.calls},saved=roots(v),target=E.roadZoningTargets(w,index(10,36))[0];E.setRoadZoning(w,target.id,'none');v.refresh();assertRetained(v,saved);assert.deepEqual(v.calls,current);
+});
