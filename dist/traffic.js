@@ -1,13 +1,13 @@
-import {CrossingControl} from './crossing-control.js?v=128';
-import {followingClearance} from './traffic-following.js?v=128';
-import {roundaboutRoute} from './roundabout-geometry.js?v=128';
-import {moveToRoute} from './route-progress.js?v=128';
-import './building-entities.js?v=128';
+import {CrossingControl} from './crossing-control.js?v=129';
+import {followingClearance} from './traffic-following.js?v=129';
+import {roundaboutRoute} from './roundabout-geometry.js?v=129';
+import {moveToRoute} from './route-progress.js?v=129';
+import './building-entities.js?v=129';
 const Buildings=globalThis.BoroughBuildings;
-import {laneOffset,transitionLaneOffsets} from './road-lanes.js?v=128';
-import {roadGeometry} from './road-junction-plan.js?v=128';
-import {TrafficSpatial} from './traffic-spatial.js?v=128';
-import {Junctions,smoothRoute} from './junctions.js?v=128';
+import {laneOffset,transitionLaneOffsets} from './road-lanes.js?v=129';
+import {roadGeometry} from './road-junction-plan.js?v=129';
+import {TrafficSpatial} from './traffic-spatial.js?v=129';
+import {Junctions,smoothRoute} from './junctions.js?v=129';
 // Car slots grow with population; saved road trips always have room to resume.
 export function carCapacity(world){const population=Buildings.entries(world).reduce((n,[,t])=>n+(t.type==='residential'&&!t.construction?(t.people||0):0),0),saved=world.citizens?.residents.filter(r=>r.trip).length||0;return Math.max(32,Math.min(512,Math.ceil(population/4)),saved);}
 // Destination-based road trips. No random placement or per-frame route searches.

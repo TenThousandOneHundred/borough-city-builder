@@ -1,4 +1,6 @@
 import * as THREE from './vendor/three.module.js';
+// The source photograph spans 2.1 metres; one world unit represents five.
+export const ROAD_TEXTURE_REPEAT=5/2.1;
 // Lateral road coordinates and lane spacing ride on the existing pavement mesh.
 // Intersections have zero coverage; no decals, extra meshes or frame updates.
 export function roadFinishData(geometry,stations,width,spec){
@@ -13,8 +15,25 @@ export function roadFinishData(geometry,stations,width,spec){
 }
 export function configureRoadFinish(material){
  material.userData.roadFinish=true;
+ material.normalScale.set(.16,.16);
+ for(const slot of ['map','normalMap','roughnessMap'])if(material[slot])material[slot].anisotropy=Math.min(4,material[slot].anisotropy);
  material.onBeforeCompile=shader=>{
   shader.vertexShader='attribute vec3 roadFinish;\nvarying vec3 roadFinishData;\nvarying vec2 roadFinishUv;\n'+shader.vertexShader;
+  // Strips use lateral/arc-length UVs, while junctions use plan coordinates.
+  // Sample all three photographic maps in one continuous world-space frame;
+  // keep the original UVs below solely for lane-relative wheel wear.
+  shader.vertexShader=shader.vertexShader.replace('#include <uv_vertex>',`#include <uv_vertex>
+   vec2 roadSurfaceUv=(modelMatrix*vec4(position,1.)).xz;
+   #ifdef USE_MAP
+    vMapUv=(mapTransform*vec3(roadSurfaceUv,1.)).xy;
+   #endif
+   #ifdef USE_NORMALMAP
+    vNormalMapUv=(normalMapTransform*vec3(roadSurfaceUv,1.)).xy;
+   #endif
+   #ifdef USE_ROUGHNESSMAP
+    vRoughnessMapUv=(roughnessMapTransform*vec3(roadSurfaceUv,1.)).xy;
+   #endif
+  `);
   shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
    roadFinishData=roadFinish;roadFinishUv=uv;
   `);
@@ -29,5 +48,5 @@ export function configureRoadFinish(material){
    diffuseColor.rgb*=1.-wheelWear*wearVisibility*.16*roadFinishData.z;
   `);
  };
- material.customProgramCacheKey=()=> 'borough-road-wheel-wear-60';return material;
+ material.customProgramCacheKey=()=> 'borough-road-surface-129';return material;
 }

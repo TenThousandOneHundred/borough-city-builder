@@ -69,3 +69,9 @@ Tree Small 02 by Rico Cilliers / Poly Haven remains CC0. Its original leaf geome
 - **Bark Brown 01** by Rob Tuytel / Poly Haven, CC0: https://polyhaven.com/a/bark_brown_01
 - License: https://polyhaven.com/license
 - Original 1K JPEG color, OpenGL normal and roughness maps stored in `industrial/`. Paint is recolored in the shader to retain the original building palette. No geometry or game assets from Cities: Skylines II are distributed.
+
+## Road asphalt (Edition 129)
+
+- **Clean Asphalt** by Dimitrios Savva / Poly Haven, CC0: https://polyhaven.com/a/clean_asphalt
+- License: https://polyhaven.com/license
+- Original 1K JPEG diffuse, OpenGL normal and roughness maps stored as `road-asphalt-color.jpg`, `road-asphalt-normal.jpg` and `road-asphalt-rough.jpg`. The photograph spans 2.1 metres and is mapped continuously across roads and junctions. Existing industrial-yard and roof maps remain separate. The official Cities: Skylines II Road Tools screenshots were visual references only and are not shipped.

@@ -1,21 +1,22 @@
-import './building-entities.js?v=128';
+import './building-entities.js?v=129';
 const Buildings=globalThis.BoroughBuildings;
 import * as THREE from './vendor/three.module.js';
+import {SIDEWALK_HEIGHT} from './road-profile.js?v=129';
 
 // Connect an owned parcel edge to its actual street sidewalk. This only builds
 // render geometry; occupancy, pedestrian routing and save data remain untouched.
-export function lotAccess(world,plan,base,engine,height,roadHeight){
+export function lotAccess(world,plan,base,engine,height,roadHeight,surfaceHeight=null){
  const points=Array.isArray(plan.accessPoints)?plan.accessPoints:[{x:0}];
- const parts=points.map(p=>accessStrip(world,plan,base,engine,height,roadHeight,p.x,p.width)).filter(Boolean);
+ const parts=points.map(p=>accessStrip(world,plan,base,engine,height,roadHeight,p.x,p.width,surfaceHeight)).filter(Boolean);
  if(!parts.length)return null;if(parts.length===1)return parts[0];
  const positions=[],uv=[],indices=[];for(const part of parts){const offset=positions.length/3;positions.push(...part.attributes.position.array);uv.push(...part.attributes.uv.array);indices.push(...Array.from(part.index.array,i=>i+offset));part.dispose();}
  const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));geometry.setIndex(indices);geometry.computeVertexNormals();geometry.computeBoundingSphere();geometry.userData={connections:parts.length};return geometry;
 }
-function accessStrip(world,plan,base,engine,height,roadHeight,centre=0,requestedWidth){
+function accessStrip(world,plan,base,engine,height,roadHeight,centre=0,requestedWidth,surfaceHeight=null){
  const f=plan.frontage;if(!f)return null;
  let width,sidewalk,raise;
- if(f.pathId){const path=world.roadPaths?.find(p=>p.id===f.pathId),spec=path&&engine.ROADS[path.type];if(!spec?.sidewalk)return null;width=spec.width;sidewalk=.38;raise=.14;}
- else{const road=world.tiles[f.roadIndex];if(road?.type!=='road'||road.ground==='water')return null;width=road.roadWidth===2?3.15:2.45;sidewalk=.42;raise=.14;}
+ if(f.pathId){const path=world.roadPaths?.find(p=>p.id===f.pathId),spec=path&&engine.ROADS[path.type];if(!spec?.sidewalk)return null;width=spec.width;sidewalk=.38;raise=SIDEWALK_HEIGHT;}
+ else{const road=world.tiles[f.roadIndex];if(road?.type!=='road'||road.ground==='water')return null;width=road.roadWidth===2?3.15:2.45;sidewalk=.42;raise=SIDEWALK_HEIGHT;}
  const dx=Math.sin(plan.angle),dz=Math.cos(plan.angle),tx=dz,tz=-dx;
  // Beyond a road endpoint, a normal-facing strip would miss the sidewalk.
  if(Math.abs((f.x-plan.cx)*tx+(f.z-plan.cz)*tz)>.35)return null;
@@ -42,7 +43,7 @@ function accessStrip(world,plan,base,engine,height,roadHeight,centre=0,requested
     const offset=centre+(i/across-.5)*span,start=startAt(offset);if(start>=reach-.01){valid=false;break;}
     const d=start+(reach-start)*t,x=plan.cx+dx*d+tx*offset,z=plan.cz+dz*d+tz*offset;
     if(!allowed(x,z)){valid=false;break;}
-    const endX=plan.cx+dx*reach+tx*offset,endZ=plan.cz+dz*reach+tz*offset,endY=roadHeight(world,endX,endZ)+raise;
+    const endX=plan.cx+dx*reach+tx*offset,endZ=plan.cz+dz*reach+tz*offset,endY=surfaceHeight?.(endX,endZ)??roadHeight(world,endX,endZ)+raise;
     const y=Math.max(base-.02+(endY-(base-.02))*t,height(world,x,z)+.025);
     row.push({x,y,z});positions.push(x,y,z);uv.push(offset,d-start);
    }rows.push(row);

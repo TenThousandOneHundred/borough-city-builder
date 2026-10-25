@@ -17,7 +17,7 @@ test('street-facing urban aprons and narrow private walks reach the sidewalk wit
  for(const type of ['office','residential']){
   const {w,p}=fixture(type),before=JSON.stringify(w),g=lotAccess(w,p,.04,E,ground,road);assert.ok(g);
   const pos=g.attributes.position,n=g.attributes.normal;assert.ok([...pos.array].every(Number.isFinite));for(let i=0;i<n.count;i++)assert.ok(n.getY(i)>0);
-  const box=new THREE.Box3().setFromBufferAttribute(pos);assert.ok(Math.abs(box.max.z-(p.frontage.z-2.45/2-.42+.025))<1e-5);assert.ok(Math.abs(box.max.y-.24)<1e-5);
+  const box=new THREE.Box3().setFromBufferAttribute(pos);assert.ok(Math.abs(box.max.z-(p.frontage.z-2.45/2-.42+.025))<1e-5);assert.ok(Math.abs(box.max.y-.215)<1e-5);
   assert.ok(g.userData.span===(type==='office'?2.8:.48));assert.equal(JSON.stringify(w),before);
  }
 });
@@ -35,7 +35,7 @@ test('rotated frontages start on their owned parcel and join curved-road sidewal
   const i=y*48+x;if(w.tiles[i].type==='road')continue;w.tiles[i].type='office';w.tiles[i].level=1;
   const p=lotPlan(w,i),g=lotAccess(w,p,.04,E,ground,road);w.tiles[i].type=null;if(!g)continue;
   count++;assert.ok(p.frontage.pathId);if(Math.abs(Math.sin(p.angle))>.01)angled++;const n=g.attributes.normal;for(let j=0;j<n.count;j++)assert.ok(n.getY(j)>0);
-  const pos=g.attributes.position;assert.ok(Math.max(...Array.from({length:pos.count},(_,j)=>pos.getY(j)))>=.239);
+  const pos=g.attributes.position;assert.ok(Math.max(...Array.from({length:pos.count},(_,j)=>pos.getY(j)))>=.214);
  }
  assert.ok(count>=3,'several lots along the bend connect');assert.ok(angled>=3,'multiple rotated lots connect');
 });
@@ -52,7 +52,7 @@ test('access surfaces batch by material and are removed when a building is demol
 
 test('offset household entrances and driveway aprons independently reach the sidewalk',()=>{
  const {w,p}=fixture('residential');p.accessPoints=[{x:-.7,width:.36},{x:.5,width:.36},{x:1.4,width:.55}];const before=JSON.stringify(w),g=lotAccess(w,p,.04,E,ground,road);assert.ok(g);assert.equal(g.userData.connections,3);
- const pos=g.attributes.position;for(const a of p.accessPoints){const endX=p.cx+a.x;assert.ok(Array.from({length:pos.count},(_,i)=>({x:pos.getX(i),y:pos.getY(i)})).some(v=>Math.abs(v.x-endX)<a.width/2+.001&&Math.abs(v.y-.24)<1e-5));}
+ const pos=g.attributes.position;for(const a of p.accessPoints){const endX=p.cx+a.x;assert.ok(Array.from({length:pos.count},(_,i)=>({x:pos.getX(i),y:pos.getY(i)})).some(v=>Math.abs(v.x-endX)<a.width/2+.001&&Math.abs(v.y-.215)<1e-5));}
  assert.equal(JSON.stringify(w),before);for(let i=0;i<g.attributes.normal.count;i++)assert.ok(g.attributes.normal.getY(i)>0);
  assert.equal(lotAccess(w,{...p,accessPoints:[]},.04,E,ground,road),null,'no disconnected apron when the lot has no front route');
 });
@@ -65,11 +65,11 @@ test('wide independent parcels have centered frontage and sidewalk access',async
 
 test('offset office walks and the side drive receive their own sidewalk aprons',()=>{
  const {w,p}=fixture('office');p.accessPoints=[{x:-.7,width:.36},{x:1.3,width:.72}];const before=JSON.stringify(w),g=lotAccess(w,p,.04,E,ground,road);assert.ok(g);assert.equal(g.userData.connections,2);
- const pos=g.attributes.position;for(const a of p.accessPoints){const endX=p.cx+a.x;assert.ok(Array.from({length:pos.count},(_,i)=>({x:pos.getX(i),y:pos.getY(i)})).some(v=>Math.abs(v.x-endX)<a.width/2+.001&&Math.abs(v.y-.24)<1e-5));}
+ const pos=g.attributes.position;for(const a of p.accessPoints){const endX=p.cx+a.x;assert.ok(Array.from({length:pos.count},(_,i)=>({x:pos.getX(i),y:pos.getY(i)})).some(v=>Math.abs(v.x-endX)<a.width/2+.001&&Math.abs(v.y-.215)<1e-5));}
  assert.equal(JSON.stringify(w),before);
 });
 
 test('industrial truck gates and separate office walks both reach the road without changing saved lots',async()=>{
  const {industrialSitePlan}=await import('../dist/industrial-site-plan.js'),{w,p}=fixture('industrial'),items=industrialSitePlan({...p,entranceXs:[1.1],loadingBays:[{x:-.65,width:.64}]},{minX:-1.4,maxX:1.4,minZ:-1.7,maxZ:-.8});
- p.accessPoints=items.filter(a=>['walk','drive'].includes(a.kind)&&a.z+a.d/2>=p.lotDepth/2-.091).map(a=>({x:a.x,width:a.w}));assert.equal(p.accessPoints.length,2);assert.ok(p.accessPoints.some(a=>a.width>=1.2));const saved=JSON.stringify(w),g=lotAccess(w,p,.04,E,ground,road);assert.ok(g);assert.equal(g.userData.connections,2);assert.equal(JSON.stringify(w),saved);const pos=g.attributes.position;for(const a of p.accessPoints){const vertices=Array.from({length:pos.count},(_,i)=>({x:pos.getX(i)-p.cx,y:pos.getY(i)})).filter(v=>Math.abs(v.y-.24)<1e-5&&Math.abs(v.x-a.x)<=a.width/2+.001);assert.ok(vertices.length>=3);assert.ok(Math.max(...vertices.map(p=>p.x))-Math.min(...vertices.map(p=>p.x))>=a.width-.002,'street apron retains full gate width');}
+ p.accessPoints=items.filter(a=>['walk','drive'].includes(a.kind)&&a.z+a.d/2>=p.lotDepth/2-.091).map(a=>({x:a.x,width:a.w}));assert.equal(p.accessPoints.length,2);assert.ok(p.accessPoints.some(a=>a.width>=1.2));const saved=JSON.stringify(w),g=lotAccess(w,p,.04,E,ground,road);assert.ok(g);assert.equal(g.userData.connections,2);assert.equal(JSON.stringify(w),saved);const pos=g.attributes.position;for(const a of p.accessPoints){const vertices=Array.from({length:pos.count},(_,i)=>({x:pos.getX(i)-p.cx,y:pos.getY(i)})).filter(v=>Math.abs(v.y-.215)<1e-5&&Math.abs(v.x-a.x)<=a.width/2+.001);assert.ok(vertices.length>=3);assert.ok(Math.max(...vertices.map(p=>p.x))-Math.min(...vertices.map(p=>p.x))>=a.width-.002,'street apron retains full gate width');}
 });

@@ -36,9 +36,9 @@ test('lamp batching preserves every triangle and night lighting with one shared 
  assert.equal(after,before);assert.equal(glowDraws,1);const pools=r.group.children.filter(m=>m.material===r.lightPoolMaterial);assert.equal(pools.length,1);r.night(true);assert.equal(r.lampMaterial.emissiveIntensity,3);assert.ok(pools.every(m=>m.visible));r.night(false);assert.equal(r.lampMaterial.emissiveIntensity,0);assert.ok(pools.every(m=>!m.visible));
 });
 test('road material cache refreshes when asynchronous textures arrive, then reuses them',()=>{
- const v=view();let creations=0;v.landscape={assets:{},material(){creations++;return new THREE.MeshStandardMaterial({map:this.assets['asphalt-color']?.clone()||null});}};
+ const v=view();let creations=0;v.landscape={assets:{},material(){creations++;return new THREE.MeshStandardMaterial({map:this.assets['road-asphalt-color']?.clone()||null});}};
  const r=new Roadworks(v),w=E.createWorld('Loading streets','plains',4);r.outside=()=>{};r.build(w);assert.equal(r.asphalt.map,null);
- const initial=r.asphalt;v.landscape.assets['asphalt-color']=new THREE.Texture();r.build(w);assert.notEqual(r.asphalt,initial);assert.ok(r.asphalt.map);const ready=r.asphalt;r.build(w);assert.equal(r.asphalt,ready);assert.equal(creations,2);
+ const initial=r.asphalt;v.landscape.assets['road-asphalt-color']=new THREE.Texture();r.build(w);assert.notEqual(r.asphalt,initial);assert.ok(r.asphalt.map);const ready=r.asphalt;r.build(w);assert.equal(r.asphalt,ready);assert.equal(creations,2);
 });
 
 test('legacy bridge decks support the unified pavement height instead of floating below it',()=>{

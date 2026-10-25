@@ -1,7 +1,8 @@
-import {bridgeWidth} from './bridge-spans.js?v=128';
+import {bridgeWidth} from './bridge-spans.js?v=129';
 import * as THREE from './vendor/three.module.js';
-import {atDistance,distanceSection} from './street-geometry.js?v=128';
-import {junctionCuts,clearRanges} from './road-junction-plan.js?v=128';
+import {atDistance,distanceSection} from './street-geometry.js?v=129';
+import {junctionCuts,clearRanges} from './road-junction-plan.js?v=129';
+import {SIDEWALK_HEIGHT,ASPHALT_HEIGHT} from './road-profile.js?v=129';
 // Concrete profiles and rail sections are swept along the complete crossing.
 // One buffer per material is added to the existing static road batches.
 export function bridgeGeometry(plan,height,ground,junctions=[]){
@@ -24,7 +25,7 @@ export function bridgeGeometry(plan,height,ground,junctions=[]){
   const cuts=junctionCuts(points,junctions,.2),ranges=clearRanges(span.start,span.end,cuts);
   for(const [start,end]of ranges){if(end-start<.05)continue;const section=distanceSection(points,start,end);section.forEach(p=>{p.width=bridgeWidth(points,p.distance);});
    for(const side of [-1,1]){
-    const foot=span.sidewalk?.14:.08;
+    const foot=span.sidewalk?SIDEWALK_HEIGHT:ASPHALT_HEIGHT;
     sweep(section,p=>{const x=side*(edge(p)-.065);return [[x-.065,foot],[x+.065,foot],[x+.04,foot+.1],[x-.04,foot+.1]];});
     sweep(section,p=>{const x=side*(edge(p)-.065),top=foot+.25;return [[x-.018,top-.018],[x+.018,top-.018],[x+.018,top+.018],[x-.018,top+.018]];},'metal');
     for(let d=start+.15;d<end;d+=.55){const p=atDistance(section,d),width=bridgeWidth(section,d),offset=side*(width/2+(span.sidewalk?.42:.2)-.065);p.x+=p.nx*offset;p.z+=p.nz*offset;const y=height(p.x,p.z);box(p,.026,.035,y+foot+.09,y+foot+.24,'metal');}

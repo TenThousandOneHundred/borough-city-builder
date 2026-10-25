@@ -1,17 +1,17 @@
-import './coastline.js?v=128';
-import './building-entities.js?v=128';
+import './coastline.js?v=129';
+import './building-entities.js?v=129';
 const Buildings=globalThis.BoroughBuildings;
-import {supportsTree} from './tree-placement.js?v=128';
-import {terrainMeshes} from './terrain-mesh.js?v=128';
-import {inlandRelief} from './landforms.js?v=128';
-import {streetStations,atDistance} from './street-geometry.js?v=128';
-import {terrainOffset} from './terrain-edit.js?v=128';
-import {outsidePortals} from './traffic.js?v=128';
-import {ScannedRocks} from './scanned-rocks.js?v=128';
-import {groundCover} from './ground-cover.js?v=128';
-import {terrainField} from './terrain-field.js?v=128';
-import {reflectedWater} from './water.js?v=128';
-import {naturalTerrain} from './terrain-material.js?v=128';
+import {supportsTree} from './tree-placement.js?v=129';
+import {terrainMeshes} from './terrain-mesh.js?v=129';
+import {inlandRelief} from './landforms.js?v=129';
+import {streetStations,atDistance} from './street-geometry.js?v=129';
+import {terrainOffset} from './terrain-edit.js?v=129';
+import {outsidePortals} from './traffic.js?v=129';
+import {ScannedRocks} from './scanned-rocks.js?v=129';
+import {groundCover} from './ground-cover.js?v=129';
+import {terrainField} from './terrain-field.js?v=129';
+import {reflectedWater} from './water.js?v=129';
+import {naturalTerrain} from './terrain-material.js?v=129';
 import * as THREE from './vendor/three.module.js';
 export const TILE=4,SIZE=48,HALF=96;
 const landBase=new THREE.Color('#c8e0ad'),landLight=new THREE.Color('#d4dfb3'),shoreColor=new THREE.Color('#c3bda6'),slopeColor=new THREE.Color('#959a8d');
@@ -31,7 +31,7 @@ export function terrainColor(w,x,z,height=groundHeight){const wet=wetness(w,x,z,
 export function floorHeight(w,x,z){return Math.max(.2,groundHeight(w,x,z))}
 export class Landscape{
 constructor(view){this.view=view;this.group=new THREE.Group();view.scene.add(this.group);this.loader=new THREE.TextureLoader();this.assets={};this.scannedRocks=new ScannedRocks(view);this.ready=Promise.all([this.load(),this.scannedRocks.ready]);}
-async load(){const defs=['grass-color','grass-normal','grass-rough','asphalt-color','asphalt-normal','asphalt-rough','brick-color','brick-normal','brick-rough','rock-color','rock-normal'];await Promise.all(defs.map(async name=>{try{const t=await this.loader.loadAsync(new URL('./assets/'+name+'.jpg',import.meta.url).href);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=this.view.renderer.capabilities.getMaxAnisotropy();if(name.endsWith('color'))t.colorSpace=THREE.SRGBColorSpace;this.assets[name]=t}catch(e){console.warn('Texture fallback:',name)}}));}
+async load(){const defs=['grass-color','grass-normal','grass-rough','asphalt-color','asphalt-normal','asphalt-rough','road-asphalt-color','road-asphalt-normal','road-asphalt-rough','brick-color','brick-normal','brick-rough','rock-color','rock-normal'];await Promise.all(defs.map(async name=>{try{const t=await this.loader.loadAsync(new URL('./assets/'+name+'.jpg',import.meta.url).href);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=name.startsWith('road-asphalt')?Math.min(4,this.view.renderer.capabilities.getMaxAnisotropy()):this.view.renderer.capabilities.getMaxAnisotropy();if(name.endsWith('color'))t.colorSpace=THREE.SRGBColorSpace;this.assets[name]=t}catch(e){console.warn('Texture fallback:',name)}}));}
 material(name,repeat=1,color='#ffffff'){const map=this.assets[name+'-color']?.clone(),normal=this.assets[name+'-normal']?.clone(),rough=this.assets[name+'-rough']?.clone();for(let t of [map,normal,rough])if(t){t.repeat.set(repeat,repeat);t.needsUpdate=true}return new THREE.MeshStandardMaterial({color,map:map||null,normalMap:normal||null,roughnessMap:rough||null,normalScale:new THREE.Vector2(.3,.3),roughness:.92});}
 clear(){this.group.traverse(o=>{o.userData.dispose?.();if(o.geometry&&!o.userData.sharedAsset)o.geometry.dispose();if(o.material&&!o.userData.sharedMaterial){for(let m of Array.isArray(o.material)?o.material:[o.material]){if(m===this.leafMat||[...this.view.materials.values()].includes(m))continue;for(let k of ['map','normalMap','roughnessMap'])if(m[k]&&!Object.values(this.assets).includes(m[k]))m[k].dispose();m.dispose()}}});this.group.clear()}
 build(w){this.clear();this.world=w;const meshes=terrainMeshes(w,groundHeight,terrainColor),geo=meshes.ground;this.geometryCacheHit=meshes.cacheHit;this.baseColors=geo.attributes.color.array.slice();const mat=naturalTerrain(this.material('grass',14,'#ffffff'),this.assets,w.seed);mat.vertexColors=true;mat.normalScale.set(.55,.55);this.ground=new THREE.Mesh(geo,mat);this.ground.receiveShadow=true;this.group.add(this.ground);

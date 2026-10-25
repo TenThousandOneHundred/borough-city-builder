@@ -142,5 +142,5 @@ test('curved approach paint stays on its lane and out of adjacent crossings',asy
 });
 test('approach paint uses bounded upward geometry and the existing shared marking material',()=>{
  const r=new Roadworks(view()),roads=cross();r.roadDescriptors=roads;r.junctionPlan=planJunctions(roads);r.height=()=>2;r.buildApproachMarkings({});assert.equal(r.group.children.length,1);const m=r.group.children[0];assert.equal(m.material,r.v.mat('#dedbd0'));assert.ok(m.geometry.attributes.position.count<200);
- const n=m.geometry.attributes.normal;for(let i=0;i<n.count;i++)assert.ok(n.getY(i)>.99);const p=m.geometry.attributes.position;for(let i=0;i<p.count;i++)assert.ok(Math.abs(p.getY(i)-2.107)<1e-6);
+ const n=m.geometry.attributes.normal;for(let i=0;i<n.count;i++)assert.ok(n.getY(i)>.99);const p=m.geometry.attributes.position;for(let i=0;i<p.count;i++)assert.ok(Math.abs(p.getY(i)-2.084)<1e-6);
 });

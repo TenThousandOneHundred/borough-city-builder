@@ -26,10 +26,11 @@ export function streetSurface(stations,profile,height){
  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(indices);g.computeVertexNormals();g.computeBoundingSphere();return g;
 }
 export function pavementMaterial(){
- const m=new THREE.MeshStandardMaterial({color:'#a7aaa4',roughness:.96});
+ const m=new THREE.MeshStandardMaterial({color:'#a6a8a4',roughness:.96});
  m.onBeforeCompile=shader=>{shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\n');shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 streetUV;').replace('#include <uv_vertex>','#include <uv_vertex>\nstreetUV=uv;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 streetUV;').replace('#include <color_fragment>',`#include <color_fragment>
- vec2 tile=streetUV/vec2(.55,.8);vec2 edge=abs(fract(tile+.5)-.5);vec2 aa=max(fwidth(tile),vec2(.001));
- float seam=max(smoothstep(vec2(.482)-aa,vec2(.492)+aa,edge).x,smoothstep(vec2(.482)-aa,vec2(.492)+aa,edge).y);
+ vec2 tile=streetUV/vec2(.2,.3);vec2 edge=abs(fract(tile+.5)-.5);vec2 aa=max(fwidth(tile),vec2(.001));
+ vec2 joints=smoothstep(vec2(.491)-aa,vec2(.498)+aa,edge);
+ float seam=max(joints.x,joints.y)*(1.-smoothstep(.16,.45,max(aa.x,aa.y)));
  float fleck=fract(sin(dot(floor(tile),vec2(127.1,311.7)))*43758.5453);
- diffuseColor.rgb*=mix(.96+fleck*.08,.65,seam*.65);`);};m.customProgramCacheKey=()=> 'street-pavement-v1';return m;
+ diffuseColor.rgb*=mix(.98+fleck*.04,.73,seam*.6);`);};m.customProgramCacheKey=()=> 'street-pavement-129';return m;
 }
