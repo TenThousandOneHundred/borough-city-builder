@@ -1,9 +1,9 @@
-import {pedestrianNetwork} from './pedestrian-network.js?v=120';
-import './building-entities.js?v=120';
+import {pedestrianNetwork} from './pedestrian-network.js?v=121';
+import './building-entities.js?v=121';
 const Buildings=globalThis.BoroughBuildings;
-import {roadPoint} from './traffic.js?v=120';
-import {visualParcels} from './parcels.js?v=120';
-import {WalkingSearch} from './walking-search.js?v=120';
+import {roadPoint} from './traffic.js?v=121';
+import {visualParcels} from './parcels.js?v=121';
+import {WalkingSearch} from './walking-search.js?v=121';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const cell=p=>Math.floor((p.z+96)/4)*48+Math.floor((p.x+96)/4);
 export function sidewalkPosition(traffic,i){const p=traffic.positions.get(i)||roadPoint(i),neighbors=traffic.graph.get(i)||[],q=neighbors.map(j=>traffic.positions.get(j)||roadPoint(j)).find(q=>distance(p,q)>.01);if(!q)return p;let dx=q.x-p.x,dz=q.z-p.z;if(dx<0||Math.abs(dx)<.001&&dz<0){dx=-dx;dz=-dz;}const length=Math.hypot(dx,dz)||1,width=traffic.engine.ROADS[traffic.world.tiles[i].roadType]?.width||2.45,offset=width/2+.22;return {x:p.x-dz/length*offset,z:p.z+dx/length*offset};}
@@ -13,7 +13,7 @@ export class Walking {
   let escape=roadAccess==='escape'&&this.network?.blocked(a);
   const steps=Math.max(1,Math.ceil(distance(a,b)/.35));for(let k=0;k<=steps;k++){const p={x:a.x+(b.x-a.x)*k/steps,z:a.z+(b.z-a.z)*k/steps};if(Math.abs(p.x)>=96||Math.abs(p.z)>=96)return false;if(this.roundabouts?.some(j=>distance(p,j)<j.roundabout.outer+.02))return false;const inRoad=this.network?.blocked(p);if(roadAccess!=='network'&&inRoad&&!escape)return false;if(!inRoad)escape=false;const i=cell(p),t=this.world.tiles[i];for(const parcel of this.parcelBins?.get(i)||[])if(!ignore.has(parcel.id)&&Buildings.contains(parcel.frame,p))return false;if(ignore.has(i))continue;if(!t||t.construction)return false;if(t.type==='road'){if(this.traffic.engine.ROADS[t.roadType||'street']?.sidewalk===false)return false;}else if(t.ground==='water'||t.type&&t.type!=='path')return false;}return true;
  }
- rebuild(){this.roundabouts=(this.traffic.roadJunctions||[]).filter(j=>j.roundabout);this.developmentRevision=this.world.development?.revision||0;this.version++;this.network=pedestrianNetwork(this.world,this.traffic.engine);this.nodes=[];this.bins=new Map();this.cache=new Map();this.parcels=visualParcels(this.world);this.parcelBins=new Map();
+ rebuild(){this.roundabouts=(this.traffic.roadJunctions||[]).filter(j=>j.roundabout);this.developmentRevision=this.world.development?.revision||0;this.version++;this.traffic.crossings?.rebuild();this.network=pedestrianNetwork(this.world,this.traffic.engine);this.nodes=[];this.bins=new Map();this.cache=new Map();this.parcels=visualParcels(this.world);this.parcelBins=new Map();
   for(const p of Object.values(this.world.development?.parcels||{}))if(p.occupant){const f=p.frame,c=Math.abs(Math.cos(f.angle)),s=Math.abs(Math.sin(f.angle)),x=(f.width*c+f.depth*s)/2,z=(f.width*s+f.depth*c)/2;for(let yy=Math.max(0,Math.floor((f.cz-z+96)/4));yy<=Math.min(47,Math.floor((f.cz+z+96)/4));yy++)for(let xx=Math.max(0,Math.floor((f.cx-x+96)/4));xx<=Math.min(47,Math.floor((f.cx+x+96)/4));xx++){const i=yy*48+xx;if(!this.parcelBins.has(i))this.parcelBins.set(i,[]);this.parcelBins.get(i).push(p);}}
   const locations=new Map();
   const add=(p,kind)=>{const location=kind+':'+p.x.toFixed(5)+':'+p.z.toFixed(5);if(locations.has(location))return locations.get(location);const id=this.nodes.length,node={...p,id,kind,links:new Map()};this.nodes.push(node);locations.set(location,node);const key=Math.floor(p.x/3)+':'+Math.floor(p.z/3);if(!this.bins.has(key))this.bins.set(key,[]);this.bins.get(key).push(node);return node;};
@@ -32,13 +32,13 @@ export class Walking {
  }
  canReach(a,b){return !!this.route(a,b);}
  request(r,to,purpose,maxLength=120){const route=this.route(r.location,to);if(!route||route.length>maxLength)return false;r.walk={from:r.location,to,purpose,...Buildings.point(this.world,r.location),heading:0};r.activity=purpose==='work'?'Walking to work':purpose==='shop'?'Walking to shops':'Walking home';this.active.set(r.id,{r,route,segment:0,version:this.version});return true;}
- advance(state,route,progress,dt){let remaining=dt*.28;while(remaining>0&&progress.segment<route.points.length-1){const target=route.points[progress.segment+1],d=distance(state,target);state.heading=Math.atan2(target.x-state.x,target.z-state.z);if(d<=remaining){state.x=target.x;state.z=target.z;remaining-=d;progress.segment++;}else{state.x+=(target.x-state.x)*remaining/d;state.z+=(target.z-state.z)*remaining/d;remaining=0;}}return progress.segment>=route.points.length-1;}
+ advance(state,route,progress,dt){let remaining=dt*.28;while(remaining>1e-8&&progress.segment<route.points.length-1){const clearance=this.traffic.crossings?.walkLimit(state,route.points,progress.segment)??Infinity;if(clearance<=1e-8)break;const target=route.points[progress.segment+1],d=distance(state,target),step=Math.min(d,remaining,clearance);state.heading=Math.atan2(target.x-state.x,target.z-state.z);if(d<1e-8){progress.segment++;continue;}state.x+=(target.x-state.x)*step/d;state.z+=(target.z-state.z)*step/d;remaining-=step;if(step>=d-1e-8){state.x=target.x;state.z=target.z;progress.segment++;}}const arrived=progress.segment>=route.points.length-1;if(arrived)this.traffic.crossings?.release(state);return arrived;}
  sync(){const people=this.world.citizens?.residents;if(people===this.peopleSource)return;this.peopleSource=people;const ids=new Set();for(const r of people||[])if(r.walk){ids.add(r.id);const entry=this.active.get(r.id);if(!entry)this.active.set(r.id,{r,version:-1});else entry.r=r;}for(const id of this.active.keys())if(!ids.has(id))this.active.delete(id);}
  update(dt){if(dt<=0)return;if(this.developmentRevision!==(this.world.development?.revision||0))this.rebuild();this.sync();for(const [id,entry]of this.active){const r=entry.r,t=r.walk;if(!t){this.active.delete(id);continue;}
   if(!Buildings.get(this.world,t.to)?.level){t.to=t.from;t.purpose='home';entry.version=-1;}
   if(entry.version!==this.version){entry.route=this.route(t,t.to,[t.from,t.to]);entry.segment=0;entry.version=this.version;}
   if(!entry.route){r.activity='Waiting for walking access';continue;}
-  if(this.advance(t,entry.route,entry,dt)){r.location=t.to;r.activity=t.purpose==='work'?'Working':t.purpose==='shop'?'Shopping':'Home';if(t.purpose==='work')r.workdays++;if(t.purpose==='shop')r.shopping++;r.nextAt=(this.world.citizens?.time||0)+(t.purpose==='work'?24:t.purpose==='shop'?8:20)+r.id%7;delete r.walk;this.active.delete(id);}
+  if(this.advance(t,entry.route,entry,dt)){r.location=t.to;r.activity=t.purpose==='work'?'Working':t.purpose==='shop'?'Shopping':'Home';if(t.purpose==='work')r.workdays++;if(t.purpose==='shop')r.shopping++;r.nextAt=(this.world.citizens?.time||0)+(t.purpose==='work'?24:t.purpose==='shop'?8:20)+r.id%7;delete r.walk;this.active.delete(id);}else r.activity=t.waitReason||(t.purpose==='work'?'Walking to work':t.purpose==='shop'?'Walking to shops':'Walking home');
  }
  }
 }

@@ -1,9 +1,9 @@
-import './roundabout-state.js?v=120';
-import {moveToRoute} from './route-progress.js?v=120';
-import './building-entities.js?v=120';
+import './roundabout-state.js?v=121';
+import {moveToRoute} from './route-progress.js?v=121';
+import './building-entities.js?v=121';
 const Buildings=globalThis.BoroughBuildings;
-import {Walking,sidewalkPosition} from './walking.js?v=120';
-import {roadPoint} from './traffic.js?v=120';
+import {Walking,sidewalkPosition} from './walking.js?v=121';
+import {roadPoint} from './traffic.js?v=121';
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const nearby=(engine,i)=>engine.neighbors(i);
 export const stopPosition=sidewalkPosition;
@@ -46,7 +46,7 @@ export class Transit{
  if(!choice)return false;r.transit={line:choice.line,board:choice.board,alight:choice.alight,from:r.location,to,purpose,phase:'walk',...origin};r.activity='Walking to bus stop';this.passengers.set(r.id,r);return true;}
  movePassenger(r,target,dt){const t=r.transit;if(!target){r.activity='Waiting for destination access';return false;}const key=t.phase+':'+target.x+':'+target.z;let entry=this.passengerRoutes.get(r.id);
  if(!entry||entry.key!==key){entry={key,route:this.walking.route(t,target,[t.from,t.to]),segment:0};this.passengerRoutes.set(r.id,entry);}
- if(!entry.route){r.activity='Waiting for walking access';return false;}return this.walking.advance(t,entry.route,entry,dt);}
+ if(!entry.route){r.activity='Waiting for walking access';return false;}const arrived=this.walking.advance(t,entry.route,entry,dt);r.activity=t.waitReason||(t.phase==='walk'?'Walking to bus stop':t.phase==='return'?'Walking back · bus service unavailable':'Walking from bus stop');return arrived;}
 
  finish(r,time){const t=r.transit;r.location=t.to;r.activity=t.purpose==='work'?'Working':t.purpose==='shop'?'Shopping':'Home';if(t.purpose==='work')r.workdays++;if(t.purpose==='shop')r.shopping++;r.nextAt=time+(t.purpose==='work'?24:t.purpose==='shop'?8:20)+r.id%7;delete r.transit;this.passengers.delete(r.id);this.passengerRoutes.delete(r.id);}
  update(dt){if(dt<=0)return;if(this.developmentRevision!==(this.world.development?.revision||0)||this.walkRevision!==(this.world.walkRevision||0)||this.graph!==this.traffic.graph||this.lineKey!==(this.world.transit?.lines||[]).map(l=>l.id+':'+l.stops.join(',')).join(';'))this.rebuild();this.walking.update(dt);this.syncPassengers();const people=this.passengers.values(),time=this.world.citizens?.time||0;let byLine=null;

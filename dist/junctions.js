@@ -1,4 +1,4 @@
-import {roundaboutLimit} from './roundabout-traffic.js?v=120';
+import {roundaboutLimit} from './roundabout-traffic.js?v=121';
 // Route geometry and intersection control, independent of rendering.
 export function smoothRoute(points) {
  const clean=points.filter((p,i)=>!i||Math.hypot(p.x-points[i-1].x,p.z-points[i-1].z)>.001);
@@ -32,14 +32,14 @@ export class Junctions {
  route(points){if(this.routes.has(points))return this.routes.get(points);const distances=[0];for(let i=1;i<points.length;i++)distances.push(distances[i-1]+Math.hypot(points[i].x-points[i-1].x,points[i].z-points[i-1].z));const gates=[];
   // Segment-circle intersections also catch long, unsampled straight roads.
   for(const junction of this.items){let entry=Infinity,exit=-Infinity,axis='x';for(let i=0;i<points.length-1;i++){const p=points[i],q=points[i+1],dx=q.x-p.x,dz=q.z-p.z,length=distances[i+1]-distances[i],a=dx*dx+dz*dz;if(!a)continue;const ox=p.x-junction.x,oz=p.z-junction.z,b=2*(ox*dx+oz*dz),c=ox*ox+oz*oz-junction.radius**2,disc=b*b-4*a*c;if(disc<0)continue;const lo=Math.max(0,(-b-Math.sqrt(disc))/(2*a)),hi=Math.min(1,(-b+Math.sqrt(disc))/(2*a));if(lo>hi)continue;const begin=distances[i]+lo*length,end=distances[i]+hi*length;if(begin<entry){entry=begin;axis=Math.abs(dx)>Math.abs(dz)?'x':'z';}exit=Math.max(exit,end);}
-   if(Number.isFinite(entry)){let mergeAngle=0;if(junction.roundabout){const s=junction.roundabout,p=points.find((p,i)=>distances[i]>=entry&&Math.abs(Math.hypot(p.x-junction.x,p.z-junction.z)-s.ring)<.02);if(p)mergeAngle=Math.atan2(p.z-junction.z,p.x-junction.x);}gates.push({junction,entry,exit,axis,mergeAngle});}}
+   if(Number.isFinite(entry)){let mergeAngle=0,mergeDistance=entry;if(junction.roundabout){const s=junction.roundabout,k=points.findIndex((p,i)=>distances[i]>=entry&&Math.abs(Math.hypot(p.x-junction.x,p.z-junction.z)-s.ring)<.02);if(k>=0){const p=points[k];mergeAngle=Math.atan2(p.z-junction.z,p.x-junction.x);mergeDistance=distances[k];}}gates.push({junction,entry,exit,axis,mergeAngle,mergeDistance});}}
   const result={distances,gates:gates.sort((a,b)=>a.entry-b.entry)};this.routes.set(points,result);return result;
  }
- limit(agent,time,dt,policy,agents,spatial){const route=this.route(agent.points),position=(route.distances[agent.segment]??route.distances.at(-1))+(agent.distance||0);let limit=Infinity;agent.waitReason='';agent.turnSpeed=Infinity;
+ limit(agent,time,dt,policy,agents,spatial){const route=this.route(agent.points),position=(route.distances[agent.segment]??route.distances.at(-1))+(agent.distance||0);let limit=Infinity;agent.waitReason='';agent.turnSpeed=Infinity;agent.circulatingJunction=null;
   for(const gate of route.gates){const j=gate.junction;if(j.owner&&(!j.owner.active||j.owner.points!==j.owner.gatePoints))j.owner=null;
    if(position>gate.exit){if(agent.roundaboutEntry?.id===j.id)agent.roundaboutEntry=null;if(position>gate.exit+1.4&&j.owner===agent)j.owner=null;continue;}
    if(position<gate.entry-9)break;
-   if(j.roundabout){limit=Math.min(limit,roundaboutLimit(agent,gate,position,agents,spatial));continue;}
+   if(j.roundabout){if(Math.abs(Math.hypot(agent.x-j.x,agent.z-j.z)-j.roundabout.ring)<.12)agent.circulatingJunction=j;limit=Math.min(limit,roundaboutLimit(agent,gate,position,agents,spatial));continue;}
    if(j.owner===agent)continue;
    const remaining=Math.max(0,gate.entry-position-.3);
    if(remaining>1){limit=Math.min(limit,remaining+2);continue;}

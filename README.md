@@ -1,6 +1,22 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 121 — Crossing signals and roundabout priority
+
+Pedestrians now wait at signal-controlled crossings and continue to the opposite curb when a signal changes mid-crossing. Drivers yield to people waiting at an uncontrolled crossing or already crossing. A car or held bus occupying the markings clears before anybody steps off the curb. Residents and bus passengers share these rules, show their waiting reason, and continue simulation offscreen. Restored walkers already in a crossing keep their position and priority. Transient crossing plans are cached per route and are rebuilt when roads or bus-stop crossings change.
+
+Controlled crossings have paired red/green pedestrian signals facing across the road. Their original standing/walking silhouettes use two instanced meshes; normal frames only update colors when the phase changes. The official [Traffic AI reference picture](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/traffic-ai) was inspected before work and compared again afterwards. The first close-up exposed block-shaped poles and protruding traffic-light bulbs, so the fixtures were revised to round poles, rounded housings and recessed lenses. The reference still has broader differences in road proportions, urban surroundings and lighting; this release does not establish visual equivalence. Reference pictures are not shipped.
+
+The previous saved QA city exposed a roundabout deadlock: entering and circulating vehicles treated each other as leaders. Gap checks now continue to the actual merge, give priority to circulating traffic, and use ring spacing only for cars on the ring. All 24 vehicles in the dense two-lane approach regression finish their journeys. The exported 226-resident QA save completed 87 vehicle trips over ten simulated minutes, compared with zero before the correction, without changing its roads or teleporting residents. Congestion elsewhere in that test city remains.
+
+All 468 checks in the local full-suite invocation passed (467 regression cases plus the asset-file check). The final fixture revision additionally passed its 11 targeted checks. Syntax, asset integrity and lossless compression checks pass. Building models, terrain, vegetation, texture downloads and detail settings are unchanged.
+
+The same-city CPU comparison measured 90 simulated seconds after warmup: 32 slots 462.8 → 459.0 ms, 128 slots 1,966.6 → 2,582.7 ms, and 512 slots 10,101.7 → 10,683.2 ms. New crossing decisions and waits intentionally change journeys; these are CPU fixture measurements, not FPS claims. The larger fixture adds about 0.32 ms per simulation step. The browser rendering comparison was noisy and is not used to claim a speedup. Two pedestrian signal draw calls are shared city-wide.
+
+The full local game retained 226 residents, 82 households, 131 assigned jobs, 58 travelling residents, day 27 and ₡994,096 through manual save and Save & Exit. A page reload returned to the home screen with the same saved city.
+
+This is feature update two after optimization 119. Edition 122 is the third feature update; the dedicated optimization follows in Edition 123.
+
 ## Edition 120 — Sidewalk routes and usable crossings
 
 Walking now follows both sidewalks along the actual street geometry. Residents use the marked approach crossings and corner pavements at ordinary junctions, and the outer sidewalks at roundabouts. Door-to-sidewalk links cannot shortcut through driving lanes. Curved streets, road widths and tapers share the rendered road plan. Explicit pedestrian paths remain usable. Saved walkers keep their position and find a new route after a road edit or reload; an old saved position inside a driving lane can leave it without teleporting.
