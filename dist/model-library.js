@@ -1,14 +1,14 @@
-import {lotMaterials} from './lot-surfaces.js?v=123';
-import {bakeRoofFinish} from './roof-finishes.js?v=123';
-import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=123';
-import {loadBinary} from './asset-transfer.js?v=123';
-import {SiteDetails} from './site-details.js?v=123';
-import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=123';
+import {lotMaterials} from './lot-surfaces.js?v=124';
+import {bakeRoofFinish} from './roof-finishes.js?v=124';
+import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=124';
+import {loadBinary} from './asset-transfer.js?v=124';
+import {SiteDetails} from './site-details.js?v=124';
+import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=124';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {lotPlan} from './building-plan.js?v=123';
-import {floorHeight} from './landscape.js?v=123';
+import {lotPlan} from './building-plan.js?v=124';
+import {floorHeight} from './landscape.js?v=124';
 const IDENTITY=new THREE.Matrix4();
 const civicDefaults={hospital:'clinic',school:'elementary',police:'police',fire:'fire'};
 // Complete textured assets are loaded once, batched per material, and instanced.
@@ -18,7 +18,7 @@ export class ModelLibrary {
   const loader=new GLTFLoader();
   // Fetch the distant indices alongside the models instead of adding another
   // large download after all three catalogues have finished.
-  const distant=Promise.all([fetch(new URL('./assets/buildings/lod.json?v=114',import.meta.url)).then(r=>{if(!r.ok)throw Error(r.status);return r.json()}),loadBinary(new URL('./assets/buildings/lod.bin?v=114',import.meta.url))]).then(value=>({value}),error=>({error}));
+  const distant=Promise.all([fetch(new URL('./assets/buildings/lod.json?v=124-final',import.meta.url)).then(r=>{if(!r.ok)throw Error(r.status);return r.json()}),loadBinary(new URL('./assets/buildings/lod.bin?v=124-final',import.meta.url))]).then(value=>({value}),error=>({error}));
   await Promise.all(['urban','industry','modern'].map(async file=>{
    try{const url=new URL(`./assets/buildings/${file}.glb?v=${file==='modern'?'114':21}`,import.meta.url),{scene}=await loader.parseAsync(await loadBinary(url),new URL('.',url).href);
     this.ingest(scene);
@@ -29,11 +29,18 @@ export class ModelLibrary {
  }
  ingest(scene){
     for(const source of scene.children){
-     const batches=new Map(),styled=new Map();source.updateMatrixWorld(true);
+     const batches=new Map();source.updateMatrixWorld(true);
      source.traverse(o=>{if(!o.isMesh)return;let geometry=o.geometry.clone();if(!o.matrixWorld.equals(IDENTITY))geometry.applyMatrix4(o.matrixWorld);if(!geometry.index)geometry.setIndex(Array.from({length:geometry.attributes.position.count},(_,i)=>i));for(const attr of Object.keys(geometry.attributes))if(!['position','normal','uv','color'].includes(attr))geometry.deleteAttribute(attr);
-      const modern=source.userData.family==='modern';this.modernMaterials ||= new Map();const materialCache=modern?this.modernMaterials:styled;let material=materialCache.get(o.material);if(!material){material=o.material.clone();materialCache.set(o.material,material);
-       if(!modern&&/plaster|brick|trim/.test(material.name)&&!source.name.includes('brick')&&!source.name.includes('loft')){
-        const palette=['#beb8a4','#c9c7ba','#9babad','#c0b39b','#c6bfb0'];let hash=0;for(const char of source.name)hash=(hash+char.charCodeAt(0))%5;material.color.set(palette[hash]);
+      const modern=source.userData.family==='modern',tinted=!modern&&/plaster|brick|trim/.test(o.material.name)&&!source.name.includes('brick')&&!source.name.includes('loft');
+      let tone=0;for(const char of source.name)tone=(tone+char.charCodeAt(0))%5;
+      this.modernMaterials ||= new Map();this.importedMaterials ||= new Map();
+      // Keep the existing per-building palette, but reuse identical glass,
+      // frames, roofs and matching wall finishes across imported models.
+      let materialCache=this.modernMaterials,key=o.material;
+      if(!modern){if(!this.importedMaterials.has(o.material))this.importedMaterials.set(o.material,new Map());materialCache=this.importedMaterials.get(o.material);key=tinted?tone:'original';}
+      let material=materialCache.get(key);if(!material){material=o.material.clone();materialCache.set(key,material);
+       if(tinted){
+        const palette=['#beb8a4','#c9c7ba','#9babad','#c0b39b','#c6bfb0'];material.color.set(palette[tone]);
         material.onBeforeCompile=shader=>{shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`#ifdef USE_MAP
          vec4 texel=texture2D(map,vMapUv);float luminance=dot(texel.rgb,vec3(.3,.59,.11));diffuseColor.rgb*=mix(vec3(luminance),texel.rgb,.12)*1.8;
          #endif`);};material.customProgramCacheKey=()=> 'borough-asset-cladding-13';
