@@ -1,6 +1,7 @@
 import * as THREE from './vendor/three.module.js';
-import {GardenProps} from './garden-props.js?v=125';
-import {sitePlan} from './site-plan.js?v=125';
+import {GardenProps} from './garden-props.js?v=126';
+import {IndustrialProps} from './industrial-props.js?v=126-wire2';
+import {sitePlan} from './site-plan.js?v=126';
 // All props share geometry and materials across the city, allowing the existing
 // building instancer to submit them in a bounded number of draw calls.
 export class SiteDetails{
@@ -27,6 +28,12 @@ export class SiteDetails{
  build(plan,footprint){const root=new THREE.Group(),items=sitePlan(plan,footprint);root.userData.sitePlan=items;
   for(const a of items){const {kind,x,z,w,d}=a;
    if(['walk','drive','patio','garden','yard','plaza'].includes(kind)){this.surface(root,kind,x,z,w,d,kind==='walk'?.018:kind==='garden'?.012:.006);if(kind==='garden'&&a.border!==false&&w>.3&&d>.3){for(const sign of [-1,1]){this.piece(root,'walk',x+sign*w/2,.015,z,.025,.04,d);this.piece(root,'walk',x,.015,z+sign*d/2,w,.04,.025);}}}
+   else if(['security-fence','container','timber','pipes','pallets','dumpster','loading'].includes(kind)){
+    this.industrialProps ||= new IndustrialProps(this.materials);
+    if(kind==='security-fence'){const along=a.axis==='x',length=along?w:d,count=Math.max(1,Math.ceil(length/.5)),span=length/count;for(let i=0;i<count;i++){const offset=-length/2+(i+.5)*span;this.industrialProps.place(root,{kind,x:x+(along?offset:0),z:z+(along?0:offset),w:along?span:w,d:along?d:span,height:.44,angle:along?0:Math.PI/2});}}
+    else if(kind==='loading'){this.materials.loading ||= this.industrialProps.materials.yellow;for(const side of [-1,1])this.surface(root,'loading',x+side*(w/2-.025),z-d/2+a.markDepth/2,.018,a.markDepth,.024);}
+    else this.industrialProps.place(root,a);
+   }
    else if(kind==='curb')this.piece(root,'walk',x,.015,z,w,.06,d);
    else if(kind==='fence'){
     this.gardenProps ||= new GardenProps(this.materials);

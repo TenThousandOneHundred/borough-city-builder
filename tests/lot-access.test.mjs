@@ -68,3 +68,8 @@ test('offset office walks and the side drive receive their own sidewalk aprons',
  const pos=g.attributes.position;for(const a of p.accessPoints){const endX=p.cx+a.x;assert.ok(Array.from({length:pos.count},(_,i)=>({x:pos.getX(i),y:pos.getY(i)})).some(v=>Math.abs(v.x-endX)<a.width/2+.001&&Math.abs(v.y-.24)<1e-5));}
  assert.equal(JSON.stringify(w),before);
 });
+
+test('industrial truck gates and separate office walks both reach the road without changing saved lots',async()=>{
+ const {industrialSitePlan}=await import('../dist/industrial-site-plan.js'),{w,p}=fixture('industrial'),items=industrialSitePlan({...p,entranceXs:[1.1],loadingBays:[{x:-.65,width:.64}]},{minX:-1.4,maxX:1.4,minZ:-1.7,maxZ:-.8});
+ p.accessPoints=items.filter(a=>['walk','drive'].includes(a.kind)&&a.z+a.d/2>=p.lotDepth/2-.091).map(a=>({x:a.x,width:a.w}));assert.equal(p.accessPoints.length,2);assert.ok(p.accessPoints.some(a=>a.width>=1.2));const saved=JSON.stringify(w),g=lotAccess(w,p,.04,E,ground,road);assert.ok(g);assert.equal(g.userData.connections,2);assert.equal(JSON.stringify(w),saved);const pos=g.attributes.position;for(const a of p.accessPoints){const vertices=Array.from({length:pos.count},(_,i)=>({x:pos.getX(i)-p.cx,y:pos.getY(i)})).filter(v=>Math.abs(v.y-.24)<1e-5&&Math.abs(v.x-a.x)<=a.width/2+.001);assert.ok(vertices.length>=3);assert.ok(Math.max(...vertices.map(p=>p.x))-Math.min(...vertices.map(p=>p.x))>=a.width-.002,'street apron retains full gate width');}
+});

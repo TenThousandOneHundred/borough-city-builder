@@ -13,8 +13,8 @@ test('private lots provide entrances, rear patios, gardens, fences and a drivewa
  for(const a of items){assert.ok(a.x-a.w/2>=-2&&a.x+a.w/2<=2);assert.ok(a.z-a.d/2>=-2&&a.z+a.d/2<=2);assert.ok(a.x+a.w/2<=footprint.minX||a.x-a.w/2>=footprint.maxX||a.z+a.d/2<=footprint.minZ||a.z-a.d/2>=footprint.maxZ,a.kind+' stays outside building');}
  assert.deepEqual(sitePlan(house,footprint),items,'reload remains deterministic');
 });
-test('commercial and industrial front yards include usable bay widths and a clear central entrance',()=>{
- for(const type of ['commercial','industrial']){const items=sitePlan({...house,low:false,type,lotWidth:8,lotDepth:8},{minX:-2,maxX:2,minZ:-3,maxZ:1});assert.ok(items.some(i=>i.kind==='yard'));const bays=items.filter(i=>i.kind==='parking');assert.ok(bays.length>=6);assert.ok(bays.every(i=>Math.abs(i.x)>.5&&i.w>=.5&&i.d>=.9));assert.ok(items.some(i=>i.kind==='walk'&&Math.abs(i.x)<1e-8));}
+test('commercial front yards include usable bay widths and a clear central entrance',()=>{
+ for(const type of ['commercial']){const items=sitePlan({...house,low:false,type,lotWidth:8,lotDepth:8},{minX:-2,maxX:2,minZ:-3,maxZ:1});assert.ok(items.some(i=>i.kind==='yard'));const bays=items.filter(i=>i.kind==='parking');assert.ok(bays.length>=6);assert.ok(bays.every(i=>Math.abs(i.x)>.5&&i.w>=.5&&i.d>=.9));assert.ok(items.some(i=>i.kind==='walk'&&Math.abs(i.x)<1e-8));}
 });
 test('urban forecourts have planted borders, seating and bicycle stands',()=>{
  const items=sitePlan({...house,low:false,type:'office',lotWidth:8,lotDepth:8},{minX:-2,maxX:2,minZ:-2,maxZ:2});for(const k of ['walk','plaza','bench','rack','tree'])assert.ok(items.some(i=>i.kind===k),k);

@@ -139,7 +139,7 @@ test('modern street fronts have ground-level entrances and shared transparent sh
  const lib=await library(),modern=lib.models.filter(m=>m.family==='modern');let entrances=0,shops=0;
  for(const model of modern){
   assert.ok(model.streetFronts.length>0,model.name+' has an authored entrance');
-  for(const front of model.streetFronts){entrances++;assert.ok(front.position.every(Number.isFinite));const threshold=model.name==='raised-stoop-brick-terrace'?1.04:model.name==='dormer-roof-brick-terrace'?.16:.08;assert.ok(Math.abs(front.position[1]-threshold)<1e-6,'authored entry matches its threshold height');assert.ok(front.width>.7&&front.width<3.5);assert.ok(front.normal[1]>.9);}
+  for(const front of model.streetFronts.filter(f=>f.kind!=='loading')){entrances++;assert.ok(front.position.every(Number.isFinite));const threshold=model.name==='raised-stoop-brick-terrace'?1.04:model.name==='dormer-roof-brick-terrace'?.16:.08;assert.ok(Math.abs(front.position[1]-threshold)<1e-6,'authored entry matches its threshold height');assert.ok(front.width>.7&&front.width<3.5);assert.ok(front.normal[1]>.9);}
   const glazing=model.root.children.find(m=>m.material.name==='modern-shop-glass');
   if(model.category==='commercial'){
    shops++;assert.ok(glazing);assert.equal(glazing.material.transparent,true);assert.ok(glazing.material.opacity>0&&glazing.material.opacity<.5);

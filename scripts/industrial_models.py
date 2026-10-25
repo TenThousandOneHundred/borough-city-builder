@@ -95,6 +95,7 @@ def build_industry(Model, materials):
 
  def bay(m,x,z,width=3.2,raised=False):
   y=.9 if raised else .08;height=3.3
+  m.streetFronts.append({'kind':'loading','position':[x,y,z+.55],'normal':[0,1],'width':width,'raised':raised})
   m.box(x,y,z,width+.36,height+.28,.14,FRAME)
   # Closed sectional shutter sits behind the projecting rubber dock surround.
   m.box(x,y+.1,z+.09,width,height-.12,.06,PAINT,(.59,.64,.63))

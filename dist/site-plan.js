@@ -1,6 +1,8 @@
+import {industrialSitePlan} from './industrial-site-plan.js?v=126';
 // Layout in the building's local coordinates. Features stay inside the owned
 // rotated envelope and outside the complete model bounds, including balconies.
 export function sitePlan(plan,footprint){
+ if(plan.type==='industrial')return industrialSitePlan(plan,footprint);
  const W=plan.lotWidth,D=plan.lotDepth,edge=.09,b=footprint,items=[];
  const rect=(kind,x0,z0,x1,z1,extra={})=>{const minimum=['fence','curb'].includes(kind)?.015:.08;if(x1-x0<minimum||z1-z0<minimum)return;items.push({kind,x:(x0+x1)/2,z:(z0+z1)/2,w:x1-x0,d:z1-z0,...extra});};
  const left=-W/2+edge,right=W/2-edge,back=-D/2+edge,front=D/2-edge;

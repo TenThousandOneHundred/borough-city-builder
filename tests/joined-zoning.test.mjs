@@ -1,14 +1,18 @@
-import {test} from 'node:test';
+import {test,mock} from 'node:test';
 import assert from 'node:assert/strict';
 import E from '../dist/engine.js';
 import Z from '../dist/zoning-layout.js';
 
 function district(){
+ // Road IDs participate in parcel variation; keep this regression reproducible.
+ let nextId=0;const ids=mock.method(globalThis.crypto,'randomUUID',()=>`joined-zoning-fixture-${nextId++}`);
+ try{
  const world=E.createWorld('Joined zoning','plains',8);world.money=1e7;
  const paths=[[[19,24],[28,24]],[[28,24],[33,24],[36,19]],[[42,14],[36,19]]].map(points=>{
   const result=E.buildRoadPath(world,points.map(([x,y])=>({x,y})));assert.ok(result.ok,result.reason);return result.path;
  });
  return {world,paths};
+ }finally{ids.mock.restore();}
 }
 function frontage(world,source,side){return [...E.fineZoningLayout(world).values()].filter(p=>p.source===source&&p.side===side&&p.row===0).sort((a,b)=>a.col-b.col);}
 
