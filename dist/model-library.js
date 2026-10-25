@@ -1,26 +1,27 @@
-import {lotMaterials} from './lot-surfaces.js?v=127';
-import {bakeRoofFinish} from './roof-finishes.js?v=127';
-import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=127';
-import {loadBinary} from './asset-transfer.js?v=127';
-import {SiteDetails} from './site-details.js?v=127';
-import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=127';
+import {IndustrialSurfaces,configureIndustrialPaint} from './industrial-surfaces.js?v=128';
+import {lotMaterials} from './lot-surfaces.js?v=128';
+import {bakeRoofFinish} from './roof-finishes.js?v=128';
+import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=128';
+import {loadBinary} from './asset-transfer.js?v=128';
+import {SiteDetails} from './site-details.js?v=128';
+import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=128';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {lotPlan} from './building-plan.js?v=127';
-import {floorHeight} from './landscape.js?v=127';
+import {lotPlan} from './building-plan.js?v=128';
+import {floorHeight} from './landscape.js?v=128';
 const IDENTITY=new THREE.Matrix4();
 const civicDefaults={hospital:'clinic',school:'elementary',police:'police',fire:'fire'};
 // Complete textured assets are loaded once, batched per material, and instanced.
 export class ModelLibrary {
- constructor(view){this.view=view;this.models=[];this.materials=new Set();this.lotGeometry=new THREE.PlaneGeometry(1,1);this.lotGeometry.rotateX(-Math.PI/2);this.ready=this.load();}
+ constructor(view){this.view=view;this.models=[];this.materials=new Set();this.lotGeometry=new THREE.PlaneGeometry(1,1);this.lotGeometry.rotateX(-Math.PI/2);this.surfaces=new IndustrialSurfaces(view.renderer);this.view.industrialSurfaces=this.surfaces.textures;this.ready=Promise.all([this.load(),this.surfaces.ready]);}
  async load(){
   const loader=new GLTFLoader();
   // Fetch the distant indices alongside the models instead of adding another
   // large download after all three catalogues have finished.
   const distant=Promise.all([fetch(new URL('./assets/buildings/lod.json?v=126-final',import.meta.url)).then(r=>{if(!r.ok)throw Error(r.status);return r.json()}),loadBinary(new URL('./assets/buildings/lod.bin?v=126-final',import.meta.url))]).then(value=>({value}),error=>({error}));
   await Promise.all(['urban','industry','modern'].map(async file=>{
-   try{const url=new URL(`./assets/buildings/${file}.glb?v=${file==='modern'?'126-final':21}`,import.meta.url),{scene}=await loader.parseAsync(await loadBinary(url),new URL('.',url).href);
+   try{const url=new URL(`./assets/buildings/${file}.glb?v=${file==='modern'?'128-final':21}`,import.meta.url),{scene}=await loader.parseAsync(await loadBinary(url),new URL('.',url).href);
     this.ingest(scene);
    }catch(error){console.warn('Building model fallback:',file,error.message);}
   }));
@@ -33,12 +34,13 @@ export class ModelLibrary {
      source.traverse(o=>{if(!o.isMesh)return;let geometry=o.geometry.clone();if(!o.matrixWorld.equals(IDENTITY))geometry.applyMatrix4(o.matrixWorld);if(!geometry.index)geometry.setIndex(Array.from({length:geometry.attributes.position.count},(_,i)=>i));for(const attr of Object.keys(geometry.attributes))if(!['position','normal','uv','color'].includes(attr))geometry.deleteAttribute(attr);
       const modern=source.userData.family==='modern',tinted=!modern&&/plaster|brick|trim/.test(o.material.name)&&!source.name.includes('brick')&&!source.name.includes('loft');
       let tone=0;for(const char of source.name)tone=(tone+char.charCodeAt(0))%5;
-      this.modernMaterials ||= new Map();this.importedMaterials ||= new Map();
+      this.modernMaterials ||= new Map();this.industrialMaterials ||= new Map();this.importedMaterials ||= new Map();
       // Keep the existing per-building palette, but reuse identical glass,
       // frames, roofs and matching wall finishes across imported models.
-      let materialCache=this.modernMaterials,key=o.material;
+      const industrialPaint=modern&&source.name.startsWith('industrial-')&&o.material.name==='modern-painted';
+      let materialCache=industrialPaint?this.industrialMaterials:this.modernMaterials,key=o.material;
       if(!modern){if(!this.importedMaterials.has(o.material))this.importedMaterials.set(o.material,new Map());materialCache=this.importedMaterials.get(o.material);key=tinted?tone:'original';}
-      let material=materialCache.get(key);if(!material){material=o.material.clone();materialCache.set(key,material);
+      let material=materialCache.get(key);if(!material){material=o.material.clone();materialCache.set(key,material);if(industrialPaint)configureIndustrialPaint(material,this.surfaces?.textures||this.view.industrialSurfaces);
        if(tinted){
         const palette=['#beb8a4','#c9c7ba','#9babad','#c0b39b','#c6bfb0'];material.color.set(palette[tone]);
         material.onBeforeCompile=shader=>{shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`#ifdef USE_MAP
@@ -52,7 +54,7 @@ export class ModelLibrary {
         diffuseColor.rgb*=.94+.035*stain+.02*sin(modernPoint.y*2.3+modernPoint.x*.3);`);};material.customProgramCacheKey=()=> 'borough-modern-concrete-21';
       }if(modern)bakeRoofFinish(geometry,material);this.materials.add(material);material.envMapIntensity=.55;material.roughness=Math.max(.24,material.roughness);material.userData.modelAsset=true;
       if(material.name.includes('glass')){if(!modern){material.metalness=.38;material.roughness=.24;}else material.envMapIntensity=.85;material.userData.glass=true;if(modern&&['modern-glass','modern-glass-occupied'].includes(material.name))configureWindowLighting(material);}
-      for(const key of ['map','normalMap','roughnessMap','metalnessMap','aoMap'])if(material[key])material[key].anisotropy=Math.min(8,this.view.renderer.capabilities.getMaxAnisotropy());
+      for(const key of ['map','normalMap','roughnessMap','metalnessMap','aoMap'])if(material[key])material[key].anisotropy=Math.min(material.userData.industrialSurface?4:8,this.view.renderer.capabilities.getMaxAnisotropy());
       if(!batches.has(material))batches.set(material,[]);batches.get(material).push(geometry);
      });
      const root=new THREE.Group();root.name=source.name;

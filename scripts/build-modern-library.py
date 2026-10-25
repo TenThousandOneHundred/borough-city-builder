@@ -27,10 +27,22 @@ models=[]
 class Model:
  def __init__(self,name,category,floors,building=None):
   self.name,self.category,self.floors=name,category,floors;self.building=building;self.site=False;self.houseForm=None;self.roofForm=None;self.detail=False;self.gardens=[];self.streetFronts=[];self.parts=defaultdict(lambda:{'p':[],'n':[],'uv':[],'c':[],'i':[],'far':[]})
+ def metric_uvs(self,points,normal):
+  # A shared world-space origin keeps neighbouring panels and raised ribs in
+  # phase. An orthonormal face basis measures sloping roofs in metres too.
+  n=list(normal);length=math.sqrt(sum(v*v for v in n));n=[v/length for v in n]
+  dominant=max(range(3),key=lambda i:abs(n[i]))
+  if n[dominant]<0:n=[-v for v in n]
+  u=[n[2],0,-n[0]] if abs(n[1])<.5 else [n[1],-n[0],0]
+  length=math.sqrt(sum(v*v for v in u));u=[v/length for v in u]
+  v=[n[1]*u[2]-n[2]*u[1],n[2]*u[0]-n[0]*u[2],n[0]*u[1]-n[1]*u[0]]
+  if abs(n[1])>=.5:v=[-t for t in v]
+  return [(sum(p[i]*u[i] for i in range(3)),sum(p[i]*v[i] for i in range(3))) for p in points]
  def quad(self,a,b,c,d,mat,color=(1,1,1),uvs=None):
   part=self.parts[mat];start=len(part['p'])//3;u=[b[i]-a[i] for i in range(3)];v=[c[i]-a[i] for i in range(3)];n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];length=math.sqrt(sum(x*x for x in n))
   if length<1e-8:return
   n=[x/length for x in n]
+  if uvs is None and self.category=='industrial' and mat==PAINT:uvs=self.metric_uvs([a,b,c,d],n)
   uw=math.sqrt(sum(t*t for t in u))/2 if mat==BRICK else 1;vh=math.dist(b,c)/2 if mat==BRICK else 1
   for pos,uv in zip([a,b,c,d],uvs or [(0,0),(uw,0),(uw,vh),(0,vh)]):part['p']+=list(pos);part['n']+=n;part['uv']+=list(uv);part['c']+=list(color)
   indices=[start,start+1,start+2]+([start,start+2,start+3] if a!=d else [])

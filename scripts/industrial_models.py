@@ -22,7 +22,8 @@ def build_industry(Model, materials):
   normals=[[u[k]*math.cos(j*math.tau/sides)+v[k]*math.sin(j*math.tau/sides) for k in range(3)] for j in range(sides)]
   for j in range(sides):
    n,q=normals[j],normals[(j+1)%sides];p=lambda origin,normal:tuple(origin[k]+normal[k]*r for k in range(3))
-   m.quad(p(a,q),p(a,n),p(b,n),p(b,q),PAINT,color)
+   lo=j*math.tau*r/sides;hi=(j+1)*math.tau*r/sides
+   m.quad(p(a,q),p(a,n),p(b,n),p(b,q),PAINT,color,uvs=[(hi,0),(lo,0),(lo,length),(hi,length)])
    m.parts[PAINT]['n'][-12:]=q+n+n+q
 
  def vessel(m,x,z,r,h,color=steel):
@@ -30,10 +31,16 @@ def build_industry(Model, materials):
   # Rolled steel shells, a shallow conical cap and retained reinforcing bands.
   def section(y,height,r0,r1):
    slope=(r0-r1)/height;normalScale=math.sqrt(1+slope*slope)
+   def uv(angle,radius,yy):
+    if r0==r1:return (angle*radius,yy)
+    # Unroll the conical lid as an annular sector, so its narrowing tip does
+    # not squeeze a full cylinder's circumference into a few centimetres.
+    scale=math.hypot(height,r0-r1)/(r0-r1);theta=angle/scale
+    return (radius*scale*math.sin(theta),radius*scale*math.cos(theta))
    for j in range(sides):
     a=j*math.tau/sides;b=(j+1)*math.tau/sides
     p=lambda angle,rr,yy:(x+math.cos(angle)*rr,yy,z+math.sin(angle)*rr)
-    m.quad(p(b,r0,y),p(a,r0,y),p(a,r1,y+height),p(b,r1,y+height),PAINT,color)
+    m.quad(p(b,r0,y),p(a,r0,y),p(a,r1,y+height),p(b,r1,y+height),PAINT,color,uvs=[uv(b,r0,y),uv(a,r0,y),uv(a,r1,y+height),uv(b,r1,y+height)])
     n=lambda t:[math.cos(t)/normalScale,slope/normalScale,math.sin(t)/normalScale]
     m.parts[PAINT]['n'][-12:]=n(b)+n(a)+n(a)+n(b)
   section(.35,h,r,r);section(h+.35,r*.4,r,.12)
@@ -89,7 +96,8 @@ def build_industry(Model, materials):
     if zz>=g:continue
     xx=a if side<0 else b
     q=[(xx,h+.028,zz),(x,h+rise+.028,zz),(x,h+rise+.055,zz+.045),(xx,h+.055,zz+.045)]
-    m.quad(*(q[::-1] if side<0 else q),PAINT,trim)
+    if side<0:q=q[::-1]
+    m.quad(*q,PAINT,trim,uvs=m.metric_uvs(q,[side*rise/(w/2+.25),1,0]))
   for sx in [-1,1]:pipe(m,(x+sx*(w/2+.12),.2,z-d/2+.2),(x+sx*(w/2+.12),h,z-d/2+.2),.06,trim,6)
   m.detail=False
 

@@ -1,6 +1,18 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 128 — Industrial surface materials
+
+Industrial walls, metal roofs, storage containers and dumpsters now use shared photographic wear, normal and roughness maps. Their original paint palettes remain, with restrained luminance variation from the source photograph. Metre-scale UVs stay continuous across panels and ribs; pitched roofs, pipes, silo shells and conical caps retain their actual surface dimensions. Timber grain wraps around each log and follows its length. The cut ends use filtered growth rings and small radial cracks in one shared material, leaving pallet wood unchanged. The texture setup waits for loading before the city is ready, with per-map failure recovery and bounded filtering.
+
+The official [Supply Chains industrial pictures](https://www.paradoxinteractive.com/games/cities-skylines-ii/add-ons/cities-skylines-ii-supply-chains) were inspected before implementation and compared with the resulting processing and timber yards afterward. The material pass improves surface detail; overall visual equivalence with the reference game has not been achieved. Reference game images are not shipped. The new 1K texture sets are CC0 Poly Haven assets, credited in `dist/assets/CREDITS.md`; six shared files add 3,260,845 bytes of image download. Industrial metre-scale UVs add 28,024 bytes to the compressed model. All other modern buildings, geometry positions/normals/colors/triangles, embedded textures and distant-model files remain unchanged. The Edition 127 yard batching savings remain in place.
+
+In a 1280×720 comparison of 24 industrial lots, main-view draw calls stay at 128 in the overview and 106 at street level; submitted triangles stay at 741,420 and 712,063. Two alternating overview GPU trials measured 12.23/11.90 ms before and 11.98/12.80 ms after. Street-view trials measured 13.32/14.04 ms before and 13.28/12.64 ms after. Another game was running on the machine; whole-frame intervals ranged from 58.8 to 86 ms, so these measurements do not establish an isolated FPS improvement or guarantee. The new textures add shading work while preserving geometry, batching and offscreen simulation.
+
+All 513 checks pass in the final local suite, alongside module syntax, asset integrity and lossless compression checks. Local full-game checks covered Continue, manual save, Save & Exit and reload to the home screen. The saved and reloaded city showed 218 residents and the same 3:12:58 PM timestamp. The final local game and comparison scene recorded no browser warnings or errors. The earlier shader declaration error was corrected before final verification.
+
+This is feature update one after optimization 127. Features 129–130 precede the next dedicated optimization in Edition 131.
+
 ## Edition 127 — Industrial rendering optimization
 
 This is the dedicated optimization after feature updates 124–126. Industrial props whose distant geometry is identical to their full geometry now use one instance buffer across both distance bands. Only container corrugation retains a separate distant mesh. The original two-pass chain-link shader and transparency ordering are retained. Existing visibility rules, reflection coverage and camera-independent shadow casters remain unchanged. Trials with additional per-prop culling and single-pass wire were rejected because they did not demonstrate a consistent overall benefit.

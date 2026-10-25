@@ -46,7 +46,7 @@ for(const file of ['buildings/urban.glb','buildings/industry.glb','buildings/mod
   for(const index of roots){assert.ok(gltf.nodes[index].extras.category);assert.ok(triangles(index)<200000,'complete building triangle budget');}
  }
 }
-assert.equal(buildingCount,89);assert.ok(fs.statSync(path.join(root,'assets/buildings/modern.glb.gz')).size<3.1*1024*1024,'modern catalogue compressed transfer stays below 3.1 MiB');
+assert.equal(buildingCount,89);assert.ok(fs.statSync(path.join(root,'assets/buildings/modern.glb.gz')).size<3.11*1024*1024,'modern catalogue including metre-scale industrial UVs stays below 3.11 MiB');
 console.log('89 complete GLB buildings and scanned coast verified');
 const coastData=fs.readFileSync(path.join(root,'assets/coast.glb')),coast=JSON.parse(coastData.toString('utf8',20,20+coastData.readUInt32LE(12)));
 assert.ok(coast.meshes.reduce((total,m)=>total+m.primitives.reduce((n,p)=>n+coast.accessors[p.indices??p.attributes.POSITION].count/3,0),0)<5000,'coastal patch triangle budget');

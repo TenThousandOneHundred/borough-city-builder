@@ -62,3 +62,10 @@ Edition 114 adds original raised-stoop and dormer-roof brick terraces, using the
 ### Edition 117 tree canopy restoration
 
 Tree Small 02 by Rico Cilliers / Poly Haven remains CC0. Its original leaf geometry was revisited using the source at https://polyhaven.com/a/tree_small_02. All 30,250 connected leaf pieces now survive as textured outlines (60,500 leaf triangles), with at least 60% of each convex texture-space outline retained. Original positions, bark geometry and the nine 512px JPEG images are preserved; leaf normals use normalized bytes and texture coordinates use normalized unsigned shorts. The unused second leaf UV channel is omitted. These opaque JPEG leaves render with opaque depth. The four elevation views were rebaked from this same model; distant trees retain their existing instancing and near-tree limits. The original high-polygon download is not distributed.
+
+## Industrial surface materials (Edition 128)
+
+- **Rusty Metal 02** by Rob Tuytel / Poly Haven, CC0: https://polyhaven.com/a/rusty_metal_02
+- **Bark Brown 01** by Rob Tuytel / Poly Haven, CC0: https://polyhaven.com/a/bark_brown_01
+- License: https://polyhaven.com/license
+- Original 1K JPEG color, OpenGL normal and roughness maps stored in `industrial/`. Paint is recolored in the shader to retain the original building palette. No geometry or game assets from Cities: Skylines II are distributed.

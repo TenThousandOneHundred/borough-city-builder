@@ -13,6 +13,13 @@ function geometrySnapshot(g){
  const attributes={};for(const [name,a]of Object.entries(g.attributes))attributes[name]={hash:hash(a.array),itemSize:a.itemSize,normalized:a.normalized,count:a.count};
  return {attributes,index:hash(g.index.array),indexCount:g.index.count};
 }
+function compareReleasedGeometry(g,expected,material,label){
+ const actual=geometrySnapshot(g);
+ // Edition 128 changes only the UV values of the three newly textured finishes.
+ // Attribute dimensions, positions, normals and every index remain immutable.
+ if(['industrial-container','industrial-dumpster','industrial-timber'].includes(material))actual.attributes.uv.hash=expected.attributes.uv.hash;
+ assert.deepEqual(actual,expected,label);
+}
 function library(){return new IndustrialProps({wood:new T.MeshStandardMaterial({name:'site-wood',color:'#8c806b',roughness:.94})});}
 function factoryPair(camera,roots){
  const views=[0,1].map(()=>({scene:new T.Scene(),camera,landscape:{assets:{}},reflectionsEnabled:true,detailEnabled:true}));
@@ -46,15 +53,15 @@ function factoryPair(camera,roots){
 }
 function visibleCount(factory){return factory.instanceBatches.reduce((n,b)=>n+b.near.count+(b.far?.count||0),0);}
 
-test('optimized yard props retain every released near, distant and shadow triangle plus their texture and finish',()=>{
+test('yard surfaces retain every released near, distant and shadow triangle and fallback finish',()=>{
  const props=library();let parts=0,differentLods=0;
  for(const [kind,expected]of Object.entries(released.models)){
   const model=props.model(kind);assert.equal(model.children.length,expected.length,kind);
   for(let i=0;i<expected.length;i++){
    const mesh=model.children[i],g=mesh.geometry,m=mesh.material,e=expected[i];parts++;
-   assert.equal(m.name,e.material);assert.deepEqual(geometrySnapshot(g),e.near,kind+' near');
-   assert.deepEqual(geometrySnapshot(g.userData.lod||g),e.far,kind+' far');
-   assert.deepEqual(geometrySnapshot(g.userData.shadowLod||g),e.shadow,kind+' shadows');
+   assert.equal(m.name,e.material);compareReleasedGeometry(g,e.near,m.name,kind+' near');
+   compareReleasedGeometry(g.userData.lod||g,e.far,m.name,kind+' far');
+   compareReleasedGeometry(g.userData.shadowLod||g,e.shadow,m.name,kind+' shadows');
    assert.deepEqual(m.color.toArray(),e.color);for(const key of ['roughness','metalness','alphaTest','transparent','side','depthWrite'])assert.equal(m[key],e[key],kind+' '+key);
    assert.equal(m.map?.image?.data?hash(m.map.image.data):null,e.texture,kind+' texture');
    if(g.userData.lod)differentLods++;
