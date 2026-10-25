@@ -18,7 +18,7 @@ test('bridge planning joins reversed street extensions and leaves roads and dry 
  const full=[straight()],pieces=[road('a',[{x:0,z:0},{x:10,z:0}]),road('b',[{x:20,z:0},{x:10,z:0}]),road('c',[{x:20,z:0},{x:30,z:0}])],saved=JSON.stringify(pieces),a=planBridges(full,water,()=>.8),b=planBridges(pieces,water,()=>.8);
  assert.equal(a.spans.length,1);assert.equal(b.spans.length,1);assert.equal(b.spans[0].roads.length,3);assert.equal(JSON.stringify(pieces),saved);assert.equal(planBridges(full,()=>false,()=>.8).spans.length,0);
  for(let x=6;x<24;x+=.17)assert.ok(Math.abs(bridgeHeight(a,x,0)-bridgeHeight(b,x,0))<.0002);
- assert.equal(bridgeHeight(a,2,0),null);assert.equal(bridgeHeight(a,15,4),null);assert.ok(Math.abs(bridgeHeight(a,15,0)-1.9)<.0001);
+ assert.equal(bridgeHeight(a,a.spans[0].start-.01,0),null);assert.equal(bridgeHeight(a,15,4),null);assert.ok(Math.abs(bridgeHeight(a,15,0)-1.9)<.0001);
 });
 
 test('curved crossings have continuous height coverage across the pavement and both railings',()=>{
@@ -43,10 +43,10 @@ test('bridge railings stop outside junction mouths and road-width transitions re
 test('road rebuilds derive bridges for every road style without editing saved worlds and remove obsolete structures',()=>{
  for(const type of Object.keys(E.ROADS)){
   const w=E.createWorld('Bridge QA','river',431);for(const t of w.tiles)Object.assign(t,{type:null,level:0});w.money=1e6;const result=E.buildRoadPath(w,[{x:20,y:24},{x:32,y:18},{x:44,y:24}],type);assert.ok(result.ok);
-  const saved=JSON.stringify(w),v=view(),r=new Roadworks(v);r.outside=()=>{};r.build(w);assert.equal(JSON.stringify(w),saved);assert.ok(r.bridgeStats.spans>=1);assert.ok(r.bridgeStats.piers>=1);assert.ok(r.bridgeStats.triangles<12000);assert.ok(r.batchStats.after<=r.batchStats.before);
+  const saved=JSON.stringify(w),v=view(),r=new Roadworks(v);r.outside=()=>{};r.build(w);assert.equal(JSON.stringify(w),saved);assert.ok(r.bridgeStats.spans>=1);assert.ok(r.bridgeStats.piers>=1);assert.ok(r.bridgeStats.triangles<17500,'longer supported approaches and local pavement contact cuts remain a bounded static mesh');assert.ok(r.batchStats.after<=r.batchStats.before);
   const restored=new Roadworks(view());restored.outside=()=>{};restored.build(JSON.parse(saved));assert.deepEqual(restored.bridgePlan.spans,r.bridgePlan.spans,'restored cities derive identical bridge geometry');
-  const span=r.bridgePlan.spans[0],point=span.points[Math.floor(span.points.length/2)],h=r.height(w,point.x,point.z);assert.ok(h>1.6);const car={agent:{active:true,x:point.x,z:point.z,heading:0},mesh:new THREE.Object3D()},city={world:w,roadworks:r,running:false};CityView.prototype.moveCar.call(city,car);assert.ok(Math.abs(car.mesh.position.y-h-.08)<1e-8);
-  E.removeRoadPath(w,result.path.id);r.build(w);assert.equal(r.bridgeStats.spans,0);assert.equal(r.bridgeStats.triangles,0);CityView.prototype.moveCar.call(city,car);assert.equal(car.heightRevision,r.heightRevision);assert.ok(Math.abs(car.mesh.position.y-r.baseHeight(w,point.x,point.z)-.08)<1e-8,'a stationary vehicle cannot retain the demolished bridge height');
+  const span=r.bridgePlan.spans[0],point=span.points[Math.floor(span.points.length/2)],h=r.drivingHeight(w,point.x,point.z);assert.ok(h>1.6);const car={agent:{active:true,x:point.x,z:point.z,heading:0},mesh:new THREE.Object3D()},city={world:w,roadworks:r,running:false};CityView.prototype.moveCar.call(city,car);assert.ok(Math.abs(car.mesh.position.y-h)<1e-6);
+  E.removeRoadPath(w,result.path.id);r.build(w);assert.equal(r.bridgeStats.spans,0);assert.equal(r.bridgeStats.triangles,0);CityView.prototype.moveCar.call(city,car);assert.equal(car.heightRevision,r.heightRevision);assert.ok(Math.abs(car.mesh.position.y-r.drivingHeight(w,point.x,point.z))<1e-6,'a stationary vehicle cannot retain the demolished bridge height');
  }
 });
 

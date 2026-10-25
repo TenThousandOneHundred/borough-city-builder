@@ -1,6 +1,6 @@
 import * as T from './vendor/three.module.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {configureIndustrialPaint,configureIndustrialBark} from './industrial-surfaces.js?v=129';
+import {configureIndustrialPaint,configureIndustrialBark} from './industrial-surfaces.js?v=130';
 
 // Props retain their authored dimensions when placed or turned in a yard.
 // Project every metal part in the same metre coordinates so ribs and panels

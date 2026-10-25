@@ -1,9 +1,9 @@
-import './roundabout-state.js?v=129';
-import {moveToRoute} from './route-progress.js?v=129';
-import './building-entities.js?v=129';
+import './roundabout-state.js?v=130';
+import {moveToRoute} from './route-progress.js?v=130';
+import './building-entities.js?v=130';
 const Buildings=globalThis.BoroughBuildings;
-import {Walking,sidewalkPosition} from './walking.js?v=129';
-import {roadPoint} from './traffic.js?v=129';
+import {Walking,sidewalkPosition} from './walking.js?v=130';
+import {roadPoint} from './traffic.js?v=130';
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const nearby=(engine,i)=>engine.neighbors(i);
 export const stopPosition=sidewalkPosition;

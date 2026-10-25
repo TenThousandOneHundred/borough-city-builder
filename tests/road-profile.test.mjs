@@ -151,3 +151,22 @@ test('adding and removing bus-stop ramps refreshes adjacent access paving and ca
  life.update(0);assert.equal(life.lastHeightSamples,1);close(life.parts[0].instanceMatrix.array[13],before+.19);assert.equal(JSON.stringify(resident),pose);assert.equal(w.citizens.time,0);
  CityView.prototype.drawTransitStops.call(v);life.update(0);assert.equal(r.accessRevision,revision+2);assert.equal(life.lastHeightSamples,0,'unchanged stops retain geometry and height caches');
 });
+
+
+test('vehicles follow the finished junction triangles and invalidate only their render height cache',()=>{
+ const w=city();E.buildRoadPath(w,[{x:10,y:24},{x:36,y:24}],'avenue');E.buildRoadPath(w,[{x:24,y:10},{x:24,y:35}],'street');
+ const r=new Roadworks(view());r.outside=()=>{};r.height=(_w,x,z)=>3+.005*x*x+.003*z*z;r.build(w);
+ const j=r.junctionPlan.junctions[0],x=j.x+.137,z=j.z+.219;let rendered=null,owners=0;
+ // Read the final batched mesh directly, independently of the query index.
+ for(const mesh of r.group.children){if(mesh.material!==r.asphalt)continue;const p=mesh.geometry.attributes.position;
+  for(let i=0;i<p.count;i+=3){const ax=p.getX(i),az=p.getZ(i),ux=p.getX(i+1)-ax,uz=p.getZ(i+1)-az,vx=p.getX(i+2)-ax,vz=p.getZ(i+2)-az,den=ux*vz-uz*vx;if(Math.abs(den)<1e-10)continue;
+   const b=((x-ax)*vz-(z-az)*vx)/den,c=(ux*(z-az)-uz*(x-ax))/den;if(b>1e-6&&c>1e-6&&b+c<1-1e-6){owners++;rendered=p.getY(i)+b*(p.getY(i+1)-p.getY(i))+c*(p.getY(i+2)-p.getY(i));}
+  }
+ }
+ assert.equal(owners,1,'exactly one visible pavement triangle owns the junction point');assert.notEqual(rendered,null);
+ assert.ok(Math.abs(rendered-r.height(w,x,z)-ASPHALT_HEIGHT)>.003,'fixture distinguishes triangulated pavement from raw terrain');
+ const agent={active:true,x,z,heading:.8,route:[1,2]},saved=JSON.stringify(agent),car={agent,mesh:new T.Group()},v={world:w,roadworks:r,running:false};
+ let queries=0;const sample=r.drivingHeight.bind(r);r.drivingHeight=(...args)=>{queries++;return sample(...args);};
+ CityView.prototype.moveCar.call(v,car);close(car.mesh.position.y,rendered,1e-6);CityView.prototype.moveCar.call(v,car);assert.equal(queries,1);
+ r.build(w);CityView.prototype.moveCar.call(v,car);assert.equal(queries,2);close(car.mesh.position.y,rendered,1e-6);assert.equal(JSON.stringify(agent),saved,'pavement work never advances or rewrites the route');
+});
