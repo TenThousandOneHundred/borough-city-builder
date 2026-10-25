@@ -1,6 +1,18 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 122 — Fine grass and road-following verges
+
+Ground vegetation now uses thin, curved leaf ribbons with darker roots and varied tips. Short verge grass follows the actual sampled road widths, tapers, junctions and footpaths; grass no longer vanishes from entire square road tiles. Empty zoning retains vegetation until construction occupies its land. Occupied lots, all four outside-road approaches and the whole plant footprint stay clear. Reeds occupy gentler damp banks, steep slopes stay bare, and local road edits do not reshuffle distant plants. Path edits refresh the cover even when their coarse tile occupancy stays unchanged.
+
+The official [Maps & Themes pictures](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/maps-themes) and terrain comparison in the official [Steam announcements](https://steamcommunity.com/app/949230/announcements/) were inspected before work and compared again with the finished street, meadow and riverbank close-ups. The first version left almost no reeds on the riverbanks; the planting threshold was revised to include gentler damp land. The oversized triangular grass spikes are replaced, but the terrain, lighting and broader landscape still differ from the reference game. Reference images are not shipped.
+
+The original shared buffers, reflection-aware visibility and four-draw limit remain. Grass has no animation or per-frame geometry uploads. In two alternating street-view comparisons, GPU medians changed from 15.23/14.87 to 15.47/15.05 ms, with frame medians around 19–20 ms. In the wider city view they changed from 8.56/9.06 to 10.32/10.18 ms, while frame medians stayed at 16.6 ms and draws stayed at 128. The finer geometry therefore has a measurable GPU cost; these scene-specific results are not a general FPS guarantee. Building and tree models, textures, detail settings, terrain heights and resident simulation are unchanged.
+
+All 475 checks in the full local invocation pass, including seven new vegetation and refresh regressions. Module syntax, model integrity and lossless compression checks pass. In the full local game, the 192-resident test city was manually saved at day 3 with 64 households and ₡991,707, returned home, survived a page reload, and continued with the same residents and households. Continuing resumes simulation, which advanced to day 4 and ₡991,769 during the check. No browser errors or warnings were recorded.
+
+This is feature update three after optimization 119. Edition 123 is the next dedicated optimization pass.
+
 ## Edition 121 — Crossing signals and roundabout priority
 
 Pedestrians now wait at signal-controlled crossings and continue to the opposite curb when a signal changes mid-crossing. Drivers yield to people waiting at an uncontrolled crossing or already crossing. A car or held bus occupying the markings clears before anybody steps off the curb. Residents and bus passengers share these rules, show their waiting reason, and continue simulation offscreen. Restored walkers already in a crossing keep their position and priority. Transient crossing plans are cached per route and are rebuilt when roads or bus-stop crossings change.

@@ -66,3 +66,8 @@ test('zoning-side edits leave building batches, road surfaces and active traffic
  for(const mode of ['left','right','none','both']){E.setRoadZoning(w,JSON.stringify(['path',p.id]),mode);v.refresh();assertRetained(v,before);assert.deepEqual(v.calls,calls);}
  for(let x=4;x<20;x++)road(w,x,36);v.refresh();const current={...v.calls},saved=roots(v),target=E.roadZoningTargets(w,index(10,36))[0];E.setRoadZoning(w,target.id,'none');v.refresh();assertRetained(v,saved);assert.deepEqual(v.calls,current);
 });
+
+test('path geometry edits refresh ground cover even when occupied coarse tiles do not change',()=>{
+ const w=world();w.money=1e7;E.buildWalkPath(w,[{x:5,y:20},{x:20,y:20}]);const v=view(w);let covers=0,trees=0;v.landscape.refreshCover=()=>covers++;v.landscape.refreshTrees=()=>trees++;const types=w.tiles.map(t=>t.type),old=roots(v);
+ w.walkPaths[0].controls[0].y+=.1;w.walkRevision=(w.walkRevision||0)+1;v.refresh();assert.deepEqual(w.tiles.map(t=>t.type),types);assert.equal(covers,1);assert.equal(trees,0);assertRetained(v,old);v.refresh();assert.equal(covers,1,'unchanged frames never rebuild vegetation');
+});
