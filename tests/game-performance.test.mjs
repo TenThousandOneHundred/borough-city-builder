@@ -83,17 +83,20 @@ test('vehicle visibility changes preserve exact retained matrices without rewrit
 test('ground-cover culling preserves visible blades and shares buffers across bounded draw ranges',async()=>{
  const {groundCover}=await import('../dist/ground-cover.js'),{groundHeight,wetness}=await import('../dist/landscape.js');
  const world=E.createWorld('Cover culling','plains',42),before=JSON.stringify(world),cover=groundCover({},world,groundHeight,wetness),geometry=cover.children[0].geometry;
- const attributes=Object.values(geometry.attributes),versions=attributes.map(a=>a.version),arrays=attributes.map(a=>a.array.slice());
+ const attributes=[...Object.values(geometry.attributes),geometry.index],versions=attributes.map(a=>a.version),arrays=attributes.map(a=>a.array.slice());
  for(const mesh of cover.children){assert.equal(mesh.material,cover.children[0].material);for(const [name,a]of Object.entries(geometry.attributes))assert.equal(mesh.geometry.attributes[name],a);}
  const camera=new THREE.PerspectiveCamera(43,16/9,.2,1800);camera.position.set(0,8,15);camera.lookAt(0,0,0);cover.userData.update(camera);
  const stats=cover.userData.stats;assert.ok(stats.visibleVertices<stats.totalVertices*.5);assert.ok(stats.visibleChunks<=4);const replans=stats.replans;cover.userData.update(camera);assert.equal(stats.replans,replans,'stationary camera reuses the plan');
  const f=new THREE.Frustum().setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse)),p=geometry.attributes.position,v=new THREE.Vector3();
  const included=i=>cover.children.some(m=>i>=m.geometry.drawRange.start&&i<m.geometry.drawRange.start+m.geometry.drawRange.count);
- for(let i=0;i<p.count;i++)if(f.containsPoint(v.fromBufferAttribute(p,i)))assert.ok(included(i),'every visible vertex remains submitted');
+ for(let i=0;i<geometry.index.count;i++)if(f.containsPoint(v.fromBufferAttribute(p,geometry.index.getX(i))))assert.ok(included(i),'every visible triangle reference remains submitted');
  const nearRanges=cover.children.map(m=>({...m.geometry.drawRange}));
  const reflection=new THREE.PerspectiveCamera(43,16/9,.2,1800);reflection.position.set(0,250,300);reflection.lookAt(0,0,0);
  cover.children[0].onBeforeRender(null,null,reflection);assert.equal(stats.visibleVertices,stats.totalVertices);assert.equal(stats.visibleChunks,1,'wide reflection sees all blades in one draw');assert.deepEqual(cover.children.map(m=>m.count),[1,0,0,0],'unused batches have no GPU instances');
  cover.children[1].onBeforeRender(null,null,camera);assert.deepEqual(cover.children.map(m=>m.geometry.drawRange),nearRanges,'main camera restores its own selection');
+ const planned=stats.replans;for(let i=0;i<20;i++){cover.children[0].onBeforeRender(null,null,reflection);cover.children[1].onBeforeRender(null,null,camera);}assert.equal(stats.replans,planned,'unchanged main and reflection views reuse their independent plans');
+ camera.position.x+=10;cover.userData.update(camera);assert.equal(stats.replans,planned+1,'moving a cached camera invalidates its plan');
+ for(const mesh of cover.children)assert.equal(mesh.geometry.index,geometry.index);
  assert.deepEqual(attributes.map(a=>a.version),versions,'camera changes upload no vertex data');attributes.forEach((a,i)=>assert.deepEqual(a.array,arrays[i]));assert.equal(JSON.stringify(world),before);
  let geometryDisposals=0,materialDisposals=0;cover.children.forEach(m=>m.geometry.addEventListener('dispose',()=>geometryDisposals++));cover.children[0].material.addEventListener('dispose',()=>materialDisposals++);cover.userData.dispose();cover.userData.dispose();assert.equal(geometryDisposals,4);assert.equal(materialDisposals,1);
 });

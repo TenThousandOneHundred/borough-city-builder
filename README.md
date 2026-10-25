@@ -1,6 +1,18 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 123 — Less work for identical grass
+
+Grass and reeds now share each leaf corner between neighboring triangles instead of storing the same corner repeatedly. Fixed-size arrays replace growing number arrays during preparation. Spatial packing preserves the exact triangle order, coordinates, normals and colors from Edition 122, including leaves crossing chunk boundaries. The main view and water-reflection camera also retain independent visibility plans; switching between unchanged views no longer repeats the chunk search. Moving or changing either camera still invalidates its own plan.
+
+Across plains, river and island maps, grass buffer memory falls by about 33%. Median preparation CPU time changes from 111.1 to 51.2 ms, 89.1 to 42.8 ms, and 56.5 to 30.6 ms respectively across seven measured trials after warmup. A 20,000-switch camera fixture reduces visibility work from 20–30 ms to about 7 ms and performs zero extra chunk searches after the two views are prepared. These are ground-cover measurements, not total city-start or overall FPS claims. Reproduce with `GIT_BIN=/path/to/git node scripts/benchmark-ground-cover-indexed.mjs 0191971`.
+
+Three alternating browser trials reduced median grass preparation from 134.7 to 86.9 ms in the street view and from 139.3 to 84.0 ms in the wider city view. Frame intervals remained around 16.6 ms with identical draw and triangle counts. GPU timings varied rather than establishing a consistent speedup: the wider-view trials ranged from 9.15–10.47 ms before and 8.98–10.52 ms after. Close-up grass and riverbank comparisons retain the previously inspected reference-driven appearance. This optimization introduces no new visual feature or reference asset. Building/tree models, textures, terrain heights, detail settings and offscreen simulation remain unchanged.
+
+All 480 local checks pass, together with syntax, asset integrity and lossless compression validation. Frozen Edition 122 triangle-stream hashes match on all three terrain types, and 24 camera selections per map match the former implementation. Shared 32-bit indices, empty cover, chunk boundaries, reflection restoration and camera-projection changes are covered. The previous saved city retained exactly 192 residents, day 4 and ₡991,769 through manual save, Save & Exit and reload in the full local game. No browser errors or warnings were recorded.
+
+This completes the optimization after feature updates 120–122. The next dedicated optimization follows feature updates 124–126, in Edition 127.
+
 ## Edition 122 — Fine grass and road-following verges
 
 Ground vegetation now uses thin, curved leaf ribbons with darker roots and varied tips. Short verge grass follows the actual sampled road widths, tapers, junctions and footpaths; grass no longer vanishes from entire square road tiles. Empty zoning retains vegetation until construction occupies its land. Occupied lots, all four outside-road approaches and the whole plant footprint stay clear. Reeds occupy gentler damp banks, steep slopes stay bare, and local road edits do not reshuffle distant plants. Path edits refresh the cover even when their coarse tile occupancy stays unchanged.
