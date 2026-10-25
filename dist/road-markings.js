@@ -1,5 +1,5 @@
-import {atDistance} from './street-geometry.js?v=126';
-import {laneLayout} from './road-lanes.js?v=126';
+import {atDistance} from './street-geometry.js?v=127';
+import {laneLayout} from './road-lanes.js?v=127';
 // Static travel guidance, not new lane restrictions. Through approaches show
 // forward arrows; terminal approaches show the available turn directions.
 export function approachMarkings(roads,junctions){

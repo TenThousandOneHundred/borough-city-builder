@@ -1,0 +1,1496 @@
+{
+  "edition": 126,
+  "models": {
+    "container": [
+      {
+        "material": "industrial-container",
+        "near": {
+          "attributes": {
+            "position": {
+              "hash": "db64b3c5837dddedf964cb5df3b99d8139e528cd950566fddcb39f2438e94d8f",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 1704
+            },
+            "normal": {
+              "hash": "d5436dacff972d49203315ad048eb581d3396283fc91334852c248e0d64b8886",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 1704
+            },
+            "uv": {
+              "hash": "324becda50373d92d7875304776a8329b9872117158fd85b7e31b8b8e14da1ed",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 1704
+            }
+          },
+          "index": "10e0d7f8863946fb0c61b279b8237ac9113367bf854b0d0368438ee109a8e58d",
+          "indexCount": 2556
+        },
+        "far": {
+          "attributes": {
+            "position": {
+              "hash": "db64b3c5837dddedf964cb5df3b99d8139e528cd950566fddcb39f2438e94d8f",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 1704
+            },
+            "normal": {
+              "hash": "d5436dacff972d49203315ad048eb581d3396283fc91334852c248e0d64b8886",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 1704
+            },
+            "uv": {
+              "hash": "324becda50373d92d7875304776a8329b9872117158fd85b7e31b8b8e14da1ed",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 1704
+            }
+          },
+          "index": "5d1e21207d588aa27ea97baa492715ef4da0f853dfef63e2ba88b88ab579b804",
+          "indexCount": 180
+        },
+        "shadow": {
+          "attributes": {
+            "position": {
+              "hash": "db64b3c5837dddedf964cb5df3b99d8139e528cd950566fddcb39f2438e94d8f",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 1704
+            },
+            "normal": {
+              "hash": "d5436dacff972d49203315ad048eb581d3396283fc91334852c248e0d64b8886",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 1704
+            },
+            "uv": {
+              "hash": "324becda50373d92d7875304776a8329b9872117158fd85b7e31b8b8e14da1ed",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 1704
+            }
+          },
+          "index": "5d1e21207d588aa27ea97baa492715ef4da0f853dfef63e2ba88b88ab579b804",
+          "indexCount": 180
+        },
+        "color": [
+          0.08437621153575764,
+          0.158960835050774,
+          0.1878207722902346
+        ],
+        "roughness": 0.87,
+        "metalness": 0.05,
+        "alphaTest": 0,
+        "transparent": false,
+        "side": 0,
+        "depthWrite": true,
+        "texture": null
+      },
+      {
+        "material": "industrial-steel",
+        "near": {
+          "attributes": {
+            "position": {
+              "hash": "a0bca927caaf1c94a6bed30dc1fb1cfdaaa7a511a83bf6eefb08c1e2c81715b8",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 416
+            },
+            "normal": {
+              "hash": "3b4dfa4eee26f9e18d9a95d4569f946f57b722695127b02dd857bb8b4492d929",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 416
+            },
+            "uv": {
+              "hash": "ac23131bc6de8ed1b26f9859aca2b46769b638cd4ba73ff17582510eb37a77f2",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 416
+            }
+          },
+          "index": "644de4736a0a881ca3b97ddd445e533a4991fe8d37ad77af9f8f104d9734012a",
+          "indexCount": 720
+        },
+        "far": {
+          "attributes": {
+            "position": {
+              "hash": "a0bca927caaf1c94a6bed30dc1fb1cfdaaa7a511a83bf6eefb08c1e2c81715b8",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 416
+            },
+            "normal": {
+              "hash": "3b4dfa4eee26f9e18d9a95d4569f946f57b722695127b02dd857bb8b4492d929",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 416
+            },
+            "uv": {
+              "hash": "ac23131bc6de8ed1b26f9859aca2b46769b638cd4ba73ff17582510eb37a77f2",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 416
+            }
+          },
+          "index": "644de4736a0a881ca3b97ddd445e533a4991fe8d37ad77af9f8f104d9734012a",
+          "indexCount": 720
+        },
+        "shadow": {
+          "attributes": {
+            "position": {
+              "hash": "a0bca927caaf1c94a6bed30dc1fb1cfdaaa7a511a83bf6eefb08c1e2c81715b8",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 416
+            },
+            "normal": {
+              "hash": "3b4dfa4eee26f9e18d9a95d4569f946f57b722695127b02dd857bb8b4492d929",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 416
+            },
+            "uv": {
+              "hash": "ac23131bc6de8ed1b26f9859aca2b46769b638cd4ba73ff17582510eb37a77f2",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 416
+            }
+          },
+          "index": "644de4736a0a881ca3b97ddd445e533a4991fe8d37ad77af9f8f104d9734012a",
+          "indexCount": 720
+        },
+        "color": [
+          0.35640014413537763,
+          0.3915724777393922,
+          0.3712376804636741
+        ],
+        "roughness": 0.56,
+        "metalness": 0.45,
+        "alphaTest": 0,
+        "transparent": false,
+        "side": 0,
+        "depthWrite": true,
+        "texture": null
+      },
+      {
+        "material": "industrial-dark",
+        "near": {
+          "attributes": {
+            "position": {
+              "hash": "0e5edb975ffd9d8192965a4db784c08bec05b15860efd82a6bda306f4dd482d4",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 48
+            },
+            "normal": {
+              "hash": "4343f400ff9d965cf7ff5eeb9f51f5ae3507a4997d6c99e2e4ddc4e1fffe624e",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 48
+            },
+            "uv": {
+              "hash": "5cbd0f3080319609e1712031e82139d1b02b8f6990b6d54c62cfcb621a430986",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 48
+            }
+          },
+          "index": "01df634a07d7d4b26838a584a5cf90a63e1b9dc4bae15bd181fe7e589e0bf1c9",
+          "indexCount": 72
+        },
+        "far": {
+          "attributes": {
+            "position": {
+              "hash": "0e5edb975ffd9d8192965a4db784c08bec05b15860efd82a6bda306f4dd482d4",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 48
+            },
+            "normal": {
+              "hash": "4343f400ff9d965cf7ff5eeb9f51f5ae3507a4997d6c99e2e4ddc4e1fffe624e",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 48
+            },
+            "uv": {
+              "hash": "5cbd0f3080319609e1712031e82139d1b02b8f6990b6d54c62cfcb621a430986",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 48
+            }
+          },
+          "index": "01df634a07d7d4b26838a584a5cf90a63e1b9dc4bae15bd181fe7e589e0bf1c9",
+          "indexCount": 72
+        },
+        "shadow": {
+          "attributes": {
+            "position": {
+              "hash": "0e5edb975ffd9d8192965a4db784c08bec05b15860efd82a6bda306f4dd482d4",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 48
+            },
+            "normal": {
+              "hash": "4343f400ff9d965cf7ff5eeb9f51f5ae3507a4997d6c99e2e4ddc4e1fffe624e",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 48
+            },
+            "uv": {
+              "hash": "5cbd0f3080319609e1712031e82139d1b02b8f6990b6d54c62cfcb621a430986",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 48
+            }
+          },
+          "index": "01df634a07d7d4b26838a584a5cf90a63e1b9dc4bae15bd181fe7e589e0bf1c9",
+          "indexCount": 72
+        },
+        "color": [
+          0.033104766565152086,
+          0.04373502925049377,
+          0.04373502925049377
+        ],
+        "roughness": 0.87,
+        "metalness": 0.05,
+        "alphaTest": 0,
+        "transparent": false,
+        "side": 0,
+        "depthWrite": true,
+        "texture": null
+      }
+    ],
+    "timber": [
+      {
+        "material": "industrial-timber",
+        "near": {
+          "attributes": {
+            "position": {
+              "hash": "014c244182bc22aa90756e8e3e6ccd29d77910411bacb2b17c13e05791e2855a",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 264
+            },
+            "normal": {
+              "hash": "463b00c06bab7c0aa287cbd44617d312c3865ece19417b1b9d98ba5ef763504f",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 264
+            },
+            "uv": {
+              "hash": "95928924ee56ef6df26d529e84a2cb3f96fead8b346653134008d45d5da45f23",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 264
+            }
+          },
+          "index": "513f1e5dc106bfca99988ab6fa2b10425a442c8996e1278a598585dd002144a7",
+          "indexCount": 720
+        },
+        "far": {
+          "attributes": {
+            "position": {
+              "hash": "014c244182bc22aa90756e8e3e6ccd29d77910411bacb2b17c13e05791e2855a",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 264
+            },
+            "normal": {
+              "hash": "463b00c06bab7c0aa287cbd44617d312c3865ece19417b1b9d98ba5ef763504f",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 264
+            },
+            "uv": {
+              "hash": "95928924ee56ef6df26d529e84a2cb3f96fead8b346653134008d45d5da45f23",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 264
+            }
+          },
+          "index": "513f1e5dc106bfca99988ab6fa2b10425a442c8996e1278a598585dd002144a7",
+          "indexCount": 720
+        },
+        "shadow": {
+          "attributes": {
+            "position": {
+              "hash": "014c244182bc22aa90756e8e3e6ccd29d77910411bacb2b17c13e05791e2855a",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 264
+            },
+            "normal": {
+              "hash": "463b00c06bab7c0aa287cbd44617d312c3865ece19417b1b9d98ba5ef763504f",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 264
+            },
+            "uv": {
+              "hash": "95928924ee56ef6df26d529e84a2cb3f96fead8b346653134008d45d5da45f23",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 264
+            }
+          },
+          "index": "513f1e5dc106bfca99988ab6fa2b10425a442c8996e1278a598585dd002144a7",
+          "indexCount": 720
+        },
+        "color": [
+          0.15592646369776456,
+          0.08437621153575764,
+          0.036889450395083165
+        ],
+        "roughness": 0.87,
+        "metalness": 0.05,
+        "alphaTest": 0,
+        "transparent": false,
+        "side": 0,
+        "depthWrite": true,
+        "texture": null
+      },
+      {
+        "material": "industrial-cutwood",
+        "near": {
+          "attributes": {
+            "position": {
+              "hash": "d74ba1fa49430f31225ff62c921ed229e260de251998cee49c68a9695233fecc",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 288
+            },
+            "normal": {
+              "hash": "4d3300f96f70f62463442a49826350c9a839e5f77a396aa036cbc5c7eb1ff07c",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 288
+            },
+            "uv": {
+              "hash": "344b88983341421f9980dcb07c67b01d5fe075ff8c0dd59c6fafc361d5caf6d8",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 288
+            }
+          },
+          "index": "79c4ccadd0bd3209d9234d20f11b71db07eb2c80dddee5fb694c716a50f24e2d",
+          "indexCount": 720
+        },
+        "far": {
+          "attributes": {
+            "position": {
+              "hash": "d74ba1fa49430f31225ff62c921ed229e260de251998cee49c68a9695233fecc",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 288
+            },
+            "normal": {
+              "hash": "4d3300f96f70f62463442a49826350c9a839e5f77a396aa036cbc5c7eb1ff07c",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 288
+            },
+            "uv": {
+              "hash": "344b88983341421f9980dcb07c67b01d5fe075ff8c0dd59c6fafc361d5caf6d8",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 288
+            }
+          },
+          "index": "79c4ccadd0bd3209d9234d20f11b71db07eb2c80dddee5fb694c716a50f24e2d",
+          "indexCount": 720
+        },
+        "shadow": {
+          "attributes": {
+            "position": {
+              "hash": "d74ba1fa49430f31225ff62c921ed229e260de251998cee49c68a9695233fecc",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 288
+            },
+            "normal": {
+              "hash": "4d3300f96f70f62463442a49826350c9a839e5f77a396aa036cbc5c7eb1ff07c",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 288
+            },
+            "uv": {
+              "hash": "344b88983341421f9980dcb07c67b01d5fe075ff8c0dd59c6fafc361d5caf6d8",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 288
+            }
+          },
+          "index": "79c4ccadd0bd3209d9234d20f11b71db07eb2c80dddee5fb694c716a50f24e2d",
+          "indexCount": 720
+        },
+        "color": [
+          0.46778379610254284,
+          0.3139887133649649,
+          0.13013647668074665
+        ],
+        "roughness": 0.87,
+        "metalness": 0.05,
+        "alphaTest": 0,
+        "transparent": false,
+        "side": 0,
+        "depthWrite": true,
+        "texture": null
+      },
+      {
+        "material": "site-wood",
+        "near": {
+          "attributes": {
+            "position": {
+              "hash": "458c5c32a495c04211d79391bb2901c6d582bac407a3ed2b0f61390f727f3c70",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 48
+            },
+            "normal": {
+              "hash": "4343f400ff9d965cf7ff5eeb9f51f5ae3507a4997d6c99e2e4ddc4e1fffe624e",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 48
+            },
+            "uv": {
+              "hash": "5cbd0f3080319609e1712031e82139d1b02b8f6990b6d54c62cfcb621a430986",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 48
+            }
+          },
+          "index": "01df634a07d7d4b26838a584a5cf90a63e1b9dc4bae15bd181fe7e589e0bf1c9",
+          "indexCount": 72
+        },
+        "far": {
+          "attributes": {
+            "position": {
+              "hash": "458c5c32a495c04211d79391bb2901c6d582bac407a3ed2b0f61390f727f3c70",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 48
+            },
+            "normal": {
+              "hash": "4343f400ff9d965cf7ff5eeb9f51f5ae3507a4997d6c99e2e4ddc4e1fffe624e",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 48
+            },
+            "uv": {
+              "hash": "5cbd0f3080319609e1712031e82139d1b02b8f6990b6d54c62cfcb621a430986",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 48
+            }
+          },
+          "index": "01df634a07d7d4b26838a584a5cf90a63e1b9dc4bae15bd181fe7e589e0bf1c9",
+          "indexCount": 72
+        },
+        "shadow": {
+          "attributes": {
+            "position": {
+              "hash": "458c5c32a495c04211d79391bb2901c6d582bac407a3ed2b0f61390f727f3c70",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 48
+            },
+            "normal": {
+              "hash": "4343f400ff9d965cf7ff5eeb9f51f5ae3507a4997d6c99e2e4ddc4e1fffe624e",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 48
+            },
+            "uv": {
+              "hash": "5cbd0f3080319609e1712031e82139d1b02b8f6990b6d54c62cfcb621a430986",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 48
+            }
+          },
+          "index": "01df634a07d7d4b26838a584a5cf90a63e1b9dc4bae15bd181fe7e589e0bf1c9",
+          "indexCount": 72
+        },
+        "color": [
+          0.26225065751888765,
+          0.21586050010324415,
+          0.14702726648767014
+        ],
+        "roughness": 0.94,
+        "metalness": 0,
+        "alphaTest": 0,
+        "transparent": false,
+        "side": 0,
+        "depthWrite": true,
+        "texture": null
+      }
+    ],
+    "pipes": [
+      {
+        "material": "industrial-steel",
+        "near": {
+          "attributes": {
+            "position": {
+              "hash": "37287bd8c0c9af0d27536e1777032f241df95f1c9f333142a83326f53c9447da",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 546
+            },
+            "normal": {
+              "hash": "cd348bd2b7c42ecaf3d9cb9d99888b55c9d7bba883044cf7fb35bff9d5bcad8b",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 546
+            },
+            "uv": {
+              "hash": "c112765131c538b1eda73c667286daffce04e41bbbcb9c50893f836e43ab514a",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 546
+            }
+          },
+          "index": "d56b103828350b38f0e425330943f7ea55cc788fb8e80568e085ecd551d5fb8e",
+          "indexCount": 1512
+        },
+        "far": {
+          "attributes": {
+            "position": {
+              "hash": "37287bd8c0c9af0d27536e1777032f241df95f1c9f333142a83326f53c9447da",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 546
+            },
+            "normal": {
+              "hash": "cd348bd2b7c42ecaf3d9cb9d99888b55c9d7bba883044cf7fb35bff9d5bcad8b",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 546
+            },
+            "uv": {
+              "hash": "c112765131c538b1eda73c667286daffce04e41bbbcb9c50893f836e43ab514a",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 546
+            }
+          },
+          "index": "d56b103828350b38f0e425330943f7ea55cc788fb8e80568e085ecd551d5fb8e",
+          "indexCount": 1512
+        },
+        "shadow": {
+          "attributes": {
+            "position": {
+              "hash": "37287bd8c0c9af0d27536e1777032f241df95f1c9f333142a83326f53c9447da",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 546
+            },
+            "normal": {
+              "hash": "cd348bd2b7c42ecaf3d9cb9d99888b55c9d7bba883044cf7fb35bff9d5bcad8b",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 546
+            },
+            "uv": {
+              "hash": "c112765131c538b1eda73c667286daffce04e41bbbcb9c50893f836e43ab514a",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 546
+            }
+          },
+          "index": "d56b103828350b38f0e425330943f7ea55cc788fb8e80568e085ecd551d5fb8e",
+          "indexCount": 1512
+        },
+        "color": [
+          0.35640014413537763,
+          0.3915724777393922,
+          0.3712376804636741
+        ],
+        "roughness": 0.56,
+        "metalness": 0.45,
+        "alphaTest": 0,
+        "transparent": false,
+        "side": 0,
+        "depthWrite": true,
+        "texture": null
+      },
+      {
+        "material": "industrial-dark",
+        "near": {
+          "attributes": {
+            "position": {
+              "hash": "81320900b0b4e74567f56129421411a85c3e48d34548a2a46c9c55f9159bbbf1",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 182
+            },
+            "normal": {
+              "hash": "1aef6205802fe5d722022a65e3c85c0e417ec7653b2f3e0bca7832b15362a6c1",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 182
+            },
+            "uv": {
+              "hash": "02b5a68f588280c30d474f5f3606e89ef6449e89e44d0ca082e8640029194caa",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 182
+            }
+          },
+          "index": "247e5ff0baaba4e8a1a50ec2e9fff5497d6edee58a5b8d7b9ab22545813fb489",
+          "indexCount": 504
+        },
+        "far": {
+          "attributes": {
+            "position": {
+              "hash": "81320900b0b4e74567f56129421411a85c3e48d34548a2a46c9c55f9159bbbf1",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 182
+            },
+            "normal": {
+              "hash": "1aef6205802fe5d722022a65e3c85c0e417ec7653b2f3e0bca7832b15362a6c1",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 182
+            },
+            "uv": {
+              "hash": "02b5a68f588280c30d474f5f3606e89ef6449e89e44d0ca082e8640029194caa",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 182
+            }
+          },
+          "index": "247e5ff0baaba4e8a1a50ec2e9fff5497d6edee58a5b8d7b9ab22545813fb489",
+          "indexCount": 504
+        },
+        "shadow": {
+          "attributes": {
+            "position": {
+              "hash": "81320900b0b4e74567f56129421411a85c3e48d34548a2a46c9c55f9159bbbf1",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 182
+            },
+            "normal": {
+              "hash": "1aef6205802fe5d722022a65e3c85c0e417ec7653b2f3e0bca7832b15362a6c1",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 182
+            },
+            "uv": {
+              "hash": "02b5a68f588280c30d474f5f3606e89ef6449e89e44d0ca082e8640029194caa",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 182
+            }
+          },
+          "index": "247e5ff0baaba4e8a1a50ec2e9fff5497d6edee58a5b8d7b9ab22545813fb489",
+          "indexCount": 504
+        },
+        "color": [
+          0.033104766565152086,
+          0.04373502925049377,
+          0.04373502925049377
+        ],
+        "roughness": 0.87,
+        "metalness": 0.05,
+        "alphaTest": 0,
+        "transparent": false,
+        "side": 0,
+        "depthWrite": true,
+        "texture": null
+      },
+      {
+        "material": "site-wood",
+        "near": {
+          "attributes": {
+            "position": {
+              "hash": "cbe035cf9cb28204ae9b47d4ba1386d760d28407ccc3a930163eeab72d313515",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 48
+            },
+            "normal": {
+              "hash": "4343f400ff9d965cf7ff5eeb9f51f5ae3507a4997d6c99e2e4ddc4e1fffe624e",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 48
+            },
+            "uv": {
+              "hash": "5cbd0f3080319609e1712031e82139d1b02b8f6990b6d54c62cfcb621a430986",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 48
+            }
+          },
+          "index": "01df634a07d7d4b26838a584a5cf90a63e1b9dc4bae15bd181fe7e589e0bf1c9",
+          "indexCount": 72
+        },
+        "far": {
+          "attributes": {
+            "position": {
+              "hash": "cbe035cf9cb28204ae9b47d4ba1386d760d28407ccc3a930163eeab72d313515",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 48
+            },
+            "normal": {
+              "hash": "4343f400ff9d965cf7ff5eeb9f51f5ae3507a4997d6c99e2e4ddc4e1fffe624e",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 48
+            },
+            "uv": {
+              "hash": "5cbd0f3080319609e1712031e82139d1b02b8f6990b6d54c62cfcb621a430986",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 48
+            }
+          },
+          "index": "01df634a07d7d4b26838a584a5cf90a63e1b9dc4bae15bd181fe7e589e0bf1c9",
+          "indexCount": 72
+        },
+        "shadow": {
+          "attributes": {
+            "position": {
+              "hash": "cbe035cf9cb28204ae9b47d4ba1386d760d28407ccc3a930163eeab72d313515",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 48
+            },
+            "normal": {
+              "hash": "4343f400ff9d965cf7ff5eeb9f51f5ae3507a4997d6c99e2e4ddc4e1fffe624e",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 48
+            },
+            "uv": {
+              "hash": "5cbd0f3080319609e1712031e82139d1b02b8f6990b6d54c62cfcb621a430986",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 48
+            }
+          },
+          "index": "01df634a07d7d4b26838a584a5cf90a63e1b9dc4bae15bd181fe7e589e0bf1c9",
+          "indexCount": 72
+        },
+        "color": [
+          0.26225065751888765,
+          0.21586050010324415,
+          0.14702726648767014
+        ],
+        "roughness": 0.94,
+        "metalness": 0,
+        "alphaTest": 0,
+        "transparent": false,
+        "side": 0,
+        "depthWrite": true,
+        "texture": null
+      }
+    ],
+    "pallets": [
+      {
+        "material": "site-wood",
+        "near": {
+          "attributes": {
+            "position": {
+              "hash": "56169672a9aef9b9cb73a4761502d9c67d02d73705b98a882aefdd141dc2813f",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 576
+            },
+            "normal": {
+              "hash": "af1f924ec110d694a64a7f04f6c3e24cd61fc1c30677750a6b742bd91dcff67f",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 576
+            },
+            "uv": {
+              "hash": "0817c1883f303301a0bcaf45ff429414607c86f2013ec252ce41035b2623d6d9",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 576
+            }
+          },
+          "index": "b5f6530c90a7878186046470e42fe56d66b3879d632301d99874345f9cc9bfd4",
+          "indexCount": 864
+        },
+        "far": {
+          "attributes": {
+            "position": {
+              "hash": "56169672a9aef9b9cb73a4761502d9c67d02d73705b98a882aefdd141dc2813f",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 576
+            },
+            "normal": {
+              "hash": "af1f924ec110d694a64a7f04f6c3e24cd61fc1c30677750a6b742bd91dcff67f",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 576
+            },
+            "uv": {
+              "hash": "0817c1883f303301a0bcaf45ff429414607c86f2013ec252ce41035b2623d6d9",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 576
+            }
+          },
+          "index": "b5f6530c90a7878186046470e42fe56d66b3879d632301d99874345f9cc9bfd4",
+          "indexCount": 864
+        },
+        "shadow": {
+          "attributes": {
+            "position": {
+              "hash": "56169672a9aef9b9cb73a4761502d9c67d02d73705b98a882aefdd141dc2813f",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 576
+            },
+            "normal": {
+              "hash": "af1f924ec110d694a64a7f04f6c3e24cd61fc1c30677750a6b742bd91dcff67f",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 576
+            },
+            "uv": {
+              "hash": "0817c1883f303301a0bcaf45ff429414607c86f2013ec252ce41035b2623d6d9",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 576
+            }
+          },
+          "index": "b5f6530c90a7878186046470e42fe56d66b3879d632301d99874345f9cc9bfd4",
+          "indexCount": 864
+        },
+        "color": [
+          0.26225065751888765,
+          0.21586050010324415,
+          0.14702726648767014
+        ],
+        "roughness": 0.94,
+        "metalness": 0,
+        "alphaTest": 0,
+        "transparent": false,
+        "side": 0,
+        "depthWrite": true,
+        "texture": null
+      },
+      {
+        "material": "industrial-cutwood",
+        "near": {
+          "attributes": {
+            "position": {
+              "hash": "d73ae2837d1d3f8709328672df6d5916290bef51d16612c22df371456d87da50",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 96
+            },
+            "normal": {
+              "hash": "26198afab8a763aefa5f415f69a9e4d6a0d54b77b26f0b26936212570972a492",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 96
+            },
+            "uv": {
+              "hash": "9d109a4bfbea5755fa23dc57dbd0238775724b08e6b1823015a29180e7922d19",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 96
+            }
+          },
+          "index": "1eb1b8aa95ce93b790548430479fc3b17794d4d0345960815fccbb8898b44afd",
+          "indexCount": 144
+        },
+        "far": {
+          "attributes": {
+            "position": {
+              "hash": "d73ae2837d1d3f8709328672df6d5916290bef51d16612c22df371456d87da50",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 96
+            },
+            "normal": {
+              "hash": "26198afab8a763aefa5f415f69a9e4d6a0d54b77b26f0b26936212570972a492",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 96
+            },
+            "uv": {
+              "hash": "9d109a4bfbea5755fa23dc57dbd0238775724b08e6b1823015a29180e7922d19",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 96
+            }
+          },
+          "index": "1eb1b8aa95ce93b790548430479fc3b17794d4d0345960815fccbb8898b44afd",
+          "indexCount": 144
+        },
+        "shadow": {
+          "attributes": {
+            "position": {
+              "hash": "d73ae2837d1d3f8709328672df6d5916290bef51d16612c22df371456d87da50",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 96
+            },
+            "normal": {
+              "hash": "26198afab8a763aefa5f415f69a9e4d6a0d54b77b26f0b26936212570972a492",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 96
+            },
+            "uv": {
+              "hash": "9d109a4bfbea5755fa23dc57dbd0238775724b08e6b1823015a29180e7922d19",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 96
+            }
+          },
+          "index": "1eb1b8aa95ce93b790548430479fc3b17794d4d0345960815fccbb8898b44afd",
+          "indexCount": 144
+        },
+        "color": [
+          0.46778379610254284,
+          0.3139887133649649,
+          0.13013647668074665
+        ],
+        "roughness": 0.87,
+        "metalness": 0.05,
+        "alphaTest": 0,
+        "transparent": false,
+        "side": 0,
+        "depthWrite": true,
+        "texture": null
+      },
+      {
+        "material": "industrial-dark",
+        "near": {
+          "attributes": {
+            "position": {
+              "hash": "71954286a2f3539c72ec7cfdea4ab7d6c832b075e267e98f3ec11aab4c267c91",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 192
+            },
+            "normal": {
+              "hash": "7f99a5e9856264b5cc9b372ef19c418bdb67cea45e4e4429220d2b6e9f852714",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 192
+            },
+            "uv": {
+              "hash": "e614f7cfdfad4fcd4295405fa89d0c43926e62f7477b747cafa9fd88cc266710",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 192
+            }
+          },
+          "index": "a0dca5531b6b5b4ebf0d6bd771eeb0502f6ac8e89f71d9545099bea0a6b8d4a8",
+          "indexCount": 288
+        },
+        "far": {
+          "attributes": {
+            "position": {
+              "hash": "71954286a2f3539c72ec7cfdea4ab7d6c832b075e267e98f3ec11aab4c267c91",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 192
+            },
+            "normal": {
+              "hash": "7f99a5e9856264b5cc9b372ef19c418bdb67cea45e4e4429220d2b6e9f852714",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 192
+            },
+            "uv": {
+              "hash": "e614f7cfdfad4fcd4295405fa89d0c43926e62f7477b747cafa9fd88cc266710",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 192
+            }
+          },
+          "index": "a0dca5531b6b5b4ebf0d6bd771eeb0502f6ac8e89f71d9545099bea0a6b8d4a8",
+          "indexCount": 288
+        },
+        "shadow": {
+          "attributes": {
+            "position": {
+              "hash": "71954286a2f3539c72ec7cfdea4ab7d6c832b075e267e98f3ec11aab4c267c91",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 192
+            },
+            "normal": {
+              "hash": "7f99a5e9856264b5cc9b372ef19c418bdb67cea45e4e4429220d2b6e9f852714",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 192
+            },
+            "uv": {
+              "hash": "e614f7cfdfad4fcd4295405fa89d0c43926e62f7477b747cafa9fd88cc266710",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 192
+            }
+          },
+          "index": "a0dca5531b6b5b4ebf0d6bd771eeb0502f6ac8e89f71d9545099bea0a6b8d4a8",
+          "indexCount": 288
+        },
+        "color": [
+          0.033104766565152086,
+          0.04373502925049377,
+          0.04373502925049377
+        ],
+        "roughness": 0.87,
+        "metalness": 0.05,
+        "alphaTest": 0,
+        "transparent": false,
+        "side": 0,
+        "depthWrite": true,
+        "texture": null
+      }
+    ],
+    "dumpster": [
+      {
+        "material": "industrial-dumpster",
+        "near": {
+          "attributes": {
+            "position": {
+              "hash": "cb53fb8bfe8db474b4f88870afd9182d69872c632a9d3091820a2717d18397e3",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 264
+            },
+            "normal": {
+              "hash": "c223871894826d34b18fbea8666e100685cdb65c15c228045b06b6753481d904",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 264
+            },
+            "uv": {
+              "hash": "cc9d609832981b7947b983a39a041ece3e09e184a783cdc6e6e72e8a6173d892",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 264
+            }
+          },
+          "index": "717833a79620019c21debd701e39548d8b4275f389a9c8441bf3b27d5467db06",
+          "indexCount": 396
+        },
+        "far": {
+          "attributes": {
+            "position": {
+              "hash": "cb53fb8bfe8db474b4f88870afd9182d69872c632a9d3091820a2717d18397e3",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 264
+            },
+            "normal": {
+              "hash": "c223871894826d34b18fbea8666e100685cdb65c15c228045b06b6753481d904",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 264
+            },
+            "uv": {
+              "hash": "cc9d609832981b7947b983a39a041ece3e09e184a783cdc6e6e72e8a6173d892",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 264
+            }
+          },
+          "index": "717833a79620019c21debd701e39548d8b4275f389a9c8441bf3b27d5467db06",
+          "indexCount": 396
+        },
+        "shadow": {
+          "attributes": {
+            "position": {
+              "hash": "cb53fb8bfe8db474b4f88870afd9182d69872c632a9d3091820a2717d18397e3",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 264
+            },
+            "normal": {
+              "hash": "c223871894826d34b18fbea8666e100685cdb65c15c228045b06b6753481d904",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 264
+            },
+            "uv": {
+              "hash": "cc9d609832981b7947b983a39a041ece3e09e184a783cdc6e6e72e8a6173d892",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 264
+            }
+          },
+          "index": "717833a79620019c21debd701e39548d8b4275f389a9c8441bf3b27d5467db06",
+          "indexCount": 396
+        },
+        "color": [
+          0.10946171076915331,
+          0.1499597898006365,
+          0.08437621153575764
+        ],
+        "roughness": 0.87,
+        "metalness": 0.05,
+        "alphaTest": 0,
+        "transparent": false,
+        "side": 0,
+        "depthWrite": true,
+        "texture": null
+      },
+      {
+        "material": "industrial-steel",
+        "near": {
+          "attributes": {
+            "position": {
+              "hash": "457486b735b91aa63bcb8fd91a142e68db28172076d7ed8530e9c35d334a2420",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 96
+            },
+            "normal": {
+              "hash": "26198afab8a763aefa5f415f69a9e4d6a0d54b77b26f0b26936212570972a492",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 96
+            },
+            "uv": {
+              "hash": "9d109a4bfbea5755fa23dc57dbd0238775724b08e6b1823015a29180e7922d19",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 96
+            }
+          },
+          "index": "1eb1b8aa95ce93b790548430479fc3b17794d4d0345960815fccbb8898b44afd",
+          "indexCount": 144
+        },
+        "far": {
+          "attributes": {
+            "position": {
+              "hash": "457486b735b91aa63bcb8fd91a142e68db28172076d7ed8530e9c35d334a2420",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 96
+            },
+            "normal": {
+              "hash": "26198afab8a763aefa5f415f69a9e4d6a0d54b77b26f0b26936212570972a492",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 96
+            },
+            "uv": {
+              "hash": "9d109a4bfbea5755fa23dc57dbd0238775724b08e6b1823015a29180e7922d19",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 96
+            }
+          },
+          "index": "1eb1b8aa95ce93b790548430479fc3b17794d4d0345960815fccbb8898b44afd",
+          "indexCount": 144
+        },
+        "shadow": {
+          "attributes": {
+            "position": {
+              "hash": "457486b735b91aa63bcb8fd91a142e68db28172076d7ed8530e9c35d334a2420",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 96
+            },
+            "normal": {
+              "hash": "26198afab8a763aefa5f415f69a9e4d6a0d54b77b26f0b26936212570972a492",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 96
+            },
+            "uv": {
+              "hash": "9d109a4bfbea5755fa23dc57dbd0238775724b08e6b1823015a29180e7922d19",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 96
+            }
+          },
+          "index": "1eb1b8aa95ce93b790548430479fc3b17794d4d0345960815fccbb8898b44afd",
+          "indexCount": 144
+        },
+        "color": [
+          0.35640014413537763,
+          0.3915724777393922,
+          0.3712376804636741
+        ],
+        "roughness": 0.56,
+        "metalness": 0.45,
+        "alphaTest": 0,
+        "transparent": false,
+        "side": 0,
+        "depthWrite": true,
+        "texture": null
+      },
+      {
+        "material": "industrial-dark",
+        "near": {
+          "attributes": {
+            "position": {
+              "hash": "b0473eaf68f15f299646a3f57290c75e25120471d00b7795119c06692f50dd28",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 72
+            },
+            "normal": {
+              "hash": "338f7f6d6a318dbcc03212cd54318622fec58446712293465607b736d6bc8569",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 72
+            },
+            "uv": {
+              "hash": "a64961cbe8f11983d954ef460ffefe51b834c78b05415f2cb722f629f3602798",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 72
+            }
+          },
+          "index": "1f02bc6877f6b16801d6054aa8c7e681010396b548d4050378bd5d4c058f5b5c",
+          "indexCount": 108
+        },
+        "far": {
+          "attributes": {
+            "position": {
+              "hash": "b0473eaf68f15f299646a3f57290c75e25120471d00b7795119c06692f50dd28",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 72
+            },
+            "normal": {
+              "hash": "338f7f6d6a318dbcc03212cd54318622fec58446712293465607b736d6bc8569",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 72
+            },
+            "uv": {
+              "hash": "a64961cbe8f11983d954ef460ffefe51b834c78b05415f2cb722f629f3602798",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 72
+            }
+          },
+          "index": "1f02bc6877f6b16801d6054aa8c7e681010396b548d4050378bd5d4c058f5b5c",
+          "indexCount": 108
+        },
+        "shadow": {
+          "attributes": {
+            "position": {
+              "hash": "b0473eaf68f15f299646a3f57290c75e25120471d00b7795119c06692f50dd28",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 72
+            },
+            "normal": {
+              "hash": "338f7f6d6a318dbcc03212cd54318622fec58446712293465607b736d6bc8569",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 72
+            },
+            "uv": {
+              "hash": "a64961cbe8f11983d954ef460ffefe51b834c78b05415f2cb722f629f3602798",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 72
+            }
+          },
+          "index": "1f02bc6877f6b16801d6054aa8c7e681010396b548d4050378bd5d4c058f5b5c",
+          "indexCount": 108
+        },
+        "color": [
+          0.033104766565152086,
+          0.04373502925049377,
+          0.04373502925049377
+        ],
+        "roughness": 0.87,
+        "metalness": 0.05,
+        "alphaTest": 0,
+        "transparent": false,
+        "side": 0,
+        "depthWrite": true,
+        "texture": null
+      }
+    ],
+    "security-fence": [
+      {
+        "material": "industrial-steel",
+        "near": {
+          "attributes": {
+            "position": {
+              "hash": "d44068a9911453526dfb671ea09d9ba34f2f5e42150c281f750ffd251d1873b8",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 208
+            },
+            "normal": {
+              "hash": "180ce679a0c0966a3301d10dc604a8d787ab77c130320d13f941522192069c4c",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 208
+            },
+            "uv": {
+              "hash": "f75d55eeb241ac7c4db45c23210b87a9ee01f7f4235ba72ecb85a77580c835ff",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 208
+            }
+          },
+          "index": "3d10b495b73652f18de098330300e8fd54d95ab71ebdfa6ab71102a156de85c2",
+          "indexCount": 384
+        },
+        "far": {
+          "attributes": {
+            "position": {
+              "hash": "d44068a9911453526dfb671ea09d9ba34f2f5e42150c281f750ffd251d1873b8",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 208
+            },
+            "normal": {
+              "hash": "180ce679a0c0966a3301d10dc604a8d787ab77c130320d13f941522192069c4c",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 208
+            },
+            "uv": {
+              "hash": "f75d55eeb241ac7c4db45c23210b87a9ee01f7f4235ba72ecb85a77580c835ff",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 208
+            }
+          },
+          "index": "3d10b495b73652f18de098330300e8fd54d95ab71ebdfa6ab71102a156de85c2",
+          "indexCount": 384
+        },
+        "shadow": {
+          "attributes": {
+            "position": {
+              "hash": "d44068a9911453526dfb671ea09d9ba34f2f5e42150c281f750ffd251d1873b8",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 208
+            },
+            "normal": {
+              "hash": "180ce679a0c0966a3301d10dc604a8d787ab77c130320d13f941522192069c4c",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 208
+            },
+            "uv": {
+              "hash": "f75d55eeb241ac7c4db45c23210b87a9ee01f7f4235ba72ecb85a77580c835ff",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 208
+            }
+          },
+          "index": "3d10b495b73652f18de098330300e8fd54d95ab71ebdfa6ab71102a156de85c2",
+          "indexCount": 384
+        },
+        "color": [
+          0.35640014413537763,
+          0.3915724777393922,
+          0.3712376804636741
+        ],
+        "roughness": 0.56,
+        "metalness": 0.45,
+        "alphaTest": 0,
+        "transparent": false,
+        "side": 0,
+        "depthWrite": true,
+        "texture": null
+      },
+      {
+        "material": "industrial-chain-link",
+        "near": {
+          "attributes": {
+            "position": {
+              "hash": "e4bd24fb5293dc04fe42fcd78ab92c4b5bc6aee391d8f71695d8ad7f2a7203bb",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 4
+            },
+            "normal": {
+              "hash": "796f0b940d4268e7d9ccbd67f52dca773c768e372dae64d3c1b1caf59e6c8247",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 4
+            },
+            "uv": {
+              "hash": "f3a0a46301c6859e5b64beadee234c4eeec1dec8c4735dc7bf40ea09e762e189",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 4
+            }
+          },
+          "index": "e6681333c21d3bedc5c5d4ea4503e8acc5b95e8d8e2aabffd97d12425a145443",
+          "indexCount": 6
+        },
+        "far": {
+          "attributes": {
+            "position": {
+              "hash": "e4bd24fb5293dc04fe42fcd78ab92c4b5bc6aee391d8f71695d8ad7f2a7203bb",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 4
+            },
+            "normal": {
+              "hash": "796f0b940d4268e7d9ccbd67f52dca773c768e372dae64d3c1b1caf59e6c8247",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 4
+            },
+            "uv": {
+              "hash": "f3a0a46301c6859e5b64beadee234c4eeec1dec8c4735dc7bf40ea09e762e189",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 4
+            }
+          },
+          "index": "e6681333c21d3bedc5c5d4ea4503e8acc5b95e8d8e2aabffd97d12425a145443",
+          "indexCount": 6
+        },
+        "shadow": {
+          "attributes": {
+            "position": {
+              "hash": "e4bd24fb5293dc04fe42fcd78ab92c4b5bc6aee391d8f71695d8ad7f2a7203bb",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 4
+            },
+            "normal": {
+              "hash": "796f0b940d4268e7d9ccbd67f52dca773c768e372dae64d3c1b1caf59e6c8247",
+              "itemSize": 3,
+              "normalized": false,
+              "count": 4
+            },
+            "uv": {
+              "hash": "f3a0a46301c6859e5b64beadee234c4eeec1dec8c4735dc7bf40ea09e762e189",
+              "itemSize": 2,
+              "normalized": false,
+              "count": 4
+            }
+          },
+          "index": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "indexCount": 0
+        },
+        "color": [
+          1,
+          1,
+          1
+        ],
+        "roughness": 0.6,
+        "metalness": 0.4,
+        "alphaTest": 0.02,
+        "transparent": true,
+        "side": 2,
+        "depthWrite": false,
+        "texture": "0124b5e201a560e5fadda841543729148fc322f4a474fcf9cae15861335d7b48"
+      }
+    ]
+  }
+}

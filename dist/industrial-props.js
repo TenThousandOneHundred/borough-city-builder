@@ -33,7 +33,23 @@ export class IndustrialProps{
    box('dumpster',0,.47,0,.94,.75,.90);for(const x of [-.48,.48])box('steel',x,.55,0,.025,.65,.98);box('dark',0,.88,0,1,.07,.98);for(const x of [-.25,.25])box('dark',x,.08,0,.08,.16,.86);
    for(let i=0;i<5;i++)for(const z of [-.46,.46])box('dumpster',-.4+i*.2,.46,z,.025,.62,.03);for(const x of [-.37,.37])box('steel',x,.74,.49,.08,.035,.018);
   }
-  const root=new T.Group();for(const [name,list]of parts){const geometry=mergeGeometries(list.map(p=>p.g),false),indices=[];let offset=0;for(const {g,detail}of list){if(!detail)for(const i of g.index.array)indices.push(i+offset);offset+=g.attributes.position.count;g.dispose();}const low=new T.BufferGeometry();for(const [key,a]of Object.entries(geometry.attributes))low.setAttribute(key,a);low.setIndex(indices);low.computeBoundingSphere();geometry.userData.lod=low;geometry.userData.shadowLod=low;const mesh=new T.Mesh(geometry,this.materials[name]);mesh.castShadow=mesh.receiveShadow=true;mesh.userData={sharedAsset:true,siteDetail:true,industrialProp:kind};if(name==='mesh'){mesh.userData.siteRange=[0,24];const empty=new T.BufferGeometry();for(const [key,a]of Object.entries(geometry.attributes))empty.setAttribute(key,a);empty.setIndex([]);geometry.userData.shadowLod=empty;}root.add(mesh);}this.models.set(kind,root);return root;
+  const root=new T.Group();
+  for(const [name,list]of parts){
+   const geometry=mergeGeometries(list.map(p=>p.g),false);let low=geometry;
+   // Most props have exactly the same close and distant triangles. One batch
+   // can render both distance bands without duplicate index or instance buffers.
+   if(list.some(p=>p.detail)){
+    const indices=[];let offset=0;for(const {g,detail}of list){if(!detail)for(const i of g.index.array)indices.push(i+offset);offset+=g.attributes.position.count;}
+    low=new T.BufferGeometry();for(const [key,a]of Object.entries(geometry.attributes))low.setAttribute(key,a);low.setIndex(indices);low.computeBoundingSphere();geometry.userData.lod=low;
+   }
+   list.forEach(({g})=>g.dispose());if(low!==geometry)geometry.userData.shadowLod=low;
+   const mesh=new T.Mesh(geometry,this.materials[name]);mesh.castShadow=mesh.receiveShadow=true;
+   mesh.userData={sharedAsset:true,siteDetail:true,industrialProp:kind};
+   if(name==='mesh'){mesh.userData.siteRange=[0,24];const empty=new T.BufferGeometry();for(const [key,a]of Object.entries(geometry.attributes))empty.setAttribute(key,a);empty.setIndex([]);geometry.userData.shadowLod=empty;}
+   root.add(mesh);
+  }
+  this.models.set(kind,root);return root;
  }
+
  place(root,a){const model=this.model(a.kind).clone(true),turned=Math.abs(a.angle||0)>.1;model.position.set(a.x,.02,a.z);model.rotation.y=a.angle||0;model.scale.set(turned?a.d:a.w,a.height||.44,turned?a.w:a.d);root.add(model);return model;}
 }

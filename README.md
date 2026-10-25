@@ -1,6 +1,18 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 127 — Industrial rendering optimization
+
+This is the dedicated optimization after feature updates 124–126. Industrial props whose distant geometry is identical to their full geometry now use one instance buffer across both distance bands. Only container corrugation retains a separate distant mesh. The original two-pass chain-link shader and transparency ordering are retained. Existing visibility rules, reflection coverage and camera-independent shadow casters remain unchanged. Trials with additional per-prop culling and single-pass wire were rejected because they did not demonstrate a consistent overall benefit.
+
+Every released prop vertex, triangle, normal, UV, near/far/shadow mesh, texture and material finish is unchanged. The factory, terrain, traffic, residents, walking, save format and simulation clock are unchanged. Unchanged model and distant-mesh assets retain their Edition 126 URLs so existing browser caches can be reused. Comparison against the same industrial reference pictures and Edition 126 gate/timber/night views found no lost detail. The gate, timber-yard and night scene regions are pixel-identical (669,600 checked pixels per view, excluding the comparison controls). This is a rendering-cost reduction, not a claim of visual equivalence with the reference game.
+
+In twelve alternating CPU trials of 24 rotated yards, instance-buffer storage fell from 985,088 to 694,272 bytes (29.5%). Construction medians were 30.43/30.47 ms, cold batch assembly 7.06/7.00 ms, unchanged rebuilds 0.01184/0.01182 ms and moving-camera updates 0.1342/0.1318 ms before/after. Submitted geometry and transforms are identical. A separate 1280×720 full-district browser comparison reduced overview main-pass draw calls from 138 to 128; street-level calls stayed at 106. Overview GPU medians were 8.70/8.52 ms before and 8.69/8.76 ms after; street-view medians were 10.22/10.61 ms before and 10.13/10.19 ms after. Frame intervals remained around 16.5–16.8 ms. These results demonstrate buffer savings with preserved detail, not a general FPS increase or a guarantee for every city/device.
+
+All 497 checks in the full local invocation pass, including three new regressions comparing complete geometry, material finishes, visible world transforms and shadows against the released duplicate-buffer behavior. The comparisons cover near/far boundaries, reflection-only visibility, detail settings, moved lots and demolition. Module syntax, asset integrity and lossless compression checks pass. In the local full game, manual save and Save & Exit stored the QA city at 228 residents, day 15 and ₡992,839; reloading returned to the home screen with that population and save timestamp. No browser warnings or errors were recorded.
+
+The next feature cycle is 128–130, followed by dedicated optimization 131.
+
 ## Edition 126 — Industrial service yards and loading access
 
 Industrial grounds now reserve clear approaches from the actual loading doors, a connected manoeuvring area and a truck-width street gate. Office entrances keep separate walks and fence openings. Full-size containers, stacked timber, hollow steel pipes, palletized goods and dumpsters occupy the remaining space according to the building's industrial form. Staff parking is limited to four spaces and only appears when both the bays and their aisle fit. Shallow lots keep clear ground instead of shrinking props or blocking a door. The arrangements are deterministic and remain inside the existing rotated property boundary.
