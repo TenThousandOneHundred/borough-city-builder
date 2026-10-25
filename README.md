@@ -1,6 +1,20 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 125 — Purpose-built industrial architecture
+
+Industrial zoning now grows five original forms: a compact trade depot, a small manufacturing workshop, a four-dock distribution hall, sawtooth-roof works and a processing yard with smooth round silos, ladders, pipework and an exposed steel gantry. Corrugated walls, pitched metal roofs, rooflights, loading shutters, raised docks, bollards and separate office entrances replace the repeated apartment-like industrial facades. Factories and warehouses choose their own forms. New industrial lots vary from two to six frontage cells, selecting full-scale architecture that fits the reserved land; existing parcel frames and capacities are preserved.
+
+The official [Economy & Production](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/economy-production) and [Supply Chains pictures](https://www.paradoxinteractive.com/games/cities-skylines-ii/add-ons/cities-skylines-ii-supply-chains) were inspected before work and compared again with close-up and district views. Inspection led to darker linear metal colors, corrected upward-facing roof seams, separated rooflight surfaces and closed silo caps. Subpixel roof ribs no longer create noisy shadows: the new industrial models cast shadows from their intact distant silhouettes, while fine detail remains in the near color pass. The reference has substantially richer weathering, yards, equipment, lighting and surroundings; this release does not establish visual equivalence. Reference pictures are not shipped.
+
+The five forms share the existing material library and require 15,380 near triangles or 4,764 distant triangles. All 63 older modern buildings and all 84 older distant models remain byte-identical. Compressed model and distant-mesh delivery grows by 153,444 bytes; no new texture download is introduced. Rebuild with `python3 scripts/build-modern-library.py` (Pillow required), then `node scripts/compress-assets.mjs`.
+
+In a 24-lot browser comparison with natural model selection, all five forms appear. Two alternating overview comparisons measured GPU medians of 8.52/8.43 ms before and 8.09/8.26 ms after. Street-level comparisons measured 11.14/10.75 ms before and 10.62/10.59 ms after. Median frame intervals stayed around 16.5–16.8 ms in both views. The more varied assets add draw batches (80 to 113 in the overview's main pass); these scene-specific measurements are not a general FPS guarantee. No terrain, tree, detail setting or offscreen simulation quality is reduced.
+
+All 488 checks in the full local invocation pass, including five new industrial regressions. Module syntax, model integrity and lossless compression validation also pass. In the full local game, manual save and Save & Exit stored the QA city at 230 residents, day 11 and ₡992,421; reloading returned to the home screen with the same saved population. No browser errors or warnings were recorded.
+
+This is feature update two after optimization 123. Edition 126 is the third feature update; Edition 127 is the next dedicated optimization pass.
+
 ## Edition 124 — Intact masonry facades at city-view distances
 
 Rebuilt the distant meshes for all 16 imported urban buildings. The former reduction tore holes through window frames and sometimes collapsed wall details. The replacement anchors the corners of connected frames and ornaments, preserves surface attributes, keeps small roofs and entrance details intact, and orders triangles for vertex-cache reuse. Distant meshes share their full-detail vertex buffers. Identical imported finishes also reuse material objects while retaining the five existing wall palettes; draw counts are unchanged. The original full-detail models and textures are unchanged, and all 68 modern/industrial distant models retain identical decoded geometry.

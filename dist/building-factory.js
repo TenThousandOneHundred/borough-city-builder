@@ -1,12 +1,12 @@
-import {ModelLibrary} from './model-library.js?v=124';
-import {buildHouse} from './house-architecture.js?v=124';
-import {buildUrban} from './city-architecture.js?v=124';
+import {ModelLibrary} from './model-library.js?v=125';
+import {buildHouse} from './house-architecture.js?v=125';
+import {buildUrban} from './city-architecture.js?v=125';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import * as THREE from './vendor/three.module.js';
-import {MeshBuilder} from './mesh-builder.js?v=124';
-import {BuildingMaterials} from './building-materials.js?v=124';
-import {lotPlan} from './building-plan.js?v=124';
-import {floorHeight} from './landscape.js?v=124';
+import {MeshBuilder} from './mesh-builder.js?v=125';
+import {BuildingMaterials} from './building-materials.js?v=125';
+import {lotPlan} from './building-plan.js?v=125';
+import {floorHeight} from './landscape.js?v=125';
 
 export class BuildingFactory{
  constructor(view){this.view=view;this.library=view.renderer?new ModelLibrary(view):null;this.ready=this.library?.ready||Promise.resolve();this.materials=new BuildingMaterials(view);this.batchRoot=new THREE.Group();view.scene.add(this.batchRoot);}
@@ -79,7 +79,8 @@ export class BuildingFactory{
    // Zero visible instances keeps this mesh out of colour/reflection draws.
    // Three uploads its static instance buffer before calling onBeforeShadow.
    near.castShadow=false;if(far)far.castShadow=false;
-   const casters=transforms.filter(t=>!t.renderRange||t.renderRange[0]===0),shadow=this.instanceMesh(previous?.shadow,geometry,material,casters.length);
+   // Authored industrial silhouettes avoid noisy subpixel roof-rib shadows.
+   const casters=transforms.filter(t=>!t.renderRange||t.renderRange[0]===0),shadow=this.instanceMesh(previous?.shadow,geometry.userData.shadowLod||geometry,material,casters.length);
    shadow.userData.shadowCaster=true;shadow.receiveShadow=false;shadow.count=0;
    let first=Infinity,last=0;const slots=previous?.shadow===shadow?previous.shadowSlots:[];
    casters.forEach((transform,i)=>{if(slots[i]!==transform){shadow.setMatrixAt(i,transform.matrix);slots[i]=transform;first=Math.min(first,i*16);last=(i+1)*16;}});

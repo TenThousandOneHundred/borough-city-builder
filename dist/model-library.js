@@ -1,14 +1,14 @@
-import {lotMaterials} from './lot-surfaces.js?v=124';
-import {bakeRoofFinish} from './roof-finishes.js?v=124';
-import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=124';
-import {loadBinary} from './asset-transfer.js?v=124';
-import {SiteDetails} from './site-details.js?v=124';
-import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=124';
+import {lotMaterials} from './lot-surfaces.js?v=125';
+import {bakeRoofFinish} from './roof-finishes.js?v=125';
+import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=125';
+import {loadBinary} from './asset-transfer.js?v=125';
+import {SiteDetails} from './site-details.js?v=125';
+import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=125';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {lotPlan} from './building-plan.js?v=124';
-import {floorHeight} from './landscape.js?v=124';
+import {lotPlan} from './building-plan.js?v=125';
+import {floorHeight} from './landscape.js?v=125';
 const IDENTITY=new THREE.Matrix4();
 const civicDefaults={hospital:'clinic',school:'elementary',police:'police',fire:'fire'};
 // Complete textured assets are loaded once, batched per material, and instanced.
@@ -18,9 +18,9 @@ export class ModelLibrary {
   const loader=new GLTFLoader();
   // Fetch the distant indices alongside the models instead of adding another
   // large download after all three catalogues have finished.
-  const distant=Promise.all([fetch(new URL('./assets/buildings/lod.json?v=124-final',import.meta.url)).then(r=>{if(!r.ok)throw Error(r.status);return r.json()}),loadBinary(new URL('./assets/buildings/lod.bin?v=124-final',import.meta.url))]).then(value=>({value}),error=>({error}));
+  const distant=Promise.all([fetch(new URL('./assets/buildings/lod.json?v=125-final',import.meta.url)).then(r=>{if(!r.ok)throw Error(r.status);return r.json()}),loadBinary(new URL('./assets/buildings/lod.bin?v=125-final',import.meta.url))]).then(value=>({value}),error=>({error}));
   await Promise.all(['urban','industry','modern'].map(async file=>{
-   try{const url=new URL(`./assets/buildings/${file}.glb?v=${file==='modern'?'114':21}`,import.meta.url),{scene}=await loader.parseAsync(await loadBinary(url),new URL('.',url).href);
+   try{const url=new URL(`./assets/buildings/${file}.glb?v=${file==='modern'?'125-final':21}`,import.meta.url),{scene}=await loader.parseAsync(await loadBinary(url),new URL('.',url).href);
     this.ingest(scene);
    }catch(error){console.warn('Building model fallback:',file,error.message);}
   }));
@@ -64,12 +64,13 @@ export class ModelLibrary {
     // The merged model library owns its buffers, the import hierarchy can go.
     scene.traverse(o=>o.geometry?.dispose());
  }
- ingestLod(manifest,data){for(const model of this.models)model.root.children.forEach((mesh,i)=>{const entry=manifest[model.name]?.[i];if(!entry)return;const geometry=new THREE.BufferGeometry();if(entry.sharedAttributes)for(const [name,a]of Object.entries(mesh.geometry.attributes))geometry.setAttribute(name,a);for(const [name,a]of Object.entries(entry.attributes||{}))geometry.setAttribute(name,new THREE.BufferAttribute(new Float32Array(data,a.offset,a.count),a.itemSize));geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(data,entry.index.offset,entry.index.count),1));geometry.computeBoundingSphere();mesh.geometry.userData.lod=geometry;});}
+ ingestLod(manifest,data){for(const model of this.models)model.root.children.forEach((mesh,i)=>{const entry=manifest[model.name]?.[i];if(!entry)return;const geometry=new THREE.BufferGeometry();if(entry.sharedAttributes)for(const [name,a]of Object.entries(mesh.geometry.attributes))geometry.setAttribute(name,a);for(const [name,a]of Object.entries(entry.attributes||{}))geometry.setAttribute(name,new THREE.BufferAttribute(new Float32Array(data,a.offset,a.count),a.itemSize));geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(data,entry.index.offset,entry.index.count),1));geometry.computeBoundingSphere();mesh.geometry.userData.lod=geometry;if(model.name.startsWith('industrial-'))mesh.geometry.userData.shadowLod=geometry;});}
  setNight(on){for(const material of this.materials)if(material.userData.glass){const lit=on;if(material.userData.roomLightingState)material.userData.roomLightingState.value=on?1:0;material.emissive.set(lit?(material.userData.roomLighting?'#ffffff':'#bc9d6e'):'#000000');material.emissiveIntensity=lit?(material.userData.roomLighting?1.15:.23):0;material.emissiveMap=lit?material.map:null;material.needsUpdate=true;}}
  acceptsCivic(tile){const id=tile.building||civicDefaults[tile.type];return !!id&&this.models.some(a=>a.category===tile.type&&a.building===id&&a.site===!!tile.facilitySite);}
  create(world,index,parcel){
   if(!this.models.length)return null;const p=lotPlan(world,index,parcel),definition=parcel?.definition||world.tiles[index],mixed=definition.building==='mixeduse',category=mixed?'commercial':p.low?'residential-low':p.type;
   const civic=civicDefaults[p.type],id=definition.building||civic;let candidates=this.models.filter(a=>a.category===category&&(a.building!=='lowrent'||id==='lowrent')&&(!mixed||a.name.includes('mixed-use'))&&(!civic||a.building===id&&a.site===p.facility));if(!candidates.length)return null;
+  if(p.type==='industrial'){const kind=id||((p.seed&1)?'factory':'warehouse'),forms=candidates.filter(a=>a.building===kind);if(forms.length)candidates=forms;}
   if(id==='lowrent'){const name=p.lotWidth>=7.8&&p.lotDepth>=7.8?'lowrent-court-block':'lowrent-staggered-slab',slabs=candidates.filter(a=>a.building==='lowrent'&&a.name===name);if(slabs.length)candidates=slabs;}
   if(p.low){const homes=candidates.filter(a=>a.houseForm);if(homes.length)candidates=homes;const forms=candidates.filter(a=>id==='townhouse'?(p.oriented?a.houseForm==='terrace':['semi','terrace'].includes(a.houseForm)):a.houseForm==='detached');if(forms.length)candidates=forms;}
   const densityFit=candidates.filter(a=>id==='lowrent'||!a.floors||(p.type==='residential'&&!p.low?(p.density==='medium'?a.floors<=9:a.floors>=9):p.type==='commercial'?(p.density==='low'?a.floors<=3:a.floors>=4):p.type==='office'?(p.density==='low'?a.floors<=4:a.floors>=5):true));if(densityFit.length)candidates=densityFit;
@@ -82,7 +83,7 @@ export class ModelLibrary {
   const widthOf=a=>a.size.x*fit(a)*rowCount(a)+(attached(a)?0:.04)*(rowCount(a)-1);
   // First fit metre-sized architecture to the parcel. A large block must not
   // shrink into a miniature tower when selected for a single-cell lot.
-  const fullScale=candidates.filter(a=>fit(a)>=.17);if(fullScale.length)candidates=fullScale;
+  const fullScale=candidates.filter(a=>fit(a)>=(p.type==='industrial'?.2:.17));if(fullScale.length)candidates=fullScale;
   // Mix perimeter blocks with tower or retail-plaza lots. Coverage alone
   // otherwise suppresses almost every slender and rounded model.
   // Independent deterministic samples avoid tying height, coverage and model

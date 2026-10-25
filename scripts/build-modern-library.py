@@ -1046,6 +1046,9 @@ m=campus('rescue','fire',5);h=m.shell(47,22,1,z=-4,cladding=BRICK);m.shell(10,16
 for x in [-7,-2,3,8,13]:shutter(m,x,7.1,4)
 m.box(3,2.85,7.25,25,.26,.12,PAINT,(.65,.10,.055));m.box(3,.02,12.5,30,.1,9,ROOF);canopy(m,-17,8,6);m.roofwork(-17,9.6,-7,4,2);m.plant(-24,0,12,3,6);m.finish()
 
+from industrial_models import build_industry
+build_industry(Model,dict(paint=PAINT,frame=FRAME,glass=GLASS,roof=ROOF,recess=RECESS,concrete=CONCRETE,brick=BRICK,wood=WOOD))
+
 # Each model has one primitive per material, with vertex colour variation.
 doc={'asset':{'version':'2.0','generator':'Borough original modern architecture'},'extensionsUsed':['KHR_mesh_quantization'],'extensionsRequired':['KHR_mesh_quantization'],'scene':0,'scenes':[{'nodes':[]}],'nodes':[],'meshes':[],'materials':[{'name':name,'pbrMetallicRoughness':{'baseColorFactor':color,'metallicFactor':metal,'roughnessFactor':rough}} for name,color,metal,rough in materials],'buffers':[{'byteLength':0}],'bufferViews':[],'accessors':[]}
 binary=bytearray()

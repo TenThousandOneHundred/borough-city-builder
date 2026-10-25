@@ -1,5 +1,5 @@
-import './coastline.js?v=124';
-import {terrainNoise} from './terrain-field.js?v=124';
+import './coastline.js?v=125';
+import {terrainNoise} from './terrain-field.js?v=125';
 const ease=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
 // Versioned relief belongs to the saved world: loading an older city cannot
 // move its buildings or roads. Broad shelves retain usable development areas.
