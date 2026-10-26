@@ -3,7 +3,14 @@ import * as THREE from './vendor/three.module.js';
 const CELL=4,MAX_CELLS=4096,AREA_EPS=1e-12;
 const cross=(a,b,c)=>(b[0]-a[0])*(c[2]-a[2])-(b[2]-a[2])*(c[0]-a[0]);
 const area=vertices=>{let sum=0;for(let i=1;i+1<vertices.length;i++)sum+=cross(vertices[0],vertices[i],vertices[i+1]);return Math.abs(sum)/2;};
-const bounds=vertices=>({minX:Math.min(...vertices.map(v=>v[0])),maxX:Math.max(...vertices.map(v=>v[0])),minZ:Math.min(...vertices.map(v=>v[2])),maxZ:Math.max(...vertices.map(v=>v[2]))});
+// Polygon vertex arrays are immutable after construction. Most fragments pass
+// many candidate triangles unchanged, so calculate their bounds only once.
+function bounds(vertices){
+ if(vertices.pavementBounds)return vertices.pavementBounds;
+ let minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity;
+ for(const vertex of vertices){minX=Math.min(minX,vertex[0]);maxX=Math.max(maxX,vertex[0]);minZ=Math.min(minZ,vertex[2]);maxZ=Math.max(maxZ,vertex[2]);}
+ return vertices.pavementBounds={minX,maxX,minZ,maxZ};
+}
 const overlaps=(a,b)=>a.minX<b.maxX&&a.maxX>b.minX&&a.minZ<b.maxZ&&a.maxZ>b.minZ;
 const mix=(a,b,t)=>a.map((value,i)=>value+(b[i]-value)*t);
 const positionKey=v=>v[0]+','+v[2];
@@ -31,20 +38,25 @@ function subtract(polygon,triangle){
 }
 
 class TriangleIndex{
- constructor(){this.rows=new Map();this.oversized=[];this.count=0;this.references=0;}
+ constructor(){this.rows=new Map();this.oversized=[];this.count=0;this.references=0;this.queryStamp=0;this.queries=0;this.singleCellQueries=0;this.sortedQueries=0;}
  add(triangle){
   triangle.id=this.count++;const b=triangle.bounds,x0=Math.floor(b.minX/CELL),x1=Math.floor(b.maxX/CELL),z0=Math.floor(b.minZ/CELL),z1=Math.floor(b.maxZ/CELL);
   if((x1-x0+1)*(z1-z0+1)>MAX_CELLS){this.oversized.push(triangle);return;}
   for(let x=x0;x<=x1;x++){let row=this.rows.get(x);if(!row){row=new Map();this.rows.set(x,row);}for(let z=z0;z<=z1;z++){let bucket=row.get(z);if(!bucket){bucket=[];row.set(z,bucket);}bucket.push(triangle);this.references++;}}
  }
- query(b){
-  const seen=new Set(),result=[],add=triangle=>{if(!seen.has(triangle.id)){seen.add(triangle.id);result.push(triangle);}};
+ append(bucket,result,stamp){for(const triangle of bucket)if(triangle.queryStamp!==stamp){triangle.queryStamp=stamp;result.push(triangle);}}
+ query(b,result){
+  this.queries++;result.length=0;
   const x0=Math.floor(b.minX/CELL),x1=Math.floor(b.maxX/CELL),z0=Math.floor(b.minZ/CELL),z1=Math.floor(b.maxZ/CELL);
+  // A single bucket already has unique entries in ownership order. It is only
+  // borrowed while clipping or checking seams; neither operation adds entries.
+  if(x0===x1&&z0===z1&&!this.oversized.length){this.singleCellQueries++;return this.rows.get(x0)?.get(z0)||result;}
+  const stamp=++this.queryStamp;
   // Broad individual triangles query existing cells instead of walking a huge
   // empty range. Normal road triangles take only the nearby small buckets.
-  if((x1-x0+1)*(z1-z0+1)>MAX_CELLS){for(const [x,row]of this.rows)if(x>=x0&&x<=x1)for(const [z,bucket]of row)if(z>=z0&&z<=z1)for(const triangle of bucket)add(triangle);}
-  else for(let x=x0;x<=x1;x++){const row=this.rows.get(x);if(row)for(let z=z0;z<=z1;z++)for(const triangle of row.get(z)||[])add(triangle);}
-  for(const triangle of this.oversized)add(triangle);
+  if((x1-x0+1)*(z1-z0+1)>MAX_CELLS){for(const [x,row]of this.rows)if(x>=x0&&x<=x1)for(const [z,bucket]of row)if(z>=z0&&z<=z1)this.append(bucket,result,stamp);}
+  else for(let x=x0;x<=x1;x++){const row=this.rows.get(x);if(row)for(let z=z0;z<=z1;z++){const bucket=row.get(z);if(bucket)this.append(bucket,result,stamp);}}
+  this.append(this.oversized,result,stamp);this.sortedQueries++;
   // Spatial buckets may discover the same owners in a different order.
   return result.sort((a,b)=>a.id-b.id);
  }
@@ -82,12 +94,12 @@ function faceNormal([a,b,c]){const ux=b[0]-a[0],uy=b[1]-a[1],uz=b[2]-a[2],vx=c[0
  */
 export function unifyPavement(strips,patches){
  const stats={inputTriangles:0,outputTriangles:0,changedMeshes:0,emptyMeshes:0,cutTriangles:0,seamVertices:0,candidateTests:0,maxCandidates:0,indexTriangles:0,indexReferences:0,indexCells:0,oversizedTriangles:0};
- const meshes=[...new Set([...patches,...strips])],states=meshes.map(mesh=>({mesh,source:mesh.geometry,layout:attributeLayout(mesh.geometry),triangles:[],changed:false})),index=new TriangleIndex(),canonical=new Map();
+ const meshes=[...new Set([...patches,...strips])],states=meshes.map(mesh=>({mesh,source:mesh.geometry,layout:attributeLayout(mesh.geometry),triangles:[],changed:false})),index=new TriangleIndex(),canonical=new Map(),candidateScratch=[],seamScratch=[];
  let magnitude=1;for(const {source}of states){const p=source.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i);if(Number.isFinite(x)&&Number.isFinite(z))magnitude=Math.max(magnitude,Math.abs(x),Math.abs(z));}}
  const epsilon=Math.max(1e-6,magnitude*2**-23);
 
  function seam(vertex,state){
-  const point=[Math.fround(vertex[0]),Math.fround(vertex[1]),Math.fround(vertex[2])],key=positionKey(point),near=index.query({minX:point[0]-epsilon,maxX:point[0]+epsilon,minZ:point[2]-epsilon,maxZ:point[2]+epsilon});
+  const point=[Math.fround(vertex[0]),Math.fround(vertex[1]),Math.fround(vertex[2])],key=positionKey(point),near=index.query({minX:point[0]-epsilon,maxX:point[0]+epsilon,minZ:point[2]-epsilon,maxZ:point[2]+epsilon},seamScratch);
   const winner=near.find(triangle=>contains(triangle,point,epsilon));
   if(canonical.has(key))point[1]=canonical.get(key)[1];else{if(winner)point[1]=Math.fround(height(winner,point));canonical.set(key,point);}
   if(point[0]!==vertex[0]||point[1]!==vertex[1]||point[2]!==vertex[2])state.changed=true;
@@ -110,7 +122,7 @@ export function unifyPavement(strips,patches){
   for(let at=0;at+2<count;at+=3){
    stats.inputTriangles++;const vertices=[0,1,2].map(k=>readVertex(geometry,state.layout,indices?indices.getX(at+k):at+k)),materialIndex=hasGroups?(geometry.groups.find(group=>at>=group.start&&at<group.start+group.count)?.materialIndex??0):0;
    if(!vertices.every(v=>v.slice(0,3).every(Number.isFinite))||Math.abs(cross(...vertices))<=AREA_EPS){state.triangles.push(record(vertices,state,materialIndex));continue;}
-   const sourceTriangle={vertices,determinant:cross(...vertices),bounds:bounds(vertices)},candidates=index.query(sourceTriangle.bounds);stats.maxCandidates=Math.max(stats.maxCandidates,candidates.length);let fragments=[vertices],cut=false;
+   const sourceTriangle={vertices,determinant:cross(...vertices),bounds:bounds(vertices)},candidates=index.query(sourceTriangle.bounds,candidateScratch);stats.maxCandidates=Math.max(stats.maxCandidates,candidates.length);let fragments=[vertices],cut=false;
    for(const triangle of candidates){
     const next=[];for(const polygon of fragments){if(!overlaps(bounds(polygon),triangle.bounds)){next.push(polygon);continue;}stats.candidateTests++;const difference=subtract(polygon,triangle);if(difference===null)next.push(polygon);else{cut=true;next.push(...difference);}}
     fragments=next;if(!fragments.length)break;
@@ -145,6 +157,6 @@ export function unifyPavement(strips,patches){
  // Shared source buffers are disposed once, and only when no supplied mesh
  // still retains them. No source materials or textures are owned here.
  const retained=new Set(states.map(state=>state.mesh.geometry)),disposed=new Set();for(const {source}of states)if(!retained.has(source)&&!disposed.has(source)){source.dispose();disposed.add(source);}
- stats.indexTriangles=index.count;stats.indexReferences=index.references;stats.oversizedTriangles=index.oversized.length;for(const row of index.rows.values())stats.indexCells+=row.size;
+ stats.indexTriangles=index.count;stats.indexReferences=index.references;stats.oversizedTriangles=index.oversized.length;stats.indexQueries=index.queries;stats.singleCellQueries=index.singleCellQueries;stats.sortedQueries=index.sortedQueries;for(const row of index.rows.values())stats.indexCells+=row.size;
  return stats;
 }

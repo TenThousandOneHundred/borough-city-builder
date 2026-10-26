@@ -1,5 +1,5 @@
-import './roundabout-state.js?v=130';
-import './building-entities.js?v=130';
+import './roundabout-state.js?v=131';
+import './building-entities.js?v=131';
 const Buildings=globalThis.BoroughBuildings;
 // Save-owned elevation offsets on a two-world-unit grid. Rendering and simulation
 // read the same surface; old saves with no elevation edits retain their terrain.

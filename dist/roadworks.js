@@ -1,23 +1,23 @@
-import {PedestrianSignals,signalHousing,signalPole} from './pedestrian-signals.js?v=130';
-import {pedestrianCrossings,rampStations,rampAmount} from './pedestrian-network.js?v=130';
-import {roundaboutIsland,addYieldSign} from './roundabout-details.js?v=130';
-import {planBridges,bridgeHeight} from './bridge-spans.js?v=130';
-import {bridgeGeometry} from './bridge-geometry.js?v=130';
-import {approachMarkings,arrowPolygons} from './road-markings.js?v=130';
-import {roadFinishData,configureRoadFinish,ROAD_TEXTURE_REPEAT} from './road-finish.js?v=130';
-import {laneLayout} from './road-lanes.js?v=130';
-import {roadGeometry,transitionWidth,junctionCorners,junctionCuts,clearRanges,clearSections,signalPlacements} from './road-junction-plan.js?v=130';
-import {lotAccess} from './lot-access.js?v=130';
-import {streetStations,atDistance,distanceSection,streetSurface,pavementMaterial} from './street-geometry.js?v=130';
-import {signalPhase,junctionPolicy} from './junctions.js?v=130';
-import {addStopSign,stopSignMaterial} from './stop-sign.js?v=130';
-import {outsidePortals} from './traffic.js?v=130';
-import {batchStatic} from './static-batch.js?v=130';
+import {PedestrianSignals,signalHousing,signalPole} from './pedestrian-signals.js?v=131';
+import {pedestrianCrossings,rampStations,rampAmount} from './pedestrian-network.js?v=131';
+import {roundaboutIsland,addYieldSign} from './roundabout-details.js?v=131';
+import {planBridges,bridgeHeight} from './bridge-spans.js?v=131';
+import {bridgeGeometry} from './bridge-geometry.js?v=131';
+import {approachMarkings,arrowPolygons} from './road-markings.js?v=131';
+import {roadFinishData,configureRoadFinish,ROAD_TEXTURE_REPEAT} from './road-finish.js?v=131';
+import {laneLayout} from './road-lanes.js?v=131';
+import {roadGeometry,transitionWidth,junctionCorners,junctionCuts,clearRanges,clearSections,signalPlacements} from './road-junction-plan.js?v=131';
+import {lotAccess} from './lot-access.js?v=131';
+import {streetStations,atDistance,distanceSection,streetSurface,pavementMaterial} from './street-geometry.js?v=131';
+import {signalPhase,junctionPolicy} from './junctions.js?v=131';
+import {addStopSign,stopSignMaterial} from './stop-sign.js?v=131';
+import {outsidePortals} from './traffic.js?v=131';
+import {batchStatic} from './static-batch.js?v=131';
 import * as THREE from './vendor/three.module.js';
-import {floorHeight,groundHeight,wetness} from './landscape.js?v=130';
-import {unifyPavement} from './road-pavement.js?v=130';
-import {RoadSurfaceIndex} from './road-surface-index.js?v=130';
-import {ASPHALT_HEIGHT,JUNCTION_HEIGHT,SIDEWALK_HEIGHT,MARKING_HEIGHT,PAINT_CLEARANCE,kerbProfile,kerbCap} from './road-profile.js?v=130';
+import {floorHeight,groundHeight,wetness} from './landscape.js?v=131';
+import {unifyPavement} from './road-pavement.js?v=131';
+import {RoadSurfaceIndex} from './road-surface-index.js?v=131';
+import {ASPHALT_HEIGHT,JUNCTION_HEIGHT,SIDEWALK_HEIGHT,MARKING_HEIGHT,PAINT_CLEARANCE,kerbProfile,kerbCap} from './road-profile.js?v=131';
 export class Roadworks{
 constructor(v){this.v=v;this.group=new THREE.Group();v.scene.add(this.group);this.lamps=[];this.lampMaterial=new THREE.MeshStandardMaterial({color:'#e5e2ca',emissive:'#ffe2a0',emissiveIntensity:v.night?3:0,roughness:.3});this.walkMaterial=pavementMaterial();this.lightPoolMaterial=new THREE.MeshBasicMaterial({color:'#ffe0a0',transparent:true,opacity:.22,depthWrite:false,blending:THREE.AdditiveBlending});this.lightPoolMaterial.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 poolUV;').replace('#include <uv_vertex>','#include <uv_vertex>\npoolUV=uv;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 poolUV;').replace('#include <color_fragment>','#include <color_fragment>\ndiffuseColor.a*=pow(max(0.,1.-length(poolUV*2.-1.)),1.8);');};this.lightPoolMaterial.customProgramCacheKey=()=> 'street-light-pool-v1';this.signalGroup=new THREE.Group();v.scene.add(this.signalGroup);}
 clear(){this.group.traverse(o=>{if(o.geometry&&o.geometry!==this.v.unitBox)o.geometry.dispose()});this.group.clear();this.lamps=[];this.pendingLamps=[];this.finishingLamps=false;this.signalKey=null;this.bridgePlan=null;this.bridgeStats=null;this.pavementStats=null;this.surfaces=new RoadSurfaceIndex();this.markingMeshes=[];this.markingStats={before:0,after:0};}
@@ -225,11 +225,19 @@ lamp(x,y,z,horizontal,inward){
    const {bins,oversized}=this.lampSurfaceIndex,candidates=new Set(oversized),border=Array.from({length:24},(_,i)=>[cx+Math.cos(i/24*Math.PI*2)*radius,cz+Math.sin(i/24*Math.PI*2)*radius]);
    for(let bx=Math.floor((cx-radius)/4);bx<=Math.floor((cx+radius)/4);bx++)for(let bz=Math.floor((cz-radius)/4);bz<=Math.floor((cz+radius)/4);bz++)for(const triangle of bins.get(bx+','+bz)||[])candidates.add(triangle);
    for(const triangle of candidates){
+    // Cells include triangles beyond the pool. Reject their exact bounds before
+    // clipping; all retained vertices still use the original interpolation.
+    const [ta,tb,tc]=triangle;
+    if(Math.max(ta[0],tb[0],tc[0])<cx-radius||Math.min(ta[0],tb[0],tc[0])>cx+radius||Math.max(ta[2],tb[2],tc[2])<cz-radius||Math.min(ta[2],tb[2],tc[2])>cz+radius)continue;
     let polygon=triangle;
     // Clip in plan view, interpolating Y on the source triangle. Every emitted
     // face stays on one actual pavement plane, including kerb bevels and crests.
     for(let edge=0;edge<border.length&&polygon.length>=3;edge++){
-     const a=border[edge],b=border[(edge+1)%border.length],distance=p=>(b[0]-a[0])*(p[2]-a[1])-(b[1]-a[1])*(p[0]-a[0]),out=[];
+     const a=border[edge],b=border[(edge+1)%border.length],distance=p=>(b[0]-a[0])*(p[2]-a[1])-(b[1]-a[1])*(p[0]-a[0]);
+     let inside=0;for(const p of polygon)if(distance(p)>=0)inside++;
+     if(inside===polygon.length)continue;
+     if(inside===0){polygon=[];break;}
+     const out=[];
      let previous=polygon.at(-1),dp=distance(previous);
      for(const current of polygon){const dc=distance(current);if((dp<0&&dc>=0)||(dp>=0&&dc<0)){const t=dp/(dp-dc);out.push(previous.map((value,k)=>value+(current[k]-value)*t));}if(dc>=0)out.push(current);previous=current;dp=dc;}
      polygon=out;

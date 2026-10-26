@@ -1,6 +1,6 @@
 // Bridge construction uses the road centreline and rendered shoreline. Plans
 // are transient: saved controls, zoning ownership and simulation paths stay put.
-import {streetStations,atDistance,distanceSection} from './street-geometry.js?v=130';
+import {streetStations,atDistance,distanceSection} from './street-geometry.js?v=131';
 const widthOf=(r,p)=>r.widthAt?r.widthAt(p):r.spec.width;
 const key=p=>`${Math.round(p.x*1000)},${Math.round(p.z*1000)}`;
 
@@ -44,14 +44,18 @@ function gradeSpan(chain,wetStart,wetEnd,isWater,baseHeight,groundHeight){
   const samples=[],distances=[start,end,...s.filter(p=>p.distance>start&&p.distance<end).map(p=>p.distance)];for(let d=start+.5;d<end;d+=.5)distances.push(d);
   let lift=0;
   for(const d of distances){const p=at(d),blend=deckBlend(span,d),center=baseHeight(p.x,p.z),edge=bridgeWidth(s,d)/2+(chain.sidewalk?.42:.2);
-   for(const u of [-edge,-edge/2,0,edge/2,edge]){const x=p.x+p.nx*u,z=p.z+p.nz*u,residual=(1-blend)*(baseHeight(x,z)-center),floor=groundHeight(x,z)+.04,y=bridgeElevation(span,d)+residual;samples.push({d,u,x,z,residual,floor});if(blend>1e-7)lift=Math.max(lift,(floor-y)/blend);}
+   const across=[];for(const u of [-edge,-edge/2,0,edge/2,edge]){const x=p.x+p.nx*u,z=p.z+p.nz*u,residual=(1-blend)*(baseHeight(x,z)-center),floor=groundHeight(x,z)+.04,y=bridgeElevation(span,d)+residual;across.push({u,residual,floor});if(blend>1e-7)lift=Math.max(lift,(floor-y)/blend);}samples.push({d,across});
   }
   // Raising both deck ends equally preserves its grade and only adds the
   // clearance actually required by the full road/footway footprint.
   span.profile.deck0+=lift;span.profile.deck1+=lift;
-  const value=(d,u)=>{const p=at(d);return bridgeElevation(span,d)+(1-deckBlend(span,d))*(baseHeight(p.x+p.nx*u,p.z+p.nz*u)-baseHeight(p.x,p.z));};
+  // All five cross-section samples share the same two longitudinal probes.
+  // Reuse their station and central height without changing sample locations,
+  // arithmetic order, or the candidate/profile selection.
+  const probe=d=>{const p=at(d);return {p,y:bridgeElevation(span,d),blend:1-deckBlend(span,d),center:baseHeight(p.x,p.z)};};
+  const value=(sample,u)=>{const {p}=sample;return sample.y+sample.blend*(baseHeight(p.x+p.nx*u,p.z+p.nz*u)-sample.center);};
   let maxGrade=0,minClearance=Infinity;
-  for(const p of samples){const lo=Math.max(start,p.d-.025),hi=Math.min(end,p.d+.025);if(hi>lo)maxGrade=Math.max(maxGrade,Math.abs((value(hi,p.u)-value(lo,p.u))/(hi-lo)));minClearance=Math.min(minClearance,bridgeElevation(span,p.d)+p.residual-p.floor);}
+  for(const sample of samples){const lo=Math.max(start,sample.d-.025),hi=Math.min(end,sample.d+.025),a=probe(lo),b=probe(hi),y=bridgeElevation(span,sample.d);for(const p of sample.across){if(hi>lo)maxGrade=Math.max(maxGrade,Math.abs((value(b,p.u)-value(a,p.u))/(hi-lo)));minClearance=Math.min(minClearance,y+p.residual-p.floor);}}
   span.profile.maxGrade=maxGrade;span.profile.minClearance=minClearance;span.profile.approach=approach;
   if(!best||maxGrade<best.profile.maxGrade-1e-6)best=span;
   if(maxGrade<=.12&&minClearance>=-1e-7)return span;
