@@ -78,8 +78,11 @@ function evaluate(world){
  return {actual,calls};
 }
 
-test('bridge optimization preserves released profiles and every geometry byte on real terrain and all road styles',()=>{
- for(const [key,terrain,type,seed]of [['islands23','islands','avenue',23],['river23','river','avenue',23],...Object.keys(E.ROADS).map(type=>[type+'431','river',type,431])]){
+test('bridge optimization preserves released profiles and every geometry byte on real terrain and original road styles',()=>{
+ // Freeze the Edition130 catalog with its oracles: later road styles have no
+ // historical geometry to compare, and are covered by their behavior tests.
+ const originalStyles=Object.keys(ORACLES).filter(key=>key.endsWith('431')).map(key=>[key,'river',key.slice(0,-3),431]);
+ for(const [key,terrain,type,seed]of [['islands23','islands','avenue',23],['river23','river','avenue',23],...originalStyles]){
   const {actual,calls}=evaluate(fixture(terrain,type,seed));assert.deepEqual(actual,ORACLES[key],key);
   const baseline=key==='islands23'?{base:20179,ground:3880,height:47328}:key==='river23'?{base:47455,ground:9115,height:26609}:{base:32348,ground:6215,height:21398};
   assert.ok(calls.base<=baseline.base*.7,'shared longitudinal probes avoid repeated central terrain calculations');

@@ -1,4 +1,4 @@
-import './building-entities.js?v=136';
+import './building-entities.js?v=137';
 const Buildings=globalThis.BoroughBuildings;
 // Saved household members and daily routines, connected to the live road agents.
 export class Residents {

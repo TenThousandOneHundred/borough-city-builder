@@ -1,4 +1,6 @@
 // Pure, deterministic lot planning. One world unit represents roughly five metres.
+import './road-curves.js?v=137';
+const RoadCurves=globalThis.BoroughRoadCurves;
 const pathIndices=new WeakMap(),pathSamples=new WeakMap();
 function roadsById(world){
  const paths=world.roadPaths||[],cached=pathIndices.get(world);
@@ -8,8 +10,7 @@ function roadsById(world){
 }
 function segments(path){
  if(pathSamples.has(path))return pathSamples.get(path);
- const [a,b,c]=path.controls,length=path.controls.slice(1).reduce((sum,p,i)=>sum+Math.hypot(p.x-path.controls[i].x,p.y-path.controls[i].y),0),steps=Math.max(2,Math.ceil(length*10)),points=[];
- for(let i=0;i<=steps;i++){const t=i/steps,u=1-t;points.push({x:((c?u*u*a.x+2*u*t*b.x+t*t*c.x:a.x+(b.x-a.x)*t)+.5)*4-96,z:((c?u*u*a.y+2*u*t*b.y+t*t*c.y:a.y+(b.y-a.y)*t)+.5)*4-96});}
+ const points=RoadCurves.sample(path.controls).map(p=>({x:(p.x+.5)*4-96,z:(p.y+.5)*4-96}));
  pathSamples.set(path,points);return points;
 }
 export function lotPlan(world,index,parcel){

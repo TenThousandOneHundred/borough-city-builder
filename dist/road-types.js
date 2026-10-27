@@ -1,0 +1,6 @@
+(function(root){
+'use strict';
+const ROADS={"gravel":{"name":"Gravel road","cost":20,"width":2,"lanes":2,"capacity":0.65,"speed":30,"sidewalk":false},"alley":{"name":"Narrow alley","cost":30,"width":1.7,"lanes":2,"capacity":0.7,"speed":20,"sidewalk":true},"street":{"name":"Two-lane street","cost":50,"width":2.45,"lanes":2,"capacity":1,"speed":40,"sidewalk":true},"oneway":{"name":"One-way street","cost":55,"width":2.45,"lanes":2,"capacity":1.4,"speed":50,"sidewalk":true,"oneway":true},"avenue":{"name":"Four-lane avenue","cost":100,"width":3.2,"lanes":4,"capacity":2,"speed":50,"sidewalk":true},"green":{"name":"Tree-lined avenue","cost":125,"width":3.4,"lanes":4,"capacity":2,"speed":50,"sidewalk":true,"green":true},"boulevard":{"name":"Six-lane boulevard","cost":160,"width":4.5,"lanes":6,"capacity":3,"speed":60,"sidewalk":true,"median":true},"highway":{"name":"Divided highway","cost":200,"width":4.8,"lanes":6,"capacity":4,"speed":100,"sidewalk":false,"median":true,"limitedAccess":true},"motorway":{"name":"Three-lane one-way highway","cost":120,"width":3.15,"lanes":3,"capacity":2.8,"speed":100,"sidewalk":false,"oneway":true,"limitedAccess":true}};
+const isLimitedAccess=type=>!!ROADS[type]?.limitedAccess;
+const api={ROADS,isLimitedAccess};root.BoroughRoadTypes=api;if(typeof module!=='undefined')module.exports=api;
+})(globalThis);

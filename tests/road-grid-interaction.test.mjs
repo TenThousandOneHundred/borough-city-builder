@@ -32,7 +32,7 @@ function harness(type='street'){
   hover(){},clearRoadZoning(){},setBuild(){},setZoning(){},setOverlay(){},setNight(){},setWorld(){},cursor:{visible:true},grid:{visible:true}};
  const session={screen:'game',world,paused:false,start(){this.world=E.createWorld('Other world','plains',9);}};
  const state={E,planRoadGrid,quoteRoadGrid,buildRoadGrid,createRoadSnapIndex,resolveRoadSnap,$,view,session,document,
-  tool:'road',toolOptions:{roadType:type},roadMode:'grid',curvePoints:[],gridPoints:[],gridWorld:null,roadGridSize:96,newRoadSides:'both',newRoadSelect:$('newRoadSides'),
+  tool:'road',toolOptions:{roadType:type},roadMode:'grid',curvePoints:[],gridPoints:[],gridWorld:null,roadGridSize:96,roadParallel:false,roadParallelGap:8,roadParallelSide:1,roadParallelReverse:true,newRoadSides:'both',newRoadSelect:$('newRoadSides'),
   roadSnapIndex:null,roadStartSnap:null,roadLastSnap:null,rightRoadPress:null,lastRoadPointer:null,roadSnapping:{nodes:true,angles:true,lengths:false},
   drag:null,photo:false,painted:new Set(),busStops:[],facilityHover:null,finishTerrain(){},money:n=>'₡'+n,toast:(...args)=>messages.push(args),update(){updates++;},
   isFacility:()=>false,save:()=>true,closeDialogs(){for(const node of nodes.values())node.open=false;},timestamp:()=>'',

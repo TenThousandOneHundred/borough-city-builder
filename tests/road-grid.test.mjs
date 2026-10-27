@@ -44,7 +44,7 @@ test('combined price charges shared intersections once, including water, and equ
   assert.equal(q.cost,expected);assert.ok(q.cost<p.paths.reduce((sum,line)=>sum+E.roadQuote(w,line,type).cost,0));
   const funds=w.money,r=buildRoadGrid(w,p,type,E,{zoneSides:'left'});assert.ok(r.ok,r.reason);assert.equal(r.cost,q.cost);assert.equal(w.money,funds-q.cost);
   assert.equal(r.roads.length,p.paths.length);assert.equal(new Set(r.roads.map(p=>p.id)).size,r.roads.length);
-  for(const path of r.roads){assert.equal(path.type,type);assert.equal(path.zoneSides,type==='highway'?undefined:'left');assert.ok(path.tiles.every(i=>w.tiles[i].pathIds.includes(path.id)));}
+  for(const path of r.roads){assert.equal(path.type,type);assert.equal(path.zoneSides,E.ROADS[type].limitedAccess?undefined:'left');assert.ok(path.tiles.every(i=>w.tiles[i].pathIds.includes(path.id)));}
   assert.ok(E.valid(w));
  }
 });

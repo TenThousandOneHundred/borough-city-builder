@@ -1,6 +1,7 @@
 // Join zoning frontages across separately drawn sections of the same street.
 (function(root){
 'use strict';
+const RoadTypes=typeof module!=='undefined'?require('./road-types.js'):root.BoroughRoadTypes;
 const cache=new WeakMap();
 function streetGraph(world,layout){
  let graph=cache.get(layout);if(graph)return graph;
@@ -14,13 +15,13 @@ function streetGraph(world,layout){
   if(pair.some(p=>!p))return;ends.set(source,pair);
   for(const p of pair){const key=Math.floor(p.x*10)+','+Math.floor(p.z*10);if(!bins.has(key))bins.set(key,[]);bins.get(key).push(p);}
  }
- for(const road of world.roadPaths||[])if(sources.has(road.id)&&road.type!=='highway')add(road.id,road.controls);
+ for(const road of world.roadPaths||[])if(sources.has(road.id)&&!RoadTypes.isLimitedAccess(road.type))add(road.id,road.controls);
  // Legacy streets use terrain coordinates; their end tile centers are also
  // where the road drawing tool snaps an extension.
  for(const source of sources){
   const match=/^legacy-([hv])-(\d+)$/.exec(source);if(!match)continue;
   const vertical=match[1]==='v',fixed=Number(match[2]),coords=[];
-  for(let n=0;n<48;n++){const t=world.tiles[vertical?n*48+fixed:fixed*48+n];if(t.type==='road'&&(!t.pathIds?.length||t.legacyRoad)&&t.roadType!=='highway')coords.push(n);}
+  for(let n=0;n<48;n++){const t=world.tiles[vertical?n*48+fixed:fixed*48+n];if(t.type==='road'&&(!t.pathIds?.length||t.legacyRoad)&&!RoadTypes.isLimitedAccess(t.roadType))coords.push(n);}
   if(coords.length>1)add(source,[coords[0],coords.at(-1)].map(n=>vertical?{x:fixed,y:n}:{x:n,y:fixed}));
  }
  for(const pair of ends.values())for(const p of pair){

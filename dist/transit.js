@@ -1,37 +1,53 @@
-import './roundabout-state.js?v=136';
-import {moveToRoute} from './route-progress.js?v=136';
-import './building-entities.js?v=136';
+import './roundabout-state.js?v=137';
+import {moveToRoute} from './route-progress.js?v=137';
+import './building-entities.js?v=137';
 const Buildings=globalThis.BoroughBuildings;
-import {Walking,sidewalkPosition} from './walking.js?v=136';
-import {roadPoint} from './traffic.js?v=136';
+import {Walking,sidewalkPosition} from './walking.js?v=137';
+import {roadPoint} from './traffic.js?v=137';
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const nearby=(engine,i)=>engine.neighbors(i);
-export const stopPosition=sidewalkPosition;
-export function transitLeg(traffic,from,to,fromDepot=false){
- const starts=fromDepot?nearby(traffic.engine,from).filter(i=>traffic.graph.has(i)):[from];
- for(const start of starts){const cells=traffic.trace(traffic.search(start),to);if(cells){let points=traffic.route(cells,null,false);points=[fromDepot?roadPoint(from):stopPosition(traffic,from),...points,stopPosition(traffic,to)];if(points.length<2)continue;return {cells,points};}}return null;
+// Attach each numeric stop to one physical road for the complete loop. Runtime
+// pins survive rebuilds and saves. Old numeric-only lines remain untouched on
+// read and acquire saved pins on their first road edit.
+const lineAttachments=new WeakMap();
+const worldPoint=p=>({x:(p.x+.5)*4-96,z:(p.y+.5)*4-96});
+function attachStop(traffic,stop,previous){
+ let source=previous?.pathId;if(previous&&source===null&&!traffic.graph.hasSource(stop,null))source=Buildings.frontageSource(traffic.world,{roadIndex:stop,...worldPoint(previous.point)});
+ if(source===false)return null;const access=traffic.network.attachment(stop,source,previous?.point);if(!access)return null;
+ return {stop,pathId:access.record.pathId,point:access.point};
 }
-export function planBusLine(world,traffic,stops){
+export function stopPosition(traffic,i,attachment=attachStop(traffic,i)){
+ if(!attachment)return sidewalkPosition(traffic,i);const access=traffic.network.attachment(i,attachment.pathId,attachment.point);if(!access||access.record.legacy)return sidewalkPosition(traffic,i);
+ const record=access.record,n=Math.min(record.points.length-2,Math.floor(access.position)),a=record.points[n],b=record.points[n+1],p=worldPoint(access.point);let dx=b.x-a.x,dz=b.y-a.y;if(dx<0||Math.abs(dx)<.001&&dz<0){dx=-dx;dz=-dz;}const length=Math.hypot(dx,dz)||1,offset=record.spec.width/2+.22;return {x:p.x-dz/length*offset,z:p.z+dx/length*offset};
+}
+export function transitLeg(traffic,from,to,fromDepot=false,fromAttachment=fromDepot?null:attachStop(traffic,from),toAttachment=attachStop(traffic,to)){
+ if(!toAttachment||!fromDepot&&!fromAttachment)return null;const starts=fromDepot?nearby(traffic.engine,from).filter(i=>traffic.graph.has(i)):[from];
+ for(const start of starts){const source=fromDepot?traffic.frontageSource(from,start):fromAttachment.pathId,point=fromDepot?traffic.frontagePoint(from):fromAttachment.point,cells=traffic.trace(traffic.search(start,traffic.graph,source,point),to,toAttachment.pathId,toAttachment.point);
+  if(cells){const points=[fromDepot?roadPoint(from):stopPosition(traffic,from,fromAttachment),...traffic.route(cells,null,false),stopPosition(traffic,to,toAttachment)];if(points.length<2)continue;return {cells,points};}
+ }return null;
+}
+export function planBusLine(world,traffic,stops,pinned,originalDepot){
  if(!Array.isArray(stops)||stops.length<2||stops.length>12||new Set(stops).size!==stops.length||stops.some(i=>!Number.isInteger(i)||!traffic.graph.has(i)))return {ok:false,reason:'Choose 2–12 different road stops.'};
  if(stops.some(i=>globalThis.BoroughRoundabouts.blocked(world,{cx:(i%48+.5)*4-96,cz:(Math.floor(i/48)+.5)*4-96,width:.01,depth:.01},3.05)))return {ok:false,reason:'Place bus stops beyond the roundabout approaches.'};
- const legs=stops.map((s,i)=>transitLeg(traffic,s,stops[(i+1)%stops.length]));if(legs.some(l=>!l))return {ok:false,reason:'Every stop must connect to the next, including the return to the first stop.'};
- let depot=-1,entry=null;for(let i=0;i<world.tiles.length;i++)if(world.tiles[i].type==='bus'&&world.tiles[i].level){const route=transitLeg(traffic,i,stops[0],true);if(route){depot=i;entry=route;break;}}
- if(!entry)return {ok:false,reason:'Build a bus depot with road access to the first stop.'};return {ok:true,legs,entry,depot,cost:500+stops.length*100};
+ const attachments=stops.map((s,i)=>attachStop(traffic,s,pinned?.[i]));if(attachments.some(a=>!a))return {ok:false,reason:'A stop’s road has been removed. Restore its road to resume service.'};
+ const legs=stops.map((s,i)=>transitLeg(traffic,s,stops[(i+1)%stops.length],false,attachments[i],attachments[(i+1)%stops.length]));if(legs.some(l=>!l))return {ok:false,attachments,reason:'Every stop must connect to the next on its own road, including the return to the first stop.'};
+ let depot=-1,entry=null;for(let i=0;i<world.tiles.length;i++)if((originalDepot===undefined||i===originalDepot)&&world.tiles[i].type==='bus'&&world.tiles[i].level){const route=transitLeg(traffic,i,stops[0],true,null,attachments[0]);if(route){depot=i;entry=route;break;}}
+ if(!entry)return {ok:false,attachments,reason:'Build a bus depot with road access to the first stop.'};return {ok:true,attachments,legs,entry,depot,cost:500+stops.length*100};
 }
 export function createBusLine(world,traffic,stops){
  if((world.transit?.lines.length||0)>=8)return {ok:false,reason:'This city can operate up to 8 bus lines.'};const plan=planBusLine(world,traffic,stops);if(!plan.ok)return plan;if(world.money<plan.cost)return {ok:false,reason:'Not enough funds for the bus and stops.'};
- world.transit ||= {version:1,nextId:1,lines:[]};const id=world.transit.nextId++;const line={id,name:'Line '+id,stops:[...stops],depot:plan.depot,boardings:0,completed:0,vehicle:{leg:-1,phase:'moving',dwell:0,segment:0,distance:0,...roadPoint(plan.depot),heading:0}};world.transit.lines.push(line);world.money-=plan.cost;return {ok:true,line,cost:plan.cost};
+ world.transit ||= {version:1,nextId:1,lines:[]};const id=world.transit.nextId++;const line={id,name:'Line '+id,stops:[...stops],stopAttachments:structuredClone(plan.attachments),depot:plan.depot,boardings:0,completed:0,vehicle:{leg:-1,phase:'moving',dwell:0,segment:0,distance:0,...roadPoint(plan.depot),heading:0}};world.transit.lines.push(line);lineAttachments.set(line,plan.attachments);world.money-=plan.cost;return {ok:true,line,cost:plan.cost};
 }
 export class Transit{
  constructor(world,traffic){this.world=world;this.traffic=traffic;this.entries=new Map();this.passengers=new Map();this.journeyCache=new Map();this.walking=new Walking(world,traffic);this.passengerRoutes=new Map();this.rebuild();}
  syncPassengers(){const people=this.world.citizens?.residents;if(people===this.peopleSource)return;this.peopleSource=people;this.passengers=new Map((people||[]).filter(r=>r.transit).map(r=>[r.id,r]));for(const id of this.passengerRoutes.keys())if(!this.passengers.has(id))this.passengerRoutes.delete(id);}
- rebuild(){const replacement=this.roadEditRevision!==undefined&&this.roadEditRevision!==(this.world.roadEditRevision||0);this.roadEditRevision=this.world.roadEditRevision||0;this.developmentRevision=this.world.development?.revision||0;if(this.walkingReady)this.walking.rebuild();this.walkingReady=true;this.walkRevision=this.world.walkRevision||0;this.passengerRoutes.clear();this.journeyCache.clear();const lines=this.world.transit?.lines||[],ids=new Set(lines.map(l=>l.id));for(const [id,e]of this.entries)if(!ids.has(id)){e.agent.active=false;this.entries.delete(id);}
- for(const line of lines){const plan=planBusLine(this.world,this.traffic,line.stops);let entry=this.entries.get(line.id);if(!entry){const agent=this.traffic.agents.find(a=>a.kind==='bus'&&!a.active&&![...this.entries.values()].some(e=>e.agent===a))||this.traffic.addAgent();agent.kind='bus';agent.length=2.1;entry={line,agent};this.entries.set(line.id,entry);}entry.plan=plan;entry.line=line;entry.stopPositions=line.stops.map(stop=>stopPosition(this.traffic,stop));
+ rebuild(){const topologyChanged=this.graph!==undefined&&this.graph!==this.traffic.graph;const replacement=this.roadEditRevision!==undefined&&this.roadEditRevision!==(this.world.roadEditRevision||0);this.roadEditRevision=this.world.roadEditRevision||0;this.developmentRevision=this.world.development?.revision||0;if(this.walkingReady)this.walking.rebuild();this.walkingReady=true;this.walkRevision=this.world.walkRevision||0;this.passengerRoutes.clear();this.journeyCache.clear();const lines=this.world.transit?.lines||[],ids=new Set(lines.map(l=>l.id));for(const [id,e]of this.entries)if(!ids.has(id)){e.agent.active=false;this.entries.delete(id);}
+ for(const line of lines){const pinned=lineAttachments.get(line)||line.stopAttachments;if(topologyChanged&&pinned&&!line.stopAttachments)line.stopAttachments=structuredClone(pinned);const plan=planBusLine(this.world,this.traffic,line.stops,pinned,line.depot);if(plan.attachments){lineAttachments.set(line,plan.attachments);if(topologyChanged&&line.stopAttachments)line.stopAttachments=structuredClone(plan.attachments);}let entry=this.entries.get(line.id);if(!entry){const agent=this.traffic.agents.find(a=>a.kind==='bus'&&!a.active&&![...this.entries.values()].some(e=>e.agent===a))||this.traffic.addAgent();agent.kind='bus';agent.length=2.1;entry={line,agent};this.entries.set(line.id,entry);}entry.plan=plan;entry.line=line;entry.stopPositions=line.stops.map((stop,i)=>stopPosition(this.traffic,stop,(lineAttachments.get(line)||line.stopAttachments)?.[i]));
  if(!plan.ok){entry.agent.active=false;entry.reason=plan.reason;continue;}entry.reason='';if(this.world.tiles[line.depot]?.type!=='bus'){entry.reason='Original depot removed';entry.agent.active=false;continue;}
- if(replacement&&entry.agent.active){const route=line.vehicle.leg<0?transitLeg(this.traffic,line.depot,line.stops[0],true):plan.legs[line.vehicle.leg];if(route){moveToRoute(entry.agent,route.points);entry.agent.trip={destination:line.stops[line.vehicle.leg<0?0:(line.vehicle.leg+1)%line.stops.length],cells:[route.cells],roads:new Set(route.cells)};Object.assign(line.vehicle,{segment:entry.agent.segment,distance:entry.agent.distance,x:entry.agent.x,z:entry.agent.z,heading:entry.agent.heading});}}
+ if(replacement&&entry.agent.active){const route=line.vehicle.leg<0?plan.entry:plan.legs[line.vehicle.leg];if(route){moveToRoute(entry.agent,route.points);entry.agent.trip={destination:line.stops[line.vehicle.leg<0?0:(line.vehicle.leg+1)%line.stops.length],cells:[route.cells],roads:new Set(route.cells)};Object.assign(line.vehicle,{segment:entry.agent.segment,distance:entry.agent.distance,x:entry.agent.x,z:entry.agent.z,heading:entry.agent.heading});}}
  if(!entry.agent.active){const dwell=line.vehicle.phase==='dwell',remaining=line.vehicle.dwell;this.launch(entry,true);if(replacement){moveToRoute(entry.agent,entry.agent.points);Object.assign(line.vehicle,{segment:entry.agent.segment,distance:entry.agent.distance,x:entry.agent.x,z:entry.agent.z,heading:entry.agent.heading});}if(dwell){line.vehicle.phase='dwell';line.vehicle.dwell=remaining;entry.agent.hold=true;}}
  }this.graph=this.traffic.graph;this.lineKey=lines.map(l=>l.id+':'+l.stops.join(',')).join(';');}
- launch(entry,restore=false){const {line,plan,agent}=entry,v=line.vehicle,route=v.leg<0?transitLeg(this.traffic,line.depot,line.stops[0],true):plan.legs[v.leg];if(!route){entry.reason='Route disconnected';return false;}
+ launch(entry,restore=false){const {line,plan,agent}=entry,v=line.vehicle,route=v.leg<0?plan.entry:plan.legs[v.leg];if(!route){entry.reason='Route disconnected';return false;}
  const segment=restore?Math.min(v.segment,route.points.length-2):0,p=route.points[segment],q=route.points[segment+1],distance=restore?Math.min(v.distance,dist(p,q)):0;
  Object.assign(agent,{hold:false,kind:'bus',length:2.1,active:true,arrived:false,residentId:null,previousX:undefined,previousZ:undefined,phase:'bus',trip:{destination:line.stops[v.leg<0?0:(v.leg+1)%line.stops.length],cells:[route.cells],roads:new Set(route.cells)},points:route.points,segment,distance,dwell:0,speed:0,stopTime:0,stopJunction:null,x:restore?v.x:p.x,z:restore?v.z:p.z,heading:restore?v.heading:Math.atan2(q.x-p.x,q.z-p.z)});v.phase='moving';return true;}
  request(r,to,purpose){const origin=Buildings.point(this.world,r.location),destination=Buildings.point(this.world,to);if(!origin||!destination)return false;const direct=dist(origin,destination);if(r.id%3===0||direct<10)return false;const key=JSON.stringify([r.location,to]);let choice=this.journeyCache.get(key)||null;

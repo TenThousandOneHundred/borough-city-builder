@@ -1,5 +1,7 @@
 (function(root){
 'use strict';
+const RoadTypes=typeof module!=='undefined'?require('./road-types.js'):root.BoroughRoadTypes;
+const RoadCurves=typeof module!=='undefined'?require('./road-curves.js'):root.BoroughRoadCurves;
 const Roundabouts=typeof module!=='undefined'?require('./roundabout-state.js'):root.BoroughRoundabouts;
 const cache=new WeakMap(),SIZE=48,CELL=4;
 function sameTiles(tiles,previous){
@@ -43,9 +45,9 @@ function layout(w,roads,options={}){
   for(let z=minZ;z<=maxZ;z++)for(let x=minX;x<=maxX;x++)for(const road of roadBins.get(x+','+z)||[]){if(road.visit===visit)continue;road.visit=visit;if(rectOverlaps(p,road))return true;}return false;
  }
 
- for(const path of w.roadPaths||[]){const [a,b,c]=path.controls,points=[],steps=Math.max(2,Math.ceil(path.controls.slice(1).reduce((n,p,i)=>n+Math.hypot(p.x-path.controls[i].x,p.y-path.controls[i].y),0)*8));let length=0;
-  for(let j=0;j<=steps;j++){const t=j/steps,u=1-t,p={x:((c?u*u*a.x+2*u*t*b.x+t*t*c.x:a.x+(b.x-a.x)*t)+.5)*4-96,z:((c?u*u*a.y+2*u*t*b.y+t*t*c.y:a.y+(b.y-a.y)*t)+.5)*4-96};if(j)length+=Math.hypot(p.x-points[j-1].x,p.z-points[j-1].z);p.distance=length;points.push(p);}
-  for(let k=1;k<points.length;k++)roadRectangle(points[k-1],points[k],roads[path.type]?.width||2.45);if(path.type==='highway')continue;
+ for(const path of w.roadPaths||[]){const curved=path.controls.length>2,points=[];let length=0;
+  for(const q of RoadCurves.sample(path.controls,8)){const p={x:(q.x+.5)*4-96,z:(q.y+.5)*4-96};if(points.length)length+=Math.hypot(p.x-points.at(-1).x,p.z-points.at(-1).z);p.distance=length;points.push(p);}
+  for(let k=1;k<points.length;k++)roadRectangle(points[k-1],points[k],roads[path.type]?.width||2.45);if(RoadTypes.isLimitedAccess(path.type))continue;
   const columns=Math.floor(length/cellSize),blockOffsets=new Map();for(let col=0;col<columns;col++){const section=independent?Math.floor(col/6)*6:col,count=independent?Math.min(6,columns-section):1,d=(section+count/2)*cellSize;let k=1;while(k<points.length-1&&points[k].distance<d)k++;const a=points[k-1],b=points[k],f=(d-a.distance)/(b.distance-a.distance||1),vx=b.x-a.x,vz=b.z-a.z,l=Math.hypot(vx,vz)||1,along=(col-section+.5-count/2)*cellSize;
    // Fine cells share a tangent within short blocks. Rotating every inner-curve
    // cell independently makes successive rows overlap in a checkerboard.
@@ -53,7 +55,7 @@ function layout(w,roads,options={}){
    // front edge to the road ribbon across the whole block, once per section.
    // Otherwise one rejected front cell also removes its whole column.
    const offset=Math.max(independent?0:2,(roads[path.type]?.width||2.45)/2+.45);
-   if(independent&&c&&!blockOffsets.has(section)){
+   if(independent&&curved&&!blockOffsets.has(section)){
     const px=a.x+vx*f,pz=a.z+vz*f,tx=vx/l,tz=vz/l,half=count*cellSize/2,clearance=[offset,offset];
     for(let j=Math.max(0,k-1);j>=0&&points[j].distance>=d-half-offset-2;j--){const q=points[j],u=(q.x-px)*tx+(q.z-pz)*tz;if(Math.abs(u)<=half+.1){const n=-(q.x-px)*tz+(q.z-pz)*tx;clearance[0]=Math.max(clearance[0],offset-n);clearance[1]=Math.max(clearance[1],offset+n);}}
     for(let j=k;j<points.length&&points[j].distance<=d+half+offset+2;j++){const q=points[j],u=(q.x-px)*tx+(q.z-pz)*tz;if(Math.abs(u)<=half+.1){const n=-(q.x-px)*tz+(q.z-pz)*tx;clearance[0]=Math.max(clearance[0],offset-n);clearance[1]=Math.max(clearance[1],offset+n);}}
@@ -61,7 +63,7 @@ function layout(w,roads,options={}){
    }
    sources.push({zoneSides:path.zoneSides,x:a.x+vx*f+vx/l*along,z:a.z+vz*f+vz/l*along,tx:vx/l,tz:vz/l,col,source:path.id,roadIndex:path.tiles[Math.min(path.tiles.length-1,Math.floor(col/Math.max(1,columns)*path.tiles.length))],offset,sideOffsets:blockOffsets.get(section)});}
  }
- for(let i=0;i<w.tiles.length;i++){const t=w.tiles[i];if(t.type!=='road'||t.pathIds?.length&&!t.legacyRoad)continue;const x=i%48,y=Math.floor(i/48),horizontal=(x>0&&w.tiles[i-1].type==='road')||(x<47&&w.tiles[i+1].type==='road'),vertical=(y>0&&w.tiles[i-48].type==='road')||(y<47&&w.tiles[i+48].type==='road');const cx=(x+.5)*4-96,cz=(y+.5)*4-96,roadWidth=roads[t.roadType]?.width||(t.roadWidth===2?3.15:2.45);if(horizontal||!vertical)roadRectangle({x:cx-2,z:cz},{x:cx+2,z:cz},roadWidth);if(vertical)roadRectangle({x:cx,z:cz-2},{x:cx,z:cz+2},roadWidth);if(horizontal&&vertical||t.roadType==='highway')continue;
+ for(let i=0;i<w.tiles.length;i++){const t=w.tiles[i];if(t.type!=='road'||t.pathIds?.length&&!t.legacyRoad)continue;const x=i%48,y=Math.floor(i/48),horizontal=(x>0&&w.tiles[i-1].type==='road')||(x<47&&w.tiles[i+1].type==='road'),vertical=(y>0&&w.tiles[i-48].type==='road')||(y<47&&w.tiles[i+48].type==='road');const cx=(x+.5)*4-96,cz=(y+.5)*4-96,roadWidth=roads[t.roadType]?.width||(t.roadWidth===2?3.15:2.45);if(horizontal||!vertical)roadRectangle({x:cx-2,z:cz},{x:cx+2,z:cz},roadWidth);if(vertical)roadRectangle({x:cx,z:cz-2},{x:cx,z:cz+2},roadWidth);if(horizontal&&vertical||RoadTypes.isLimitedAccess(t.roadType))continue;
   const source={zoneSides:t.zoneSides,x:cx,z:cz,tx:vertical?0:1,tz:vertical?1:0,col:vertical?y:x,source:vertical?'legacy-v-'+x:'legacy-h-'+y,roadIndex:i,offset:Math.max(independent?0:2,roadWidth/2+.45)};
   if(!independent)sources.push(source);else{const along=vertical?cz:cx;for(let col=Math.ceil((along-2)/cellSize-.5);(col+.5)*cellSize<along+2-1e-8;col++)sources.push({...source,col,...(vertical?{z:(col+.5)*cellSize}:{x:(col+.5)*cellSize})});}
  }

@@ -159,6 +159,83 @@ export class RoadGuidePreview{
    this.labelText(1,[snap?.label,angle].filter(Boolean).join(' · ')||(details.anchorOnly?'Choose start':''));this.labelRoot.hidden=false;this.updateLabels();
   }
  }
+ showParallel(plan,type,valid,details={}){
+  const raw=[plan?.samples?.primary,plan?.samples?.secondary];
+  if(raw.some(points=>!Array.isArray(points)||points.length<2||points.some(p=>!finitePoint(p)))){this.clear();return;}
+  const spec=globalThis.CityEngine.ROADS[type],width=(spec?.width??2.45)+(spec?.sidewalk?.8:0),half=width/2,innerRatio=Math.min((spec?.width??width)/2,half-.07)/half;
+  const fill=[],colors=[],outline=[],dashes=[],guides=[],outerColor=valid?GRID_COLORS.blue:GRID_COLORS.red,asphaltColor=valid?(type==='gravel'?GRID_COLORS.gravel:GRID_COLORS.asphalt):GRID_COLORS.blocked;
+  const totalSamples=raw[0].length+raw[1].length;
+  const corridors=raw.map(samples=>{
+   const budget=totalSamples<=MAX_GRID_STATIONS?samples.length:Math.max(2,Math.floor((MAX_GRID_STATIONS-4)*samples.length/totalSamples)+2),points=[],stride=Math.max(1,Math.ceil((samples.length-1)/(budget-1)));let lengthMeters=0;
+   for(let i=1;i<samples.length;i++)lengthMeters+=Math.hypot(samples[i].x-samples[i-1].x,samples[i].y-samples[i-1].y)*20;
+   for(let i=0;i<samples.length;i+=stride)points.push(toWorld(samples[i]));
+   const end=toWorld(samples.at(-1));if(Math.hypot(points.at(-1).x-end.x,points.at(-1).z-end.z)>1e-8)points.push(end);
+   const left=[],right=[],center=[],distances=[0];
+   for(let i=0;i<points.length;i++){
+    const p=points[i],before=points[Math.max(0,i-1)],after=points[Math.min(points.length-1,i+1)],dx=after.x-before.x,dz=after.z-before.z,n=Math.hypot(dx,dz),nx=n>1e-9?-dz/n:0,nz=n>1e-9?dx/n:1;
+    left.push(this.surface(p.x+nx*half,p.z+nz*half));right.push(this.surface(p.x-nx*half,p.z-nz*half));const middle=between(left[i],right[i],.5);middle.y+=.02;center.push(middle);
+    if(i)distances.push(distances.at(-1)+Math.hypot(p.x-points[i-1].x,p.z-points[i-1].z));
+   }
+   return {points,left,right,center,distances,lengthMeters,length:distances.at(-1)};
+  });
+  // Sampling the two road edges once supplies the carriageway, center markings
+  // and arrows. Distinct roads still sample their own terrain; no height cache
+  // or assumption of a flat median is involved.
+  const at=(road,distance)=>{
+   let i=1;while(i<road.distances.length-1&&road.distances[i]<distance)i++;
+   const before=road.center[Math.max(0,i-1)],after=road.center[Math.min(i,road.center.length-1)],span=Math.hypot(after.x-before.x,after.z-before.z),t=span>1e-9?Math.max(0,Math.min(1,(distance-road.distances[Math.max(0,i-1)])/span)):0;
+   const p=between(before,after,t),l=between(road.left[Math.max(0,i-1)],road.left[Math.min(i,road.left.length-1)],t),r=between(road.right[Math.max(0,i-1)],road.right[Math.min(i,road.right.length-1)],t),tangent=span>1e-9?{x:(after.x-before.x)/span,z:(after.z-before.z)/span}:{x:1,z:0};
+   return {p,tangent,along:span>1e-9?(after.y-before.y)/span:0,across:(l.y-r.y)/width};
+  };
+  const shifted=(station,along,cross)=>({x:station.p.x+station.tangent.x*along-station.tangent.z*cross,y:station.p.y+station.along*along+station.across*cross,z:station.p.z+station.tangent.z*along+station.tangent.x*cross});
+  const ring=(p,radius,array=outline,steps=40)=>{let previous;for(let i=0;i<=steps;i++){const angle=i/steps*Math.PI*2,q=this.surface(p.x+Math.cos(angle)*radius,p.z+Math.sin(angle)*radius,.27);if(previous)segment(array,previous,q);previous=q;}};
+  const arrows=[];
+  for(const road of corridors){
+   for(let i=1;i<road.points.length;i++){
+    if(road.distances[i]-road.distances[i-1]<1e-8)continue;
+    const l=road.left[i-1],r=road.right[i-1],ll=road.left[i],rr=road.right[i];
+    quad(fill,l,r,ll,rr);colorVertices(colors,outerColor,.22,6);
+    quad(fill,between(l,r,(1-innerRatio)/2),between(l,r,(1+innerRatio)/2),between(ll,rr,(1-innerRatio)/2),between(ll,rr,(1+innerRatio)/2));colorVertices(colors,asphaltColor,.42,6);
+    segment(outline,l,ll);segment(outline,r,rr);
+   }
+   if(road.length>1e-8){
+    segment(outline,road.left[0],road.right[0]);segment(outline,road.left.at(-1),road.right.at(-1));
+    const period=Math.max(2.4,road.length/256);
+    for(let mark=.3;mark<road.length-.3;mark+=period){const a=at(road,mark),b=at(road,Math.min(road.length-.3,mark+1.1)),h=width*.016;quad(dashes,shifted(a,0,h),shifted(a,0,-h),shifted(b,0,h),shifted(b,0,-h));}
+    const station=at(road,road.length*.58),size=Math.min(width*1.7,road.length*.32),head=size*.45,tip=shifted(station,size*.5,0),tail=shifted(station,-size*.5,0);
+    quad(dashes,shifted(station,-size*.5,width*.07),shifted(station,-size*.5,-width*.07),shifted(station,size*.5-head,width*.07),shifted(station,size*.5-head,-width*.07));
+    pushPoint(dashes,tip);pushPoint(dashes,shifted(station,size*.5-head,width*.28));pushPoint(dashes,shifted(station,size*.5-head,-width*.28));arrows.push({from:tail,to:tip});
+   }
+   ring(road.points[0],half+.18);if(road.length>1e-8)ring(road.points.at(-1),half+.18);
+  }
+  const primary=corridors[0],start=primary.points[0],end=primary.points.at(-1),radius=width*2.5;
+  if(primary.length>1e-8){
+   ring(start,radius,guides,80);const station=at(primary,0);segment(guides,shifted(station,-radius,0),shifted(station,radius,0));
+   const reference=details.referenceTangent;
+   if(finitePoint(reference)&&Math.hypot(reference.x,reference.y)>1e-7){const n=Math.hypot(reference.x,reference.y);segment(guides,this.surface(start.x,start.z,.27),this.surface(start.x+reference.x/n*radius,start.z+reference.y/n*radius,.27));}
+  }
+  if(plan.primary?.length===3&&finitePoint(plan.primary[1])){const bend=toWorld(plan.primary[1]);ring(bend,.35);segment(guides,this.surface(start.x,start.z,.27),this.surface(bend.x,bend.z,.27));segment(guides,this.surface(bend.x,bend.z,.27),this.surface(end.x,end.z,.27));}
+  let gapMiddle=between(at(primary,primary.length/2).p,at(corridors[1],corridors[1].length/2).p,.5);
+  const gap=plan.gapGuide||plan.gapSegment;
+  if(finitePoint(gap?.a)&&finitePoint(gap?.b)){
+   const aa=toWorld(gap.a),bb=toWorld(gap.b),a=this.surface(aa.x,aa.z,.32),b=this.surface(bb.x,bb.z,.32),span=Math.hypot(b.x-a.x,b.z-a.z);gapMiddle=between(a,b,.5);segment(guides,a,b);
+   if(span>1e-8){const dx=(b.x-a.x)/span,dz=(b.z-a.z)/span,size=Math.min(width*.24,span*.22),h=size*.45;for(const [tip,sign]of [[a,1],[b,-1]]){const base={x:tip.x+dx*size*sign,y:tip.y+(b.y-a.y)/span*size*sign,z:tip.z+dz*size*sign};pushPoint(dashes,tip);pushPoint(dashes,{x:base.x-dz*h,y:base.y,z:base.z+dx*h});pushPoint(dashes,{x:base.x+dz*h,y:base.y,z:base.z-dx*h});}}
+  }
+  for(const guide of (details.snap?.guides||[]).slice(0,8)){
+   if(!finitePoint(guide.a)||!finitePoint(guide.b))continue;const a=toWorld(guide.a),b=toWorld(guide.b),steps=Math.max(1,Math.min(128,Math.ceil(Math.hypot(b.x-a.x,b.z-a.z)/2)));let previous;
+   for(let i=0;i<=steps;i++){const t=i/steps,p=this.surface(a.x+(b.x-a.x)*t,a.z+(b.z-a.z)*t,.25);if(previous)segment(guides,previous,p);previous=p;}
+  }
+  const color=valid?BLUE:RED;this.fillAppearance(true,color);this.outline.object.material.color.set(color);this.guides.object.material.color.set(color);
+  this.fill.write(fill,colors);this.outline.write(outline);this.dashes.write(dashes);this.guides.write(guides);this.group.visible=true;
+  const gapMeters=Number.isFinite(plan.gap)?plan.gap*20:null;this.metrics={mode:'parallel',roadCount:2,stations:corridors.reduce((n,r)=>n+r.points.length,0),lengthMeters:corridors.reduce((n,r)=>n+r.lengthMeters,0),primaryLengthMeters:primary.lengthMeters,secondaryLengthMeters:corridors[1].lengthMeters,gapMeters,arrows,drawObjects:this.batches.filter(batch=>batch.object.visible).length};
+  this.labelPoints=[at(primary,primary.length).p,gapMiddle,at(primary,primary.length*.36).p,at(corridors[1],corridors[1].length*.36).p,at(primary,primary.length).p];
+  if(this.labels){
+   this.labelMode='parallel';this.labels[0].title='Combined construction cost for both roads. Arrows follow each authored road direction.';
+   this.labelText(0,Number.isFinite(details.cost)?['₡'+Math.round(details.cost).toLocaleString(),!valid&&details.reason,'2 parallel roads'].filter(Boolean).join('\n'):details.reason||'2 parallel roads');this.labels[0].style.borderColor=valid?'rgba(130,216,249,.45)':'rgba(255,140,120,.7)';
+   this.labelText(1,gapMeters===null?'':`↔ ${metres(gapMeters)} m clear gap`);this.labelText(2,`Road 1 · ${metres(primary.lengthMeters)} m`);this.labelText(3,`Road 2 · ${metres(corridors[1].lengthMeters)} m`);
+   this.labelText(4,[details.snap?.label,Number.isFinite(details.snap?.angleDegrees)?Math.round(details.snap.angleDegrees)+'°':''].filter(Boolean).join(' · '));this.labelRoot.hidden=false;this.updateLabels();
+  }
+ }
  showGrid(plan,type,valid,details={}){
   const paths=plan?.paths,corners=plan?.corners;
   if(!Array.isArray(paths)||!paths.length||paths.length>MAX_GRID_PATHS||paths.some(path=>!Array.isArray(path)||path.length!==2||path.some(p=>!finitePoint(p)))){this.clear();return;}
