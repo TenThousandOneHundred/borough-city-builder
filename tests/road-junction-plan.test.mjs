@@ -91,7 +91,7 @@ test('outside connections preserve authored road width, dividers and median',asy
  const {canvasDocument}=await import('./architecture-fixture.mjs');
  const {laneLayout}=await import('../dist/road-lanes.js');
  const old=globalThis.document;globalThis.document=canvasDocument();
- try{for(const type of ['street','avenue','boulevard','highway','oneway']){
+ try{for(const type of ['street','avenue','boulevard','highway','motorway','oneway']){
   const w=E.createWorld('Outside lanes','plains',42),v=view();v.box=()=>{};
   const r=new Roadworks(v),widths=[],dividers=[],edges=[],medians=[];
   r.height=()=>0;r.ribbon=(_w,_p,width)=>widths.push(width);
@@ -100,7 +100,8 @@ test('outside connections preserve authored road width, dividers and median',asy
   r.outside(w,{id:24,x:2,z:-94,dx:0,dz:-1},v.mat('#555555'));
   const spec=E.ROADS[type];assert.deepEqual(widths,[spec.width]);
   assert.deepEqual(dividers,laneLayout(spec).dividers.map(d=>d.offset));
-  assert.deepEqual(edges,[-(spec.width/2-.12),spec.width/2-.12]);
+  const paintEdge=type==='highway'?2.1:type==='motorway'?1.125:spec.width/2-.12;
+  assert.deepEqual(edges,[-paintEdge,paintEdge],'highway edge lines reserve their paved shoulders');
   assert.equal(medians.length,spec.median?1:0);
  }}finally{globalThis.document=old;}
 });

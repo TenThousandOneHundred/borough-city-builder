@@ -8,7 +8,7 @@ test('three-lane one-way highways expose three forward lanes and no opposing cen
  const road=E.ROADS.motorway,lanes=laneLayout(road);
  assert.equal(road.oneway,true);assert.equal(road.limitedAccess,true);assert.equal(road.sidewalk,false);
  assert.equal(lanes.forward.length,3);assert.equal(lanes.reverse.length,0);assert.equal(lanes.dividers.length,2);assert.ok(lanes.dividers.every(p=>!p.center));
- assert.ok(lanes.forward.every((v,i)=>Math.abs(v-[1.05,0,-1.05][i])<1e-12));
+ assert.ok(lanes.forward.every((v,i)=>Math.abs(v-[.75,0,-.75][i])<1e-12),'paved shoulders leave three 3.75 m travel lanes');
 });
 
 test('one-way highways build and save but cannot create roadside zoning',()=>{

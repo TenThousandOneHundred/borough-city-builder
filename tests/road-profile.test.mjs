@@ -20,7 +20,7 @@ function view(){const materials=new Map();return {scene:new T.Scene(),unitBox:ne
  landscape:{assets:{},material:()=>new T.MeshStandardMaterial()}};}
 function city(){const w=E.createWorld('Road profile','plains',8);for(const t of w.tiles)Object.assign(t,{type:null,ground:'land',level:0});w.money=1e7;return w;}
 const plane=(_w,x,z)=>3+x*.02+z*.03;
-function markingMeshes(r){const colors=['#d4cba8','#dfded3','#e0ded2','#dedbd0','#dedbc9','#e0dfd0'];return r.group.children.filter(m=>colors.some(c=>m.material===r.v.mat(c)));}
+function markingMeshes(r){const colors=['#d4cba8','#dfded3','#e0ded2','#dedbd0','#dedbc9','#e0dfd0'];return r.group.children.filter(m=>m.material.userData.roadPaint||colors.some(c=>m.material===r.v.mat(c)));}
 
 test('17.5 cm kerbs retain legacy and authored street footprints with 20 cm bevels',()=>{
  close((SIDEWALK_HEIGHT-ASPHALT_HEIGHT)*5,.175);close(KERB_WIDTH*5,.2);

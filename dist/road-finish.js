@@ -1,4 +1,5 @@
 import * as THREE from './vendor/three.module.js';
+import {travelHalfWidth} from './road-lanes.js?v=138';
 // The source photograph spans 2.1 metres; one world unit represents five.
 export const ROAD_TEXTURE_REPEAT=5/2.1;
 // Lateral road coordinates and lane spacing ride on the existing pavement mesh.
@@ -6,10 +7,13 @@ export const ROAD_TEXTURE_REPEAT=5/2.1;
 export function roadFinishData(geometry,stations,width,spec){
  const data=new Float32Array(geometry.attributes.position.count*3);
  for(let i=0;i<stations.length;i++){
-  const p=stations[i],w=typeof width==='function'?width(p):width,median=spec.median?.16:0;
-  const laneWidth=spec.oneway?w/spec.lanes:(w/2-median)/Math.max(1,spec.lanes/2);
-  const start=spec.oneway?-w/2:median;
-  for(let side=0;side<2;side++)data.set([laneWidth,start,1],(i*2+side)*3);
+  const p=stations[i],w=typeof width==='function'?width(p):width,median=spec.median?.16:0,edge=travelHalfWidth(spec,w);
+  const laneWidth=spec.oneway?edge*2/spec.lanes:(edge-median)/Math.max(1,spec.lanes/2);
+  const start=spec.oneway?-edge:median;
+  // Keep the ordinary-road payload unchanged. Negative coverage encodes the
+  // highway travel edge, so tyre wear cannot repeat across its paved shoulder.
+  const coverage=spec.limitedAccess?-edge:1;
+  for(let side=0;side<2;side++)data.set([laneWidth,start,coverage],(i*2+side)*3);
  }
  geometry.setAttribute('roadFinish',new THREE.BufferAttribute(data,3));
 }
@@ -40,13 +44,16 @@ export function configureRoadFinish(material){
   shader.fragmentShader='varying vec3 roadFinishData;\nvarying vec2 roadFinishUv;\n'+shader.fragmentShader;
   shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
    float laneWidth=max(roadFinishData.x,.1);
-   float lanePosition=(abs(roadFinishUv.x)-roadFinishData.y)/laneWidth;
-   float trackDistance=abs(abs(fract(lanePosition)-.5)-.23)*laneWidth;
+   float laneCoordinate=roadFinishData.y<0.?roadFinishUv.x:abs(roadFinishUv.x);
+   float lanePosition=(laneCoordinate-roadFinishData.y)/laneWidth;
+   float laneCenterDistance=abs(fract(lanePosition)-.5)*laneWidth;
+   float trackDistance=abs(laneCenterDistance-.15);
    float trackAA=max(fwidth(roadFinishUv.x),.008);
-   float wheelWear=1.-smoothstep(.045-trackAA,.105+trackAA,trackDistance);
+   float wheelWear=1.-smoothstep(.015-trackAA,.055+trackAA,trackDistance);
    float wearVisibility=1.-smoothstep(.04,.18,trackAA);
-   diffuseColor.rgb*=1.-wheelWear*wearVisibility*.16*roadFinishData.z;
+   float wearCoverage=roadFinishData.z<0.?1.-smoothstep(-roadFinishData.z-trackAA,-roadFinishData.z+trackAA,abs(roadFinishUv.x)):roadFinishData.z;
+   diffuseColor.rgb*=1.-wheelWear*wearVisibility*.065*wearCoverage;
   `);
  };
- material.customProgramCacheKey=()=> 'borough-road-surface-129';return material;
+ material.customProgramCacheKey=()=> 'borough-road-surface-138';return material;
 }
