@@ -1,6 +1,20 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 136 — Three-click street grids
+
+Roads now includes Grid mode: click a corner, set the first edge, then set the perpendicular depth. Target block sizes are 80, 96, 128 or 160 metres, with up to eight blocks in either direction. The tool supports all eight road styles; one-way grids use a connected perimeter loop and alternating internal streets. Right-click steps back, Escape cancels, and changing tools or leaving the city clears unfinished drafts. Connection, angle and length snapping remain available. Alt releases snapping while the grid keeps its rectangular shape.
+
+The whole grid is priced before construction. Shared intersection tiles are charged once, compatible existing edges can be reused, and invalid or unaffordable grids leave the city unchanged. Successful placement creates ordinary roads with real junctions, driving routes and roadside zoning; it uses the existing save format. Resident records are not copied while the pointer moves, and the scene rebuilds once for the completed grid.
+
+The official [Road Tools Grid mode picture](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/road-tools) was inspected before implementation and compared with successive browser previews. Revisions added rounded outer corners, separate asphalt and sidewalk shading, stronger construction-axis dashes, 90° markers and dimensions on the actual grid edges. The original preview still uses four persistent drawing objects and shared buffers. Label layout work is batched and unchanged labels reuse their measurements. Reference images are not shipped; this is an original grid tool, and commercial-game equivalence remains unachieved.
+
+All 690 automated checks pass, including construction rollback, complete pricing, existing-edge reuse, one-way reachability, resident journeys, geometric zoning and production pointer interactions. All 96 root JavaScript modules pass syntax checking; all five lossless asset bundles retain identical decoded contents. Existing building, tree and terrain assets are unchanged.
+
+Browser QA created a separate Grid QA 136 world and built a 1×3 grid connected to its starter road for ₡2,550. Right-click correctly returned to the first-edge step without building. Manual save verified at 6:05:09 PM on October 27; Save & Exit stored 6:05:22 PM. A full reload returned to home with that entry, and Continue restored the grid, its five controlled intersections and roadside zoning. No browser warnings or errors were recorded. The five-minute interval remains covered by existing clock tests; this check did not establish a fresh hosted five-minute autosave.
+
+In a bounded 1280×720 preview fixture, the final median grid quote took 0.9 ms and guide update 2.8 ms, with a 16.7 ms median frame interval. A separate maximum 8×8-grid CPU fixture quoted in 6.66 ms median; adding 50,000 resident records to a smaller fixture did not increase its quote time. These observations do not establish a general FPS improvement. Road/terrain rebuilding remains synchronous and can pause during construction. This is feature update one after optimization 135; the next scheduled optimization follows features 136–138.
+
 ## Edition 135 — Shorter catch-up pauses and faster city calculations
 
 Delayed simulation work now yields between complete fixed steps after an 8 ms work target while the page is visible. Unprocessed time stays pending in the active session; no resident, vehicle, journey or fixed step is discarded to meet the work target. Hidden pages retain the previous larger catch-up batches so throttled browser timers can continue advancing the city. The 8 ms target is not a hard limit: an individual fixed step can take longer. Pause, speed changes and switching worlds preserve their existing behavior. As before, saves store completed city state; pending catch-up time is not retained after leaving or reloading a world.

@@ -1,6 +1,6 @@
 // Bridge construction uses the road centreline and rendered shoreline. Plans
 // are transient: saved controls, zoning ownership and simulation paths stay put.
-import {streetStations,atDistance,distanceSection} from './street-geometry.js?v=135';
+import {streetStations,atDistance,distanceSection} from './street-geometry.js?v=136';
 const widthOf=(r,p)=>r.widthAt?r.widthAt(p):r.spec.width;
 const key=p=>`${Math.round(p.x*1000)},${Math.round(p.z*1000)}`;
 

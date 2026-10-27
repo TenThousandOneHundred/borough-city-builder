@@ -1,28 +1,28 @@
-import {RoadGuidePreview} from './road-guide-preview.js?v=135';
-import {SIDEWALK_HEIGHT} from './road-profile.js?v=135';
-import './building-entities.js?v=135';
+import {RoadGuidePreview} from './road-guide-preview.js?v=136';
+import {SIDEWALK_HEIGHT} from './road-profile.js?v=136';
+import './building-entities.js?v=136';
 const Buildings=globalThis.BoroughBuildings;
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {ZonePlaneBatch} from './zoning-render-batch.js?v=135';
-import {trackAssetGroups} from './asset-transfer.js?v=135';
-import {buildFootpaths} from './footpaths.js?v=135';
-import {Transit,transitLeg,stopPosition} from './transit.js?v=135';
-import {SimulationClock} from './simulation-clock.js?v=135';
-import {Residents} from './residents.js?v=135';
-import {Traffic,carCapacity} from './traffic.js?v=135';
-import {Vehicles} from './vehicles.js?v=135';
-import {BuildingFactory} from './building-factory.js?v=135';
-import {StreetLife} from './street-life.js?v=135';
-import {changedRoadCells,frontageTouches} from './road-frontage.js?v=135';
-import {visualParcels} from './parcels.js?v=135';
-import {Graphics} from './graphics.js?v=135';
-import {Vegetation} from './vegetation.js?v=135';
+import {ZonePlaneBatch} from './zoning-render-batch.js?v=136';
+import {trackAssetGroups} from './asset-transfer.js?v=136';
+import {buildFootpaths} from './footpaths.js?v=136';
+import {Transit,transitLeg,stopPosition} from './transit.js?v=136';
+import {SimulationClock} from './simulation-clock.js?v=136';
+import {Residents} from './residents.js?v=136';
+import {Traffic,carCapacity} from './traffic.js?v=136';
+import {Vehicles} from './vehicles.js?v=136';
+import {BuildingFactory} from './building-factory.js?v=136';
+import {StreetLife} from './street-life.js?v=136';
+import {changedRoadCells,frontageTouches} from './road-frontage.js?v=136';
+import {visualParcels} from './parcels.js?v=136';
+import {Graphics} from './graphics.js?v=136';
+import {Vegetation} from './vegetation.js?v=136';
 import {RGBELoader} from './vendor/RGBELoader.js';
 import * as THREE from './vendor/three.module.js';
 import {OrbitControls} from './vendor/OrbitControls.js';
-import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=135';
-import {Architecture} from './architecture.js?v=135';
-import {Roadworks} from './roadworks.js?v=135';
+import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=136';
+import {Architecture} from './architecture.js?v=136';
+import {Roadworks} from './roadworks.js?v=136';
 const N=48,T=4,HALF=96,zoneColors={residential:'#54b663',commercial:'#5bb1d8',industrial:'#cdb268',office:'#aa87c9'};
 export class CityView{
 constructor(canvas){this.assetsReady=false;this.loadingElement=document.getElementById('sceneLoading');this.canvas=canvas;this.scene=new THREE.Scene();this.scene.background=new THREE.Color('#aebfca');this.scene.fog=new THREE.FogExp2('#b7c6cc',.00105);
@@ -181,6 +181,7 @@ showRoadReplacement(plan){
  const mesh=this.roadworks.ribbon(this.world,points,spec.width+(spec.sidewalk?.8:0),0,material,.3);this.roadworks.group.remove(mesh);group.add(mesh);
  const batch=new ZonePlaneBatch(this.world,(w,x,z)=>this.renderFloor(w,x,z));for(const conflict of plan.conflicts)batch.add(0,0,'#ef755c',.55,conflict.frame);batch.finish(group);
 }
+showRoadGridPreview(plan,type,valid,details={}){this.clearLine();this.roadGuidePreview ||= new RoadGuidePreview(this);this.roadGuidePreview.showGrid(plan,type,valid,details);}
 showRoadPreview(controls,type,valid,details={}){this.clearLine();this.roadGuidePreview ||= new RoadGuidePreview(this);this.roadGuidePreview.update(controls,type,valid,details);}
 getZoneTile(x,y){if(!this.getTile(x,y))return null;const p=BoroughZoning.hit(CityEngine.fineZoningLayout(this.world),this.point.x,this.point.z);if(p)return {id:p.id,x:p.index%48,y:Math.floor(p.index/48)};const old=BoroughZoning.hit(CityEngine.zoningLayout(this.world),this.point.x,this.point.z);return old&&this.world.tiles[old.index].zone?{legacy:true,x:old.index%48,y:Math.floor(old.index/48)}:null}
 getZoneDragTile(x,y,start){

@@ -1,6 +1,8 @@
 import * as THREE from './vendor/three.module.js';
 
-const MAX_STATIONS=384,BLUE='#78d8ff',RED='#ff8c78';
+const MAX_STATIONS=384,MAX_GRID_PATHS=18,MAX_GRID_STATIONS=768,BLUE='#78d8ff',RED='#ff8c78';
+const GRID_COLORS={blue:new THREE.Color(BLUE),red:new THREE.Color(RED),asphalt:new THREE.Color('#42515e'),blocked:new THREE.Color('#744f49'),gravel:new THREE.Color('#655e50')};
+const LABEL_SIZE_STYLES=['font','letterSpacing','padding','borderWidth','maxWidth','width','whiteSpace'];
 const toWorld=p=>({x:(p.x+.5)*4-96,z:(p.y+.5)*4-96});
 const finitePoint=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y);
 const overlap=(a,b,gap=8)=>a.left<b.right+gap&&a.right>b.left-gap&&a.top<b.bottom+gap&&a.bottom>b.top-gap;
@@ -22,8 +24,9 @@ export function placeRoadGuideBadge(anchor,size,bounds,blocked=[],occupied=[]){
 // These are disposable drawing aids, never pavement, road controls or save data.
 // Four persistent draw objects are updated only when the pointer changes.
 class BufferBatch{
- constructor(object){this.object=object;this.geometry=object.geometry;this.capacity=0;this.array=null;}
- write(values){
+ constructor(object){this.object=object;this.geometry=object.geometry;this.capacity=0;this.array=null;this.colorArray=null;}
+ write(values,colors=null){
+  let grew=false;
   if(values.length>this.capacity){
    this.capacity=3*2**Math.ceil(Math.log2(Math.max(1024,Math.ceil(values.length/3))));
    // Releasing the previous attribute's GPU allocation before growing avoids
@@ -31,8 +34,16 @@ class BufferBatch{
    if(this.array)this.geometry.dispose();
    this.array=new Float32Array(this.capacity);
    this.geometry.setAttribute('position',new THREE.BufferAttribute(this.array,3).setUsage(THREE.DynamicDrawUsage));
+   grew=true;
   }
   if(this.array){this.array.set(values);this.geometry.attributes.position.needsUpdate=true;}
+  if(colors||this.colorArray){
+   if(!this.colorArray||grew){this.colorArray=new Float32Array(this.capacity/3*4).fill(1);this.geometry.setAttribute('color',new THREE.BufferAttribute(this.colorArray,4).setUsage(THREE.DynamicDrawUsage));}
+   // An ordinary road never inherits a grid tint or opacity. The same pooled
+   // attribute remains allocated and harmlessly white while vertex colors are off.
+   if(colors)this.colorArray.set(colors);else this.colorArray.fill(1);
+   this.geometry.attributes.color.needsUpdate=true;
+  }
   this.geometry.setDrawRange(0,values.length/3);this.object.visible=values.length>0;
  }
  dispose(){this.geometry.dispose();this.object.material.dispose();}
@@ -43,6 +54,9 @@ function lineMaterial(color,opacity){return new THREE.LineBasicMaterial({color,o
 function pushPoint(array,p){array.push(p.x,p.y,p.z);}
 function segment(array,a,b){pushPoint(array,a);pushPoint(array,b);}
 function quad(array,a,b,c,d){pushPoint(array,a);pushPoint(array,b);pushPoint(array,c);pushPoint(array,c);pushPoint(array,b);pushPoint(array,d);}
+function colorVertices(array,color,alpha,count){for(let i=0;i<count;i++)array.push(color.r,color.g,color.b,alpha);}
+function between(a,b,t){return {x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:a.z+(b.z-a.z)*t};}
+const metres=value=>value<100?value.toFixed(1):Math.round(value).toLocaleString();
 
 export class RoadGuidePreview{
  constructor(view){
@@ -60,14 +74,19 @@ export class RoadGuidePreview{
   if(typeof document==='undefined')return;
   this.labelRoot=document.createElement('div');this.labelRoot.className='road-guide-labels';this.labelRoot.hidden=true;
   this.labelRoot.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:35;overflow:hidden;';
-  this.labels=[0,1].map((_,index)=>{
-   const label=document.createElement('div');label.className='road-guide-badge';label.dataset.roadGuide=index?'snap':'measurement';
+  this.labels=[0,1,2,3,4].map((_,index)=>{
+   const label=document.createElement('div');label.className='road-guide-badge';label.dataset.roadGuide=['measurement','snap','grid-depth','grid-angle','grid-angle'][index];
    label.style.cssText='position:absolute;display:none;padding:7px 10px;border-radius:4px;background:rgba(16,25,33,.94);color:#f3faff;border:1px solid rgba(130,216,249,.35);box-shadow:0 2px 8px #0005;font:600 12px/1.55 system-ui,sans-serif;white-space:pre-line;max-width:245px;transform:translate(-50%,-100%);text-align:center;font-variant-numeric:tabular-nums;';
    this.labelRoot.append(label);return label;
   });
   this.labels[0].title='Length follows the drawn centerline. Slope is an endpoint estimate; final road grading may differ.';
   document.body.append(this.labelRoot);
+  this.labelFonts=document.fonts;this.invalidateLabelSizes=()=>{this.labelSizes=null;};
+  this.labelFonts?.addEventListener?.('loadingdone',this.invalidateLabelSizes);
+  this.labelFonts?.addEventListener?.('loadingerror',this.invalidateLabelSizes);
  }
+ labelText(index,text){const label=this.labels?.[index];if(label&&label.textContent!==text){label.textContent=text;this.labelSizes=null;}}
+ fillAppearance(grid,color){const material=this.fill.object.material;if(material.vertexColors!==grid){material.vertexColors=grid;material.needsUpdate=true;}material.color.set(grid?'#ffffff':color);material.opacity=grid?1:.22;}
  height(x,z){
   const view=this.view,h=view.roadworks?.height?.(view.world,x,z)??view.renderFloor?.(view.world,x,z)??0;
   return Number.isFinite(h)?h:0;
@@ -124,17 +143,110 @@ export class RoadGuidePreview{
    if(!finitePoint(guide.a)||!finitePoint(guide.b))continue;const a=toWorld(guide.a),b=toWorld(guide.b),distance=Math.hypot(b.x-a.x,b.z-a.z),steps=Math.max(1,Math.min(128,Math.ceil(distance/2)));
    let previous;for(let i=0;i<=steps;i++){const t=i/steps,p=this.surface(a.x+(b.x-a.x)*t,a.z+(b.z-a.z)*t,.25);if(previous)segment(guides,previous,p);previous=p;}
   }
-  const color=valid?BLUE:RED;this.fill.object.material.color.set(color);this.outline.object.material.color.set(color);this.guides.object.material.color.set(color);
+  const color=valid?BLUE:RED;this.fillAppearance(false,color);this.outline.object.material.color.set(color);this.guides.object.material.color.set(color);
   this.fill.write(fill);this.outline.write(outline);this.dashes.write(dashes);this.guides.write(guides);this.group.visible=true;
   const first=points[0],chord=Math.hypot(last.x-first.x,last.z-first.z),slope=chord>1e-8?(this.height(last.x,last.z)-this.height(first.x,first.z))/chord*100:0;
   this.metrics={lengthMeters:length,endpointSlopePercent:slope,stations:points.length,drawObjects:this.batches.filter(b=>b.object.visible).length};
   const middle=center[Math.floor(center.length/2)],end=center.at(-1);this.labelPoints=[{...middle},{...end}];
   if(this.labels){
-   const metres=length<100?length.toFixed(1):Math.round(length).toLocaleString();
-   this.labels[0].textContent=details.anchorOnly?'':length<.01?'Choose an endpoint':`${metres} m  ·  ${valid&&Number.isFinite(details.cost)?'₡'+Math.round(details.cost).toLocaleString():details.reason||'Road preview'}\nEndpoint grade ~${slope>=0?'+':''}${slope.toFixed(1)}%`;
+   this.labelMode=details.gridEdge?'grid-edge':details.anchorOnly?'anchor':'road';
+   for(let i=2;i<this.labels.length;i++)this.labelText(i,'');
+   this.labels[0].title=details.gridEdge?'Set the first edge, then choose the depth of the street grid.':'Length follows the drawn centerline. Slope is an endpoint estimate; final road grading may differ.';
+   const measured=metres(length);
+   this.labelText(0,details.gridEdge?`${measured} m · Grid width\n${valid?'Click to choose the grid depth':details.reason||'Choose a valid first edge'}`:details.anchorOnly?'':length<.01?'Choose an endpoint':`${measured} m  ·  ${valid&&Number.isFinite(details.cost)?'₡'+Math.round(details.cost).toLocaleString():details.reason||'Road preview'}\nEndpoint grade ~${slope>=0?'+':''}${slope.toFixed(1)}%`);
    this.labels[0].style.borderColor=valid?'rgba(130,216,249,.45)':'rgba(255,140,120,.7)';
    const snap=details.snap,angle=Number.isFinite(snap?.angleDegrees)?Math.round(snap.angleDegrees)+'°':'';
-   this.labels[1].textContent=[snap?.label,angle].filter(Boolean).join(' · ')||(details.anchorOnly?'Choose start':'');this.labelSizes=null;this.labelRoot.hidden=false;this.updateLabels();
+   this.labelText(1,[snap?.label,angle].filter(Boolean).join(' · ')||(details.anchorOnly?'Choose start':''));this.labelRoot.hidden=false;this.updateLabels();
+  }
+ }
+ showGrid(plan,type,valid,details={}){
+  const paths=plan?.paths,corners=plan?.corners;
+  if(!Array.isArray(paths)||!paths.length||paths.length>MAX_GRID_PATHS||paths.some(path=>!Array.isArray(path)||path.length!==2||path.some(p=>!finitePoint(p)))){this.clear();return;}
+  // The engine owns staging. A first-edge plan has no depth; recognizing its
+  // geometry also keeps the guide independent of the UI's stage numbering.
+  const full=Array.isArray(corners)&&corners.length===4&&corners.every(finitePoint)&&Math.hypot(corners[3].x-corners[0].x,corners[3].y-corners[0].y)>1e-7;
+  if(!full){
+   this.update(paths[0],type,valid,{...details,gridEdge:true});
+   if(this.metrics){this.metrics.mode='grid';this.metrics.roadCount=1;this.metrics.stage='edge';}
+   return;
+  }
+  const engine=globalThis.CityEngine,spec=engine.ROADS[type],width=type==='path'?.65:(spec?.width??2.45)+(spec?.sidewalk?.8:0),half=width/2;
+  const fill=[],fillColors=[],outline=[],dashes=[],guides=[],worldCorners=corners.map(toWorld),perPath=Math.floor(MAX_GRID_STATIONS/paths.length);
+  const outerColor=valid?GRID_COLORS.blue:GRID_COLORS.red,asphaltColor=valid?(type==='gravel'?GRID_COLORS.gravel:GRID_COLORS.asphalt):GRID_COLORS.blocked,asphaltHalf=Math.min((spec?.width??width)/2,half-.07),asphaltRatio=asphaltHalf/half;
+  const a=worldCorners[0],b=worldCorners[1],d=worldCorners[3],widthWorld=Math.hypot(b.x-a.x,b.z-a.z),depthWorld=Math.hypot(d.x-a.x,d.z-a.z);
+  if(widthWorld<1e-7){this.clear();return;}
+  const ux=(b.x-a.x)/widthWorld,uz=(b.z-a.z)/widthWorld,vx=(d.x-a.x)/depthWorld,vz=(d.z-a.z)/depthWorld;
+  const perimeter=(p,q)=>{const near=(x,y)=>Math.hypot(x.x-y.x,x.z-y.z)<1e-5;return worldCorners.findIndex((c,i)=>near(c,p)&&near(worldCorners[(i+1)%4],q)||near(c,q)&&near(worldCorners[(i+1)%4],p));};
+  let stationCount=0,totalLength=0;
+  for(const path of paths){
+   const start=toWorld(path[0]),end=toWorld(path[1]),dx=end.x-start.x,dz=end.z-start.z,span=Math.hypot(dx,dz);if(span<1e-7)continue;
+   const steps=Math.max(1,Math.min(perPath-1,Math.ceil(span/2))),nx=-dz/span,nz=dx/span,perimeterIndex=perimeter(start,end),drawingAxis=perimeterIndex===0||perimeterIndex===1,edge=perimeterIndex>=0?outline:guides;
+   let beforeLeft,beforeRight,beforeInnerLeft,beforeInnerRight;
+   for(let i=0;i<=steps;i++){
+    const t=i/steps,x=start.x+dx*t,z=start.z+dz*t,left=this.surface(x+nx*half,z+nz*half),right=this.surface(x-nx*half,z-nz*half);
+    const innerLeft=between(left,right,(1-asphaltRatio)/2),innerRight=between(left,right,(1+asphaltRatio)/2);
+    if(beforeLeft){
+     quad(fill,beforeLeft,beforeRight,left,right);colorVertices(fillColors,outerColor,.22,6);
+     // Darken the carriageway while retaining the cyan sidewalk/edge band.
+     // The inner section lies on the already sampled ribbon: no extra height work.
+     quad(fill,beforeInnerLeft,beforeInnerRight,innerLeft,innerRight);colorVertices(fillColors,asphaltColor,.42,6);
+     segment(edge,beforeLeft,left);segment(edge,beforeRight,right);
+    }
+    beforeLeft=left;beforeRight=right;beforeInnerLeft=innerLeft;beforeInnerRight=innerRight;
+   }
+   stationCount+=steps+1;totalLength+=span*5;
+   {
+    // Keep the construction axes prominent while giving the interior streets
+    // quieter lane markings instead of leaving featureless blue bands.
+    const dashHalf=width*(drawingAxis?.05:.016),dashLength=drawingAxis?.9:1.1,period=Math.max(drawingAxis?1.65:2.4,span/256),inset=drawingAxis?0:half+.12;
+    for(let mark=inset;mark<span-inset;mark+=period){
+     const to=Math.min(span-inset,mark+dashLength),x=start.x+dx*mark/span,z=start.z+dz*mark/span,ex=start.x+dx*to/span,ez=start.z+dz*to/span;
+     quad(dashes,this.surface(x+nx*dashHalf,z+nz*dashHalf,.25),this.surface(x-nx*dashHalf,z-nz*dashHalf,.25),this.surface(ex+nx*dashHalf,ez+nz*dashHalf,.25),this.surface(ex-nx*dashHalf,ez-nz*dashHalf,.25));
+    }
+   }
+  }
+  const ring=(p,radius,array=outline,steps=40)=>{let previous;for(let i=0;i<=steps;i++){const angle=i/steps*Math.PI*2,q=this.surface(p.x+Math.cos(angle)*radius,p.z+Math.sin(angle)*radius,.27);if(previous)segment(array,previous,q);previous=q;}};
+  for(const corner of worldCorners)ring(corner,half+.18);
+  // The outer halo follows the real rectangular footprint, with rounded
+  // corners so it reads as an alignment aid rather than another road.
+  const orthogonal=Math.abs(ux*vx+uz*vz)<1e-5;
+  if(orthogonal){
+   const radius=width*2.5,point=(u,v)=>this.surface(a.x+ux*u+vx*v,a.z+uz*u+vz*v,.27),rounded=[];
+   for(const [u,v,from]of [[0,0,Math.PI],[widthWorld,0,Math.PI*1.5],[widthWorld,depthWorld,0],[0,depthWorld,Math.PI*.5]]){
+    // Straight ribbons meet at their centerline ends. Fill only the missing
+    // outer quarter, avoiding any extra surface inside the open city block.
+    const center=this.surface(a.x+ux*u+vx*v,a.z+uz*u+vz*v);let previous;
+    for(let i=0;i<=16;i++){
+     const angle=from+i/16*Math.PI/2,xx=u+Math.cos(angle)*half,zz=v+Math.sin(angle)*half,q=this.surface(a.x+ux*xx+vx*zz,a.z+uz*xx+vz*zz);
+     if(previous){
+      pushPoint(fill,center);pushPoint(fill,previous);pushPoint(fill,q);colorVertices(fillColors,outerColor,.22,3);
+      pushPoint(fill,center);pushPoint(fill,between(center,previous,asphaltRatio));pushPoint(fill,between(center,q,asphaltRatio));colorVertices(fillColors,asphaltColor,.42,3);segment(outline,previous,q);
+     }previous=q;
+    }
+    for(let i=0;i<=20;i++){const angle=from+i/20*Math.PI/2;rounded.push(point(u+Math.cos(angle)*radius,v+Math.sin(angle)*radius));}
+   }
+   for(let i=0;i<rounded.length;i++)segment(guides,rounded[i],rounded[(i+1)%rounded.length]);
+   // Right-angle brackets are grounded in the two perpendicular grid axes.
+   const r=width*.95,stroke=(p,q)=>{const dx=q.x-p.x,dz=q.z-p.z,n=Math.hypot(dx,dz),nx=-dz/n*.07,nz=dx/n*.07;quad(dashes,{x:p.x+nx,y:p.y,z:p.z+nz},{x:p.x-nx,y:p.y,z:p.z-nz},{x:q.x+nx,y:q.y,z:q.z+nz},{x:q.x-nx,y:q.y,z:q.z-nz});};
+   for(const [u,v,sign]of [[0,0,1],[widthWorld,0,-1]]){stroke(point(u+sign*r,v),point(u+sign*r,v+r));stroke(point(u+sign*r,v+r),point(u,v+r));}
+  }else ring(a,width*2.5,guides,80);
+  for(const guide of (details.snap?.guides||[]).slice(0,8)){
+   if(!finitePoint(guide.a)||!finitePoint(guide.b))continue;const from=toWorld(guide.a),to=toWorld(guide.b),steps=Math.max(1,Math.min(128,Math.ceil(Math.hypot(to.x-from.x,to.z-from.z)/2)));let previous;
+   for(let i=0;i<=steps;i++){const t=i/steps,p=this.surface(from.x+(to.x-from.x)*t,from.z+(to.z-from.z)*t,.25);if(previous)segment(guides,previous,p);previous=p;}
+  }
+  const color=valid?BLUE:RED;this.fillAppearance(true,color);this.outline.object.material.color.set(color);this.guides.object.material.color.set(color);
+  this.fill.write(fill,fillColors);this.outline.write(outline);this.dashes.write(dashes);this.guides.write(guides);this.group.visible=true;
+  this.metrics={mode:'grid',stage:'grid',roadCount:paths.length,stations:stationCount,widthMeters:widthWorld*5,depthMeters:depthWorld*5,lengthMeters:totalLength,drawObjects:this.batches.filter(batch=>batch.object.visible).length};
+  const middle=(p,q)=>this.surface((p.x+q.x)/2,(p.z+q.z)/2,.3);this.labelPoints=[this.surface(worldCorners[2].x,worldCorners[2].z,.3),middle(a,b),middle(b,worldCorners[2]),this.surface(a.x,a.z,.3),this.surface(b.x,b.z,.3)];
+  if(this.labels){
+   this.labelMode='grid';
+   const columns=Math.max(0,Math.min(8,Math.floor(plan.columns||0))),rows=Math.max(0,Math.min(8,Math.floor(plan.rows||0))),blocks=columns*rows;
+   this.labels[0].title='Total construction cost for the complete street grid. Road grading is calculated when built.';
+   this.labelText(0,Number.isFinite(details.cost)?['₡'+Math.round(details.cost).toLocaleString(),!valid&&details.reason,`${columns} × ${rows} · ${blocks} ${blocks===1?'block':'blocks'}`].filter(Boolean).join('\n'):details.reason||'Grid preview');
+   this.labels[0].style.borderColor=valid?'rgba(130,216,249,.45)':'rgba(255,140,120,.7)';
+   this.labelText(1,`↔ ${metres(widthWorld*5)} m`);this.labelText(2,`↔ ${metres(depthWorld*5)} m`);
+   this.labelText(3,orthogonal?'∟ 90°':'');this.labelText(4,orthogonal?'∟ 90°':'');
+   this.labelRoot.hidden=false;this.updateLabels();
   }
  }
  updateLabels(){
@@ -142,18 +254,26 @@ export class RoadGuidePreview{
   const rect=this.view.canvas?.getBoundingClientRect?.()||{left:0,top:0,width:globalThis.innerWidth||1280,height:globalThis.innerHeight||720};
   const panel=typeof document==='undefined'?null:document.getElementById('buildPanel'),panelRect=panel&&!panel.hidden?panel.getBoundingClientRect():null;
   const bounds={left:rect.left,right:rect.left+rect.width,top:rect.top+65,bottom:rect.top+rect.height-95},occupied=[];
-  if(!this.labelSizes){this.labelSizes=this.labels.map(label=>{label.style.display='block';const box=label.getBoundingClientRect();return {width:box.width,height:box.height};});}
+  const sizeKey=[this.labelMode,rect.width,rect.height,globalThis.devicePixelRatio||1,...this.labels.map(label=>label.textContent+'\u001f'+LABEL_SIZE_STYLES.map(key=>label.style[key]).join('\u001f'))].join('\u001e');
+  if(sizeKey!==this.labelSizeKey){this.labelSizeKey=sizeKey;this.labelSizes=null;}
+  const display=(label,value)=>{if(label.style.display!==value)label.style.display=value;};
+  if(!this.labelSizes){
+   // All visibility writes precede every size read. Interleaving the two
+   // forces a fresh browser layout for each badge during a pointer update.
+   for(const label of this.labels)display(label,label.textContent?'block':'none');
+   this.labelSizes=this.labels.map(label=>{if(!label.textContent)return null;const box=label.getBoundingClientRect();return {width:box.width,height:box.height};});
+  }
   for(let i=0;i<this.labels.length;i++){
-   const label=this.labels[i],p=this.labelPoints[i];if(!p||!label.textContent){label.style.display='none';continue;}
+   const label=this.labels[i],p=this.labelPoints[i];if(!p||!label.textContent){display(label,'none');continue;}
    this.cameraPoint.set(p.x,p.y,p.z).applyMatrix4(this.view.camera.matrixWorldInverse);
    this.projected.set(p.x,p.y,p.z).project(this.view.camera);
-   if(this.cameraPoint.z>=0||this.projected.z<-1||this.projected.z>1||Math.abs(this.projected.x)>1||Math.abs(this.projected.y)>1){label.style.display='none';continue;}
+   if(this.cameraPoint.z>=0||this.projected.z<-1||this.projected.z>1||Math.abs(this.projected.x)>1||Math.abs(this.projected.y)>1){display(label,'none');continue;}
    const rawX=rect.left+(this.projected.x*.5+.5)*rect.width,rawY=rect.top+(-this.projected.y*.5+.5)*rect.height;
    const size=this.labelSizes[i],position=placeRoadGuideBadge({x:rawX,y:rawY-(i?25:45)},size,bounds,panelRect?[panelRect]:[],occupied);
-   if(!position){label.style.display='none';continue;}
-   occupied.push(badgeBox(position,size));label.style.display='block';label.style.left=position.x+'px';label.style.top=position.y+'px';
+   if(!position){display(label,'none');continue;}
+   occupied.push(badgeBox(position,size));display(label,'block');const left=position.x+'px',top=position.y+'px';if(label.style.left!==left)label.style.left=left;if(label.style.top!==top)label.style.top=top;
   }
  }
  clear(){this.group.visible=false;this.metrics=null;if(this.labelRoot)this.labelRoot.hidden=true;}
- dispose(){this.clear();this.group.removeFromParent();for(const batch of this.batches)batch.dispose();this.labelRoot?.remove();}
+ dispose(){this.clear();this.group.removeFromParent();for(const batch of this.batches)batch.dispose();this.labelFonts?.removeEventListener?.('loadingdone',this.invalidateLabelSizes);this.labelFonts?.removeEventListener?.('loadingerror',this.invalidateLabelSizes);this.labelRoot?.remove();}
 }
