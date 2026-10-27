@@ -385,7 +385,11 @@ function buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePlan
    for(const {a,b,start,end}of fitted){const dx=b[0]-a[0],dz=b[2]-a[2],length=Math.hypot(dx,dz);boundaryWalls.push({a,b,nx:dz/length,nz:-dx/length,u0:edge.u0+edge.length*start,u1:edge.u0+edge.length*end});}
   }
   for(const wall of boundaryWalls){const {a,b,nx,nz,u0:ua,u1:ub}=wall,ya=a.nativeY,yb=b.nativeY,fill=a[1]+b[1]>=ya+yb,side=fill?-1:1,thickness=.06;
-   const p=[a[0],Math.min(a[1],ya),a[2],ua,Math.min(a[1],ya)],q=[a[0],Math.max(a[1],ya),a[2],ua,Math.max(a[1],ya)],r=[b[0],Math.max(b[1],yb),b[2],ub,Math.max(b[1],yb)],s=[b[0],Math.min(b[1],yb),b[2],ub,Math.min(b[1],yb)];
+   // A three-centimetre coping stands above the soil shelf. Raising the whole
+   // closed upper rim keeps side/end faces joined and avoids a coplanar grass
+   // and concrete cap without changing terrain or adding clipping work.
+   const topA=Math.max(a[1],ya)+.006,topB=Math.max(b[1],yb)+.006;
+   const p=[a[0],Math.min(a[1],ya),a[2],ua,Math.min(a[1],ya)],q=[a[0],topA,a[2],ua,topA],r=[b[0],topB,b[2],ub,topB],s=[b[0],Math.min(b[1],yb),b[2],ub,Math.min(b[1],yb)];
    const back=v=>[v[0]+nx*thickness*side,v[1],v[2]+nz*thickness*side,v[3],v[4]],pp=back(p),qq=back(q),rr=back(r),ss=back(s),quad=(a,b,c,d,reverse=false)=>{if(reverse)walls.push(a,c,b,a,d,c);else walls.push(a,b,c,a,c,d);};
    quad(p,q,r,s,!fill);quad(pp,ss,rr,qq,!fill);
    // Caps have a second physical UV dimension across their thickness. Using

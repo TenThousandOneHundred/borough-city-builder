@@ -4,7 +4,7 @@ import E from '../dist/engine.js';
 import {planRoadGrades} from '../dist/road-grades.js';
 import {streetStations,atDistance} from '../dist/street-geometry.js';
 import {planJunctions,roadGeometry,planWidthTransitions} from '../dist/road-junction-plan.js';
-import {planBridges,bridgeHeight} from '../dist/bridge-spans.js';
+import {planBridges,bridgeHeight,bridgeWidth} from '../dist/bridge-spans.js';
 import {floorHeight,wetness} from '../dist/landscape.js';
 import {Roadworks} from '../dist/roadworks.js';
 globalThis.CityEngine=E;
@@ -86,9 +86,9 @@ test('new dry grades meet the unchanged bridge dry-end height, derivative and la
  close(plan.sampleDatum(-40,0),lower(-40,0),.005);close(plan.sampleDatum(40,0),lower(40,0),.005);
 });
 
-test('bridge-overlapping junctions retain their released elevation field',()=>{
+test('bridge-overlapping junctions resolve one modest plane for every connected arm',()=>{
  const source=layout([road('east',[{x:-30,z:0},{x:30,z:0}]),road('north',[{x:0,z:-30},{x:0,z:30}])]),old=(x,z)=>1+x*.02+z*.015,bridges=planBridges(source.roads,(x,z)=>Math.abs(x)<8,old,(x,z)=>old(x,z)-.1),plan=planRoadGrades(source,bridges,(x,z)=>old(x,z)-.16);
- assert.ok(plan.stats.preservedJunctions>0);for(const [x,z]of [[0,0],[.5,.4],[-.8,-.2]])close(plan.sampleDatum(x,z),bridgeHeight(bridges,x,z)??old(x,z));
+ assert.equal(plan.stats.bridgeJunctions,1);const j=[...plan.junctions.values()][0].resolvedPlane;assert.ok(Math.hypot(j.gx,j.gz)<=.040000001);for(const [x,z]of [[0,0],[.5,.4],[-.8,-.2]]){const expected=j.y+j.gx*x+j.gz*z;close(plan.resolveBridgeJunction(x,z),expected);close(plan.sampleDatum(x,z),expected);}for(const r of plan.roads.values())for(const u of [-1,0,1])close(plan.sampleRoad(r.id,30,u),plan.resolveBridgeJunction(r.source.stations[0].x+30*r.source.stations[0].tx+r.source.stations[0].nx*u,r.source.stations[0].z+30*r.source.stations[0].tz+r.source.stations[0].nz*u));
 });
 
 test('width tapers, reversed bridge-chain descriptors and empty plans keep their existing domains',()=>{
@@ -108,12 +108,64 @@ test('real plains, river and island plans preserve saves, sampled curves and loc
   const source=roadGeometry(w,E),old=(x,z)=>Math.max(.32,floorHeight(w,x,z))+.1+wetness(w,x,z)*1.2,water=(x,z)=>{const gx=Math.floor((x+96)/4),gy=Math.floor((z+96)/4);return wetness(w,x,z)>.08||(gx>=0&&gy>=0&&gx<48&&gy<48&&w.tiles[gy*48+gx].ground==='water');};
   const bridges=planBridges(source.roads,water,old,(x,z)=>floorHeight(w,x,z)),saved=JSON.stringify(w),original=JSON.stringify(source),profile=JSON.stringify(bridges.spans),plan=planRoadGrades(source,bridges,(x,z)=>old(x,z)-.16);
   for(const r of source.roads){const stations=plan.stationsFor(r.id);assert.ok(stations.length>=r.stations.length);for(const p of r.stations){assert.ok(stations.includes(p));const h=bridgeHeight(bridges,p.x,p.z)??plan.sampleDatum(p.x,p.z);assert.ok(Number.isFinite(h));assert.ok(plan.stats.lastCandidateCount<150,'height queries stay local instead of scanning the road network');}}
-  const height=(x,z)=>bridgeHeight(bridges,x,z)??plan.sampleDatum(x,z)??old(x,z)-.16;
+  const height=(x,z)=>plan.resolveBridgeJunction(x,z)??bridgeHeight(bridges,x,z)??plan.sampleDatum(x,z)??old(x,z)-.16;
   for(const span of bridges.spans)for(const p of [span.points[0],span.points.at(-1)])if(p.distance>0&&p.distance<span.stations.at(-1).distance)for(const u of [-1.5,0,1.5]){
-   const x=p.x+p.nx*u,z=p.z+p.nz*u,e=.001,y=height(x,z);close(y,old(x,z),2e-7);
+   const x=p.x+p.nx*u,z=p.z+p.nz*u,e=.001,y=height(x,z);if(plan.resolveBridgeJunction(x,z)===null)close(y,old(x,z),2e-7);
    const a=(y-height(x-p.tx*e,z-p.tz*e))/e,b=(height(x+p.tx*e,z+p.tz*e)-y)/e;close(a,b,.0002);
   }
+  for(const span of bridges.spans)for(let d=span.wetStart;d<=span.wetEnd;d+=.3){const p=atDistance(span.stations,d),edge=bridgeWidth(span.stations,d)/2+(span.sidewalk?.42:.2);for(const u of [-edge,0,edge]){const x=p.x+p.nx*u,z=p.z+p.nz*u,oldHeight=bridgeHeight(bridges,x,z);if(oldHeight!==null)assert.ok(height(x,z)>=oldHeight-1e-7,'the correction preserves existing water clearance across the full deck');}}
   assert.equal(JSON.stringify(w),saved);assert.equal(JSON.stringify(source),original);assert.equal(JSON.stringify(bridges.spans),profile);
   assert.equal(plan.sampleDatum(1000,1000),null);assert.equal(plan.sampleDatum(NaN,0),null);
  }
+});
+
+
+test('bridge junction transitions preserve distant profiles, C1 boundaries and full concrete width',()=>{
+ const source=layout([road('east',Array.from({length:301},(_,i)=>({x:-30+i*.2,z:0})),'avenue'),road('north',Array.from({length:301},(_,i)=>({x:0,z:-30+i*.2})))]),old=(x,z)=>2+x*.015+z*.01,bridges=planBridges(source.roads,(x,z)=>x>1&&x<10&&Math.abs(z)<2,old,(x,z)=>old(x,z)-.1),before=JSON.stringify(bridges),plan=planRoadGrades(source,bridges,(x,z)=>old(x,z)-.16),j=[...plan.junctions.values()][0].resolvedPlane;
+ assert.ok(j);const epsilon=.0001;
+ for(const r of plan.roads.values()){
+  const extent=r.source.spec.width/2+.42;
+  for(const sign of [-1,1])for(const u of [-extent,0,extent]){
+   const radial=Math.sqrt(j.outer*j.outer-u*u),d=30+sign*radial,p=atDistance(r.source.stations,d),x=p.x+p.nx*u,z=p.z+p.nz*u;
+   close(r.sample(d,u),r.baseSample(d,u),1e-9);
+   const y=r.sample(d,u),a=(y-r.sample(d-epsilon,u))/epsilon,b=(r.sample(d+epsilon,u)-y)/epsilon;close(a,b,.0001);
+   const farther=30+sign*(radial+.01),q=atDistance(r.source.stations,farther),qx=q.x+q.nx*u,qz=q.z+q.nz*u;assert.equal(plan.resolveBridgeJunction(qx,qz),null);close(r.sample(farther,u),r.baseSample(farther,u),1e-12);
+   close(plan.resolveBridgeJunction(x,z)??r.baseSample(d,u),r.sample(d,u),1e-8);
+  }
+ }
+ for(const span of bridges.spans){const stations=plan.bridgeStations(span);assert.equal(plan.bridgeStations(span),stations,'build-local station results are cached');for(const p of span.points)assert.ok(stations.includes(p));for(const p of stations){const expected=atDistance(span.stations,p.distance);close(p.x,expected.x,1e-10);close(p.z,expected.z,1e-10);assert.ok(Number.isFinite(p.width));}assert.ok(stations.length<=span.points.length+8,'an already dense bridge gains only local grade breaks, not another sample lattice');}
+ assert.equal(JSON.stringify(bridges),before,'the saved/source bridge plan is not mutated');
+});
+
+test('unconnected nearby road descriptors and separate crossings receive no junction correction',()=>{
+ const source=layout([road('east',[{x:-40,z:0},{x:40,z:0}],'avenue'),road('north',[{x:0,z:-40},{x:0,z:40}])]);
+ // This descriptor crosses in XZ, but intentionally has no junction arm: it
+ // represents a separately connected overpass, not a third junction approach.
+ source.roads.push(road('unconnected',[{x:-25,z:4},{x:25,z:4}]));
+ const old=(x,z)=>2+x*.01+z*.008,bridges=planBridges(source.roads,(x,z)=>(x>1&&x<8&&Math.abs(z)<2)||(z>24&&z<28&&Math.abs(x)<2),old,(x,z)=>old(x,z)-.1),plan=planRoadGrades(source,bridges,(x,z)=>old(x,z)-.16),r=plan.roads.get('unconnected');
+ assert.equal(r.bridgeJunctions,undefined);for(let d=0;d<=r.length;d+=.5)close(r.sample(d),r.baseSample(d),1e-12);
+ for(const [x,z]of [[8,4],[-8,4],[0,27],[0,35]])assert.equal(plan.resolveBridgeJunction(x,z),null,'unconnected overpasses and remote crossings keep their old field');
+ for(const span of bridges.spans.filter(s=>s.roads.includes('north')))assert.equal(plan.bridgeStations(span),span.points,'remote crossing does not gain unused stations');
+});
+
+test('finite road ends inside a bridge junction influence retain their height and full-width tangent',()=>{
+ const source=layout([road('east',Array.from({length:301},(_,i)=>({x:-30+i*.2,z:0})),'avenue'),road('short',[{x:0,z:-6},{x:0,z:6}])]),old=(x,z)=>1+x*.01+z*.02,bridges=planBridges(source.roads,(x,z)=>x>1&&x<8&&Math.abs(z)<2,old,(x,z)=>old(x,z)-.1),plan=planRoadGrades(source,bridges,(x,z)=>old(x,z)-.16),r=plan.roads.get('short');
+ assert.equal(plan.stats.bridgeJunctions,1);assert.equal(plan.stats.skippedBridgeJunctions,0);assert.equal([...plan.junctions.values()][0].resolvedPlane.endFades.length,2);
+ for(const d of [0,r.length])for(const u of [-1.645,0,1.645]){const p=atDistance(r.source.stations,d),x=p.x+p.nx*u,z=p.z+p.nz*u,e=.0001,near=d===0?e:d-e;close(r.sample(d,u),r.baseSample(d,u),1e-12);close((r.sample(near,u)-r.sample(d,u))/(near-d),(r.baseSample(near,u)-r.baseSample(d,u))/(near-d),.00001);assert.equal(plan.resolveBridgeJunction(x,z),null);}
+ const t=layout([road('east',[{x:-30,z:0},{x:30,z:0}],'avenue'),road('terminal',[{x:0,z:0},{x:0,z:6}])]),b=planBridges(t.roads,(x,z)=>x>1&&x<8&&Math.abs(z)<2,old,(x,z)=>old(x,z)-.1),g=planRoadGrades(t,b,(x,z)=>old(x,z)-.16);assert.equal(g.stats.bridgeJunctions,1,'a real T-junction endpoint is connected, not a free end');
+});
+
+test('an infeasibly short free approach retains the complete released junction field',()=>{
+ const source=layout([road('east',[{x:-30,z:0},{x:30,z:0}],'avenue'),road('short',[{x:0,z:-3.8},{x:0,z:3.8}])]),old=(x,z)=>1+x*.01+z*.02,bridges=planBridges(source.roads,(x,z)=>x>1&&x<8&&Math.abs(z)<2,old,(x,z)=>old(x,z)-.1),plan=planRoadGrades(source,bridges,(x,z)=>old(x,z)-.16);
+ assert.equal(plan.stats.skippedBridgeJunctions,1);assert.equal(plan.stats.bridgeJunctions,0);assert.equal(plan.resolveBridgeJunction(0,0),null);
+ for(const r of plan.roads.values())for(let d=0;d<=r.length;d+=.1)for(const u of [-1,0,1])close(r.sample(d,u),r.baseSample(d,u),1e-12);
+});
+
+test('adjacent bridge junctions share corrections through real interior junction arms',()=>{
+ const source=layout([road('main',[{x:-40,z:0},{x:40,z:0}],'avenue'),road('north0',[{x:0,z:-30},{x:0,z:30}]),road('north4',[{x:4,z:-30},{x:4,z:30}])]),old=(x,z)=>2+.02*x+.003*x*x+.01*z,bridges=planBridges(source.roads,(x,z)=>x>1&&x<8&&Math.abs(z)<2,old,(x,z)=>old(x,z)-.1),plan=planRoadGrades(source,bridges,(x,z)=>old(x,z)-.16);
+ assert.equal(plan.stats.bridgeJunctions,2);for(const j of plan.junctions.values())assert.deepEqual([...j.resolvedPlane.roads].map(r=>r.id).sort(),['main','north0','north4']);
+ // Before interior junction connectivity was included, this nearest-road
+ // boundary jumped .00930world (4.65cm) across only .0001world (0.5mm).
+ close(plan.resolveBridgeJunction(2.35,-1.65),plan.resolveBridgeJunction(2.3501,-1.65),.00001);
+ for(let x=-1;x<=5;x+=.25)for(let z=-1.5;z<=1.5;z+=.25){const shared=plan.resolveBridgeJunction(x,z);close(plan.sampleRoad('main',x+40,z),shared,1e-10);for(const side of [0,4])if(Math.abs(x-side)<=1.5)close(plan.sampleRoad('north'+side,z+30,side-x),shared,1e-10);}
 });

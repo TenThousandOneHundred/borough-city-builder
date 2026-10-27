@@ -1,6 +1,6 @@
-import {atDistance} from './street-geometry.js?v=132';
-import {junctionCorners,junctionCuts,transitionWidth} from './road-junction-plan.js?v=132';
-import {bridgeHeight} from './bridge-spans.js?v=132';
+import {atDistance} from './street-geometry.js?v=133';
+import {junctionCorners,junctionCuts,transitionWidth} from './road-junction-plan.js?v=133';
+import {bridgeHeight,bridgeWidth} from './bridge-spans.js?v=133';
 
 const CELL=4,EPS=1e-6,clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),smooth=t=>t*t*(3-2*t);
 const key=p=>Math.round(p.x*1000)+','+Math.round(p.z*1000);
@@ -109,11 +109,11 @@ export function planRoadGrades(roadGeometry,bridgePlan,naturalDatum){
   record.sample=sample;
   const additions=[...unique,...record.knots.map(n=>n.d)],all=[...original,...additions.filter(d=>d>EPS&&d<total-EPS&&!original.some(p=>Math.abs(p.distance-d)<EPS)).map(d=>atDistance(original,d))].sort((a,b)=>a.distance-b.distance);
   record.stations=all.filter((p,i)=>!i||p.distance-all[i-1].distance>EPS);stats.addedStations+=record.stations.length-original.length;
-  for(let i=1;i<record.stations.length;i++){const a=record.stations[i-1],b=record.stations[i],margin=Math.max(widthAt(a.distance),widthAt(b.distance))/2+sidewalk+.03,item={road:record,a,b,margin};stats.segments++;index(item,Math.min(a.x,b.x)-margin,Math.min(a.z,b.z)-margin,Math.max(a.x,b.x)+margin,Math.max(a.z,b.z)+margin);}
+  for(let i=1;i<record.stations.length;i++){const a=record.stations[i-1],b=record.stations[i],margin=Math.max(widthAt(a.distance),widthAt(b.distance))/2+Math.max(sidewalk,source.spec.sidewalk?.42:sidewalk)+.03,item={road:record,a,b,margin};stats.segments++;index(item,Math.min(a.x,b.x)-margin,Math.min(a.z,b.z)-margin,Math.max(a.x,b.x)+margin,Math.max(a.z,b.z)+margin);}
  }
  function group(items){const grouped=[],lookup=new Map();for(const item of items){if(item.junction){grouped.push(item);continue;}let entry=lookup.get(item.road);if(!entry){entry={road:item.road,segments:[]};lookup.set(item.road,entry);grouped.push(entry);}entry.segments.push(item);}return grouped;}
  for(const row of bins.values())for(const [z,bucket]of row)row.set(z,group(bucket));
- function corridorAt(x,z){
+ function corridorAt(x,z,raw=false){
   stats.lastCandidateCount=0;if(!Number.isFinite(x)||!Number.isFinite(z))return null;const bucket=bins.get(Math.floor(x/CELL))?.get(Math.floor(z/CELL));let best=null,nearest=Infinity,junction=null;
   const entries=oversized.length?group([...(bucket||[]).flatMap(item=>item.junction?[item]:item.segments),...oversized]):bucket;
   for(const item of entries||[]){
@@ -123,12 +123,80 @@ export function planRoadGrades(roadGeometry,bridgePlan,naturalDatum){
    if(!closest||localDistance>nearest+1e-10)continue;const {a,b,t,u}=closest,distance=localDistance;
    if(a.distance===0&&t<0&&(x-a.x)*a.tx+(z-a.z)*a.tz< -1e-5)continue;
    if(b.distance===road.length&&t>1&&(x-b.x)*b.tx+(z-b.z)*b.tz>1e-5)continue;
-   const d=a.distance+(b.distance-a.distance)*u,p=atDistance(road.source.stations,d),offset=(x-p.x)*p.nx+(z-p.z)*p.nz,width=road.widthAt(d),edge=width/2+road.sidewalk;if(Math.abs(offset)>edge+.03)continue;
-   const zone=road.zones.find(q=>q.mode==='bridge'&&d>=q.start-EPS&&d<=q.end+EPS)||road.zones.find(q=>d>=q.start-EPS&&d<=q.end+EPS),datum=road.sample(d,offset,x,z);
+   const d=a.distance+(b.distance-a.distance)*u,p=atDistance(road.source.stations,d),offset=(x-p.x)*p.nx+(z-p.z)*p.nz,width=road.widthAt(d),edge=width/2+road.sidewalk;if(Math.abs(offset)>edge+.03+(raw&&road.bridgeJunctions?.length&&road.source.spec.sidewalk?.04:0))continue;
+   const zone=road.zones.find(q=>q.mode==='bridge'&&d>=q.start-EPS&&d<=q.end+EPS)||road.zones.find(q=>d>=q.start-EPS&&d<=q.end+EPS),datum=(raw?road.baseSample||road.sample:road.sample)(d,offset,x,z);
    if(distance<nearest-1e-10||!best||datum>best.datum){nearest=distance;best={roadId:road.id,road,distance:d,offset,width,edge,datum,mode:zone?.mode||'dry',bridgeSpan:zone?.bridgeSpan||null,junction:zone?.junction||null};}
   }
-  if(junction)return {roadId:best?.roadId??null,road:best?.road??null,distance:best?.distance??null,offset:best?.offset??null,width:best?.width??null,edge:best?.edge??null,datum:junction.height(x,z),mode:junction.preserveBridge?'bridge-junction':'junction',bridgeSpan:best?.bridgeSpan??null,junction};
+  if(junction)best={roadId:best?.roadId??null,road:best?.road??null,distance:best?.distance??null,offset:best?.offset??null,width:best?.width??null,edge:best?.edge??null,datum:junction.height(x,z),mode:junction.preserveBridge?'bridge-junction':'junction',bridgeSpan:best?.bridgeSpan??null,junction};
+  if(best&&!raw)best.datum=resolveBridgeJunction(x,z)??best.datum;
   return best;
  }
- return {roads,junctions,stationsFor:id=>roads.get(id)?.stations||null,sampleRoad:(id,d,u=0)=>roads.get(id)?.sample(d,u)??null,sampleDatum:(x,z)=>corridorAt(x,z)?.datum??null,corridorAt,bounds:Number.isFinite(bounds.minX)?bounds:null,stats};
+// A bridge's lateral lookup band is not a junction elevation boundary. A
+ // shared local plane removes that selector seam, and a C2 compact blend
+ // returns to the exact released road/bridge field outside its approaches.
+ // Only descriptors connected to an actual junction participate; nearby,
+ // unconnected roads and ordinary dry intersections keep their old fields.
+ const bridgeJunctions=[],endpointRoads=new Map(),roadJunctions=new Map(),junctionBins=new Map(),spanPlans=new Map();
+ for(const j of roadGeometry.junctions)for(const arm of j.arms){if(!roadJunctions.has(arm.roadId))roadJunctions.set(arm.roadId,new Set());roadJunctions.get(arm.roadId).add(j);}
+ const singleSpan=span=>{if(!spanPlans.has(span)){const local={...bridgePlan,bins:new Map()};for(const [key,groups]of bridgePlan.bins){const own=groups.filter(group=>group.span===span);if(own.length)local.bins.set(key,own);}spanPlans.set(span,local);}return spanPlans.get(span);};
+ for(const r of roads.values())for(const p of [r.source.stations[0],r.source.stations.at(-1)]){const k=key(p);if(!endpointRoads.has(k))endpointRoads.set(k,[]);endpointRoads.get(k).push(r);}
+ const ease=t=>t*t*t*(t*(t*6-15)+10);
+ const weightAt=(j,x,z)=>{const d=Math.hypot(x-j.x,z-j.z);if(d>=j.outer)return 0;let weight=d<=j.inner?1:ease(1-(d-j.inner)/(j.outer-j.inner));for(const end of j.endFades||[]){const distance=(x-end.x)*end.tx+(z-end.z)*end.tz;if(distance<=0)return 0;if(distance<end.length)weight*=ease(distance/end.length);}return weight;};
+ stats.skippedBridgeJunctions=0;
+ for(const j of junctions.values()){
+  const seeds=j.source.arms.map(a=>roads.get(a.roadId)).filter(Boolean),ids=new Set(seeds.map(r=>r.id));
+  const active=(bridgePlan?.spans||[]).filter(span=>span.roads.some(id=>ids.has(id))&&span.points.some(p=>Math.hypot(p.x-j.x,p.z-j.z)<j.radius+p.width/2+.52));
+  if(!active.length)continue;
+  const local={x:j.x,z:j.z,inner:j.radius+.12,outer:j.radius+12.12,source:j,roads:new Set(),spans:active};
+  const pending=[...seeds];while(pending.length){const r=pending.pop();if(local.roads.has(r))continue;const q=project(r.source.stations,j.x,j.z);if(!q||q.distance>local.outer*local.outer)continue;local.roads.add(r);for(const q of roadJunctions.get(r.id)||[])if(Math.hypot(q.x-j.x,q.z-j.z)<local.outer)for(const arm of q.arms){const next=roads.get(arm.roadId);if(next&&!local.roads.has(next))pending.push(next);}for(const p of [r.source.stations[0],r.source.stations.at(-1)])if(Math.hypot(p.x-j.x,p.z-j.z)<local.outer)for(const next of endpointRoads.get(key(p))||[])if(!local.roads.has(next))pending.push(next);}
+  // A terminal road still meets its original endpoint plane, across its
+  // entire width. The same finite-end weight is shared by every arm so the
+  // nearest-road selector cannot introduce another seam. If an endpoint is
+  // too close to fit even a short transition, keep the released junction.
+  local.endFades=[];let feasible=true;
+  for(const r of local.roads)for(const [p,sign]of [[r.source.stations[0],1],[r.source.stations.at(-1),-1]]){
+   if(ends.get(key(p))!==1||Math.hypot(p.x-j.x,p.z-j.z)>=local.outer||roadGeometry.junctions.some(q=>q.arms.some(a=>a.roadId===r.id)&&Math.hypot(p.x-q.x,p.z-q.z)<1e-4))continue;
+   const tx=p.tx*sign,tz=p.tz*sign,available=(j.x-p.x)*tx+(j.z-p.z)*tz-local.inner;if(available<.5){feasible=false;break;}local.endFades.push({x:p.x,z:p.z,tx,tz,length:Math.min(6,available)});
+  }
+  if(!feasible){stats.skippedBridgeJunctions++;continue;}
+  let y=bridgeHeight(bridgePlan,j.x,j.z)??legacy(j.x,j.z),g=gradient(legacy,j.x,j.z),m=Math.hypot(g.x,g.z);if(m>.04){g.x*=.04/m;g.z*=.04/m;}
+  // Never lower an existing bridge within this bounded correction. Checking
+  // its authored/dense sweep stations and full footway width also retains the
+  // old wet clearance, rather than trading a smoother junction for a low deck.
+  for(const span of active)for(const p of span.points){if(Math.hypot(p.x-j.x,p.z-j.z)>local.outer+.6)continue;const edge=p.width/2+(span.sidewalk?.42:.2);for(const u of [-edge,-edge/2,0,edge/2,edge]){const x=p.x+p.nx*u,z=p.z+p.nz*u;if(weightAt(local,x,z)===0)continue;const h=bridgeHeight(singleSpan(span),x,z);if(h!==null)y=Math.max(y,h-g.x*(x-j.x)-g.z*(z-j.z));}}
+  Object.assign(local,{y,gx:g.x,gz:g.z});bridgeJunctions.push(local);for(const r of local.roads){(r.bridgeJunctions??=[]).push(local);}
+  j.resolvedPlane=local;
+  for(let x=Math.floor((j.x-local.outer)/CELL);x<=Math.floor((j.x+local.outer)/CELL);x++)for(let z=Math.floor((j.z-local.outer)/CELL);z<=Math.floor((j.z+local.outer)/CELL);z++){const k=x+','+z;if(!junctionBins.has(k))junctionBins.set(k,[]);junctionBins.get(k).push(local);}
+ }
+ const corrected=(list,x,z,base,road=null)=>{let total=0,value=0,baseWeight=1;for(const j of list||[]){if(road&&!j.roads.has(road))continue;const weight=weightAt(j,x,z);if(!weight)continue;total+=weight;value+=weight*(j.y+j.gx*(x-j.x)+j.gz*(z-j.z)-base);baseWeight*=1-weight;}return total?base+value/(total+baseWeight):null;};
+ const localJunctions=(x,z)=>junctionBins.get(Math.floor(x/CELL)+','+Math.floor(z/CELL));
+ function underlying(r,d,u,x,z){const bridge=r.zones.find(q=>q.mode==='bridge'&&d>=q.start-EPS&&d<=q.end+EPS);if(bridge)return bridgeHeight(singleSpan(bridge.bridgeSpan),x,z)??oldDatum(x,z);if(r.zones.some(q=>q.mode==='bridge-junction'&&d>=q.start-EPS&&d<=q.end+EPS))return oldDatum(x,z);return r.baseSample(d,u,x,z);}
+ function resolveBridgeJunction(x,z){
+  const list=localJunctions(x,z);if(!list)return null;const location=corridorAt(x,z,true);if(!location)return null;const r=location.road;
+  if(!r&&!location.junction?.resolvedPlane)return null;return corrected(list,x,z,r?underlying(r,location.distance,location.offset,x,z):location.datum,r);
+ }
+ function additionsFor(stations,list,lo=0,hi=stations.at(-1).distance){
+  const distances=[],ranges=[];for(const j of list)for(const radius of [j.inner,j.outer])for(const [a,b]of junctionCuts(stations,[{x:j.x,z:j.z,radius}])){if(radius===j.outer)ranges.push([a,b]);for(const d of [a,b])if(d>lo+EPS&&d<hi-EPS)distances.push(d);}
+  for(const j of list)for(const end of j.endFades)for(const level of [0,end.length])for(let i=1;i<stations.length;i++){const a=stations[i-1],b=stations[i],u=(a.x-end.x)*end.tx+(a.z-end.z)*end.tz-level,v=(b.x-end.x)*end.tx+(b.z-end.z)*end.tz-level;if(u*v>=0||Math.abs(u-v)<EPS)continue;const d=a.distance+(b.distance-a.distance)*u/(u-v);if(d>lo+EPS&&d<hi-EPS)distances.push(d);}
+  const all=[lo,hi,...stations.filter(p=>p.distance>lo&&p.distance<hi).map(p=>p.distance),...distances].sort((a,b)=>a-b),unique=all.filter((d,i)=>!i||d-all[i-1]>EPS);
+  // Retain every authored station and grade break. Refine only remaining
+  // long gaps, rather than adding another lattice over an already dense road.
+  for(let i=1;i<unique.length;i++){const a=unique[i-1],b=unique[i],mid=(a+b)/2;if(!ranges.some(([start,end])=>mid>=start&&mid<=end))continue;const count=Math.max(1,Math.ceil((b-a-EPS)/.7));for(let k=1;k<count;k++)distances.push(a+(b-a)*k/count);}
+  return distances.sort((a,b)=>a-b).filter((d,i,a)=>!i||d-a[i-1]>EPS);
+ }
+ for(const r of roads.values()){
+  r.baseSample=r.sample;if(!r.bridgeJunctions)continue;for(const zone of r.zones)if(zone.bridgeSpan)singleSpan(zone.bridgeSpan);
+  r.sample=(d,u=0,x,z)=>{const base=r.baseSample(d,u,x,z);if(base===null)return null;const p=atDistance(r.source.stations,clamp(d,0,r.length));x??=p.x+p.nx*u;z??=p.z+p.nz*u;const list=localJunctions(x,z);if(!list)return base;return corrected(list,x,z,underlying(r,d,u,x,z),r)??base;};
+  const added=additionsFor(r.stations,r.bridgeJunctions).filter(d=>!r.stations.some(p=>Math.abs(p.distance-d)<EPS));r.stations=[...r.stations,...added.map(d=>atDistance(r.source.stations,d))].sort((a,b)=>a.distance-b.distance);stats.addedStations+=added.length;
+ }
+ const bridgeStationCache=new Map();
+ function bridgeStations(span){
+  if(bridgeStationCache.has(span))return bridgeStationCache.get(span);const list=bridgeJunctions.filter(j=>span.roads.some(id=>[...j.roads].some(r=>r.id===id)));
+  if(!list.length)return span.points;
+  const additions=additionsFor(span.points,list,span.start,span.end).filter(d=>!span.points.some(p=>Math.abs(p.distance-d)<EPS));
+  if(!additions.length){bridgeStationCache.set(span,span.points);return span.points;}
+  const result=[...span.points,...additions.map(d=>({...atDistance(span.stations,d),width:bridgeWidth(span.stations,d)}))].sort((a,b)=>a.distance-b.distance);bridgeStationCache.set(span,result);return result;
+ }
+ stats.bridgeJunctions=bridgeJunctions.length;
+ return {roads,junctions,resolveBridgeJunction,bridgeStations,stationsFor:id=>roads.get(id)?.stations||null,sampleRoad:(id,d,u=0)=>roads.get(id)?.sample(d,u)??null,sampleDatum:(x,z)=>resolveBridgeJunction(x,z)??corridorAt(x,z)?.datum??null,corridorAt,bounds:Number.isFinite(bounds.minX)?bounds:null,stats};
 }

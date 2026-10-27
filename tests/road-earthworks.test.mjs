@@ -2,6 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from '../dist/vendor/three.module.js';
 import {createRoadEarthworks} from '../dist/road-earthworks.js';
+import {RoadSurfaceIndex} from '../dist/road-surface-index.js';
 import polygonClipping from '../dist/vendor/polygon-clipping.umd.min.js';
 
 function terrain(height=()=>0,size=20,segments=20){
@@ -49,10 +50,29 @@ test('tall fills and cuts produce solid retaining walls with continuous physical
    if(Math.abs(normal.getY(i))<.1)close(uv.getY(i),pos.getY(i));
    if(Math.abs(normal.getY(i))>.9)cap++;
    if(Math.abs(pos.getZ(i)-1.12)<1e-5&&Math.abs(normal.getZ(i))>.9){close(normal.getZ(i),cut?-1:1);front++;}
-   assert.ok(pos.getY(i)>=Math.min(1.98,ground())-1e-6&&pos.getY(i)<=Math.max(1.98,ground())+1e-6);
+   assert.ok(pos.getY(i)>=Math.min(1.98,ground())-1e-6&&pos.getY(i)<=Math.max(1.98,ground())+.006001);
   }
   assert.ok(front>0);assert.ok(cap>0,'retaining walls include solid caps');
   for(let i=0;i<pos.count;i+=3){const a=new T.Vector3().fromBufferAttribute(pos,i),b=new T.Vector3().fromBufferAttribute(pos,i+1),c=new T.Vector3().fromBufferAttribute(pos,i+2),size=b.sub(a).cross(c.sub(a)).length();if(size<1e-8)continue;const u=uv.getX(i+1)-uv.getX(i),v=uv.getY(i+1)-uv.getY(i),s=uv.getX(i+2)-uv.getX(i),t=uv.getY(i+2)-uv.getY(i);assert.ok(Math.abs(u*t-v*s)>1e-9,'every visible wall face has two-dimensional UVs for normal mapping');}
+ }
+});
+
+test('retaining coping clears soil with a closed upper rim while fill caps stay below pavement',()=>{
+ for(const cut of [false,true]){
+  const ground=()=>cut?4:0,{p}=plan({ground,roads:[rectangle(-5,5,-1,1,2)]}),g=terrain(ground),before=attributeCopies(g),indices=g.index.array.slice();p.beginApplication();const result=p.applyToGeometry(g),wallIndex=new RoadSurfaceIndex(),soilIndex=new RoadSurfaceIndex();wallIndex.add(result.walls);soilIndex.add(result.replacement);
+  const kept=g.clone();kept.setIndex(new T.BufferAttribute(result.indices,1));soilIndex.add(kept);
+  // The wall body is inward for a fill and outward into preserved ground for
+  // a cut. Both exposed upper caps previously coincided with that soil plane.
+  const z=cut?1.15:1.09;let probes=0;
+  for(let x=-4.5;x<=4.5;x+=.25){const soil=soilIndex.sample(x,z),cap=wallIndex.sample(x,z);assert.notEqual(soil,null);assert.notEqual(cap,null);close(cap-soil,.006,2e-5);if(!cut)assert.ok(cap<2-.01,'the coping cannot protrude through the pavement it supports');probes++;}
+  assert.ok(probes>30);
+  const pos=result.walls.attributes.position;
+  for(let start=0;start<pos.count;start+=36){
+   const edges=new Map(),point=i=>[pos.getX(i),pos.getY(i),pos.getZ(i)].map(v=>Math.round(v*1e6)).join(',');
+   for(let i=start;i<start+36;i+=3)for(let k=0;k<3;k++){const a=point(i+k),b=point(i+(k+1)%3);if(a===b)continue;const key=a<b?a+'|'+b:b+'|'+a;edges.set(key,(edges.get(key)||0)+1);}
+   for(const count of edges.values())assert.equal(count,2,'raising the upper rim must retain closed front/back/end faces');
+  }
+  for(const [name,a]of Object.entries(before))assert.deepEqual(g.attributes[name].array,a);assert.deepEqual(g.index.array,indices,'coping never changes natural ground');kept.dispose();result.replacement.dispose();result.walls.dispose();g.dispose();p.dispose();
  }
 });
 

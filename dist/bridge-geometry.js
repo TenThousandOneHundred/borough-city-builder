@@ -1,11 +1,11 @@
-import {bridgeWidth} from './bridge-spans.js?v=132';
+import {bridgeWidth} from './bridge-spans.js?v=133';
 import * as THREE from './vendor/three.module.js';
-import {atDistance,distanceSection} from './street-geometry.js?v=132';
-import {junctionCuts,clearRanges} from './road-junction-plan.js?v=132';
-import {SIDEWALK_HEIGHT,ASPHALT_HEIGHT} from './road-profile.js?v=132';
+import {atDistance,distanceSection} from './street-geometry.js?v=133';
+import {junctionCuts,clearRanges} from './road-junction-plan.js?v=133';
+import {SIDEWALK_HEIGHT,ASPHALT_HEIGHT} from './road-profile.js?v=133';
 // Concrete profiles and rail sections are swept along the complete crossing.
 // One buffer per material is added to the existing static road batches.
-export function bridgeGeometry(plan,height,ground,junctions=[],pavement=[]){
+export function bridgeGeometry(plan,height,ground,junctions=[],pavement=[],stationsForSpan=span=>span.points){
  const parts={concrete:[],metal:[]},stationHeights=new Map();let piers=0;
  const quad=(target,a,b,c,d)=>parts[target].push(...a,...b,...c,...a,...c,...d);
  // Adjacent sweep faces repeat their station/offset vertices. Height lookup is
@@ -21,7 +21,7 @@ export function bridgeGeometry(plan,height,ground,junctions=[],pavement=[]){
   const corners=[local(-a,-b,bottom),local(a,-b,bottom),local(a,b,bottom),local(-a,b,bottom),local(-a,-b,top),local(a,-b,top),local(a,b,top),local(-a,b,top)];
   for(const [a,b,c,d]of [[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7],[4,5,6,7],[3,2,1,0]])quad(target,corners[a],corners[b],corners[c],corners[d]);
  }
- for(const span of plan.spans){const points=span.points,edge=p=>p.width/2+(span.sidewalk?.42:.2);
+ for(const span of plan.spans){const points=stationsForSpan(span),edge=p=>p.width/2+(span.sidewalk?.42:.2);
   // Clockwise transverse profiles yield outward side faces and an upward deck.
   sweep(points,p=>[[-edge(p),.06],[edge(p),.06],[edge(p)-.1,-.31],[-edge(p)+.1,-.31]]);
   for(const side of [-1,1])sweep(points,p=>{const x=side*p.width*.26;return [[x-.12,-.28],[x+.12,-.28],[x+.08,-.52],[x-.08,-.52]];});
