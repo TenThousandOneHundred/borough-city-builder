@@ -1,27 +1,27 @@
-import {PedestrianSignals,signalHousing,signalPole} from './pedestrian-signals.js?v=138';
-import {pedestrianCrossings,rampStations,rampAmount} from './pedestrian-network.js?v=138';
-import {roundaboutIsland,addYieldSign} from './roundabout-details.js?v=138';
-import {planBridges,bridgeHeight} from './bridge-spans.js?v=138';
-import {planRoadGrades} from './road-grades.js?v=138';
-import {createRoadEarthworks} from './road-earthworks.js?v=138';
-import {visualParcels} from './parcels.js?v=138';
-import {bridgeGeometry} from './bridge-geometry.js?v=138';
-import {approachMarkings,arrowPolygons} from './road-markings.js?v=138';
-import {roadFinishData,configureRoadFinish,ROAD_TEXTURE_REPEAT} from './road-finish.js?v=138';
-import {laneLayout,travelHalfWidth} from './road-lanes.js?v=138';
-import {roadGeometry,transitionWidth,junctionCorners,junctionCuts,clearRanges,clearSections,signalPlacements} from './road-junction-plan.js?v=138';
-import {lotAccess} from './lot-access.js?v=138';
-import {streetStations,atDistance,distanceSection,streetSurface,pavementMaterial} from './street-geometry.js?v=138';
-import {signalPhase,junctionPolicy} from './junctions.js?v=138';
-import {addStopSign,stopSignMaterial} from './stop-sign.js?v=138';
-import {outsidePortals} from './traffic.js?v=138';
-import {batchStatic} from './static-batch.js?v=138';
+import {PedestrianSignals,signalHousing,signalPole} from './pedestrian-signals.js?v=139';
+import {pedestrianCrossings,rampStations,rampAmount} from './pedestrian-network.js?v=139';
+import {roundaboutIsland,addYieldSign} from './roundabout-details.js?v=139';
+import {planBridges,bridgeHeight} from './bridge-spans.js?v=139';
+import {planRoadGrades} from './road-grades.js?v=139';
+import {createRoadEarthworks} from './road-earthworks.js?v=139';
+import {visualParcels} from './parcels.js?v=139';
+import {bridgeGeometry} from './bridge-geometry.js?v=139';
+import {approachMarkings,arrowPolygons} from './road-markings.js?v=139';
+import {roadFinishData,configureRoadFinish,ROAD_TEXTURE_REPEAT} from './road-finish.js?v=139';
+import {laneLayout,travelHalfWidth} from './road-lanes.js?v=139';
+import {roadGeometry,transitionWidth,junctionCorners,junctionCuts,clearRanges,clearSections,signalPlacements} from './road-junction-plan.js?v=139';
+import {lotAccess} from './lot-access.js?v=139';
+import {streetStations,atDistance,distanceSection,streetSurface,pavementMaterial} from './street-geometry.js?v=139';
+import {signalPhase,junctionPolicy} from './junctions.js?v=139';
+import {addStopSign,stopSignMaterial} from './stop-sign.js?v=139';
+import {outsidePortals} from './traffic.js?v=139';
+import {batchStatic} from './static-batch.js?v=139';
 import * as THREE from './vendor/three.module.js';
-import {floorHeight,groundHeight,wetness} from './landscape.js?v=138';
-import {unifyPavement} from './road-pavement.js?v=138';
-import {RoadSurfaceIndex} from './road-surface-index.js?v=138';
-import {annotatePaintRibbon,fitPaintRibbon,createPaintMaterial,PAINT_MAX_EXPANSION} from './road-paint.js?v=138';
-import {ASPHALT_HEIGHT,JUNCTION_HEIGHT,SIDEWALK_HEIGHT,MARKING_HEIGHT,PAINT_CLEARANCE,kerbProfile,kerbCap} from './road-profile.js?v=138';
+import {floorHeight,groundHeight,wetness} from './landscape.js?v=139';
+import {unifyPavement} from './road-pavement.js?v=139';
+import {RoadSurfaceIndex} from './road-surface-index.js?v=139';
+import {annotatePaintRibbon,fitPaintRibbon,createPaintMaterial,PAINT_MAX_EXPANSION} from './road-paint.js?v=139';
+import {ASPHALT_HEIGHT,JUNCTION_HEIGHT,SIDEWALK_HEIGHT,MARKING_HEIGHT,PAINT_CLEARANCE,kerbProfile,kerbCap} from './road-profile.js?v=139';
 export class Roadworks{
 constructor(v){this.v=v;this.group=new THREE.Group();v.scene.add(this.group);this.lamps=[];this.lampMaterial=new THREE.MeshStandardMaterial({color:'#e5e2ca',emissive:'#ffe2a0',emissiveIntensity:v.night?3:0,roughness:.3});this.walkMaterial=pavementMaterial();this.lightPoolMaterial=new THREE.MeshBasicMaterial({color:'#ffe0a0',transparent:true,opacity:.22,depthWrite:false,blending:THREE.AdditiveBlending});this.lightPoolMaterial.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 poolUV;').replace('#include <uv_vertex>','#include <uv_vertex>\npoolUV=uv;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 poolUV;').replace('#include <color_fragment>','#include <color_fragment>\ndiffuseColor.a*=pow(max(0.,1.-length(poolUV*2.-1.)),1.8);');};this.lightPoolMaterial.customProgramCacheKey=()=> 'street-light-pool-v1';this.signalGroup=new THREE.Group();v.scene.add(this.signalGroup);}
 clear(){this.earthworks?.dispose();for(const mesh of [...(this.earthworkSurfaces||[]),...(this.earthworkStructures||[])])mesh.geometry.dispose();this.earthworks=null;this.earthworkSurfaces=[];this.earthworkStructures=[];this.earthworkKey=null;this.earthworkInputKey=null;this.gradePlan=null;this.group.traverse(o=>{if(o.geometry&&o.geometry!==this.v.unitBox)o.geometry.dispose()});this.group.clear();for(const material of this.paintMaterials?.values()||[])material.dispose();this.paintMaterials?.clear();this.lamps=[];this.pendingLamps=[];this.finishingLamps=false;this.signalKey=null;this.bridgePlan=null;this.bridgeStats=null;this.pavementStats=null;this.surfaces=new RoadSurfaceIndex();this.markingMeshes=[];this.markingStats={before:0,after:0};}
@@ -50,22 +50,28 @@ conformMarking(w,geometry){
  // A narrow paint triangle can cross two pavement planes even when its own
  // vertices match perfectly. Split only those triangles, at build time, with
  // a fixed depth bound; flat roads retain every original triangle.
- const positions=[],texcoords=[],paintcoords=[],read=i=>({p:[p.getX(i),p.getY(i),p.getZ(i)],uv:uv?[uv.getX(i),uv.getY(i)]:null,paint:paint?[paint.getX(i),paint.getY(i),paint.getZ(i),paint.getW(i)]:null});
+ let positions=null,texcoords=null,paintcoords=null,sourceOffset=0;
+ const read=i=>({p:[p.getX(i),p.getY(i),p.getZ(i)],uv:uv?[uv.getX(i),uv.getY(i)]:null,paint:paint?[paint.getX(i),paint.getY(i),paint.getZ(i),paint.getW(i)]:null});
+ const emit=v=>{positions.push(...v.p);if(uv)texcoords.push(...v.uv);if(paint)paintcoords.push(...v.paint);};
+ // Most paint needs no refinement. Keep its original buffers instead of
+ // flattening every triangle into temporary arrays that would be discarded.
+ const beginOutput=()=>{positions=[];texcoords=[];paintcoords=[];for(let i=0;i<sourceOffset;i++)emit(read(index?index.getX(i):i));};
  // Sharp bridge/terrain crests may require deeper local refinement. The
  // per-mesh split budget still caps output at 64 times its original triangles.
  let splitsRemaining=sourceCount/3*21;
- const midpoint=(a,b)=>{const x=Math.fround((a.p[0]+b.p[0])/2),z=Math.fround((a.p[2]+b.p[2])/2);return {p:[x,this.paintHeight(w,x,z),z],uv:uv?[(a.uv[0]+b.uv[0])/2,(a.uv[1]+b.uv[1])/2]:null,paint:paint?a.paint.map((v,i)=>(v+b.paint[i])/2):null};};
+ const midpoint=(a,b)=>{const x=Math.fround((a.p[0]+b.p[0])/2),z=Math.fround((a.p[2]+b.p[2])/2);return {p:[x,this.paintHeight(w,x,z),z],uv:null,paint:null};};
+ const interpolate=(out,a,b)=>{if(uv)out.uv=[(a.uv[0]+b.uv[0])/2,(a.uv[1]+b.uv[1])/2];if(paint)out.paint=a.paint.map((v,i)=>(v+b.paint[i])/2);};
  const triangle=(a,b,c,depth)=>{
   if(depth<6&&splitsRemaining>0){
    const ab=midpoint(a,b),bc=midpoint(b,c),ca=midpoint(c,a),x=(a.p[0]+b.p[0]+c.p[0])/3,z=(a.p[2]+b.p[2]+c.p[2])/3;
    const error=Math.max(Math.abs(ab.p[1]-(a.p[1]+b.p[1])/2),Math.abs(bc.p[1]-(b.p[1]+c.p[1])/2),Math.abs(ca.p[1]-(c.p[1]+a.p[1])/2),Math.abs(this.paintHeight(w,x,z)-(a.p[1]+b.p[1]+c.p[1])/3));
-   if(error>.0008){splitsRemaining--;triangle(a,ab,ca,depth+1);triangle(ab,b,bc,depth+1);triangle(ca,bc,c,depth+1);triangle(ab,bc,ca,depth+1);return;}
+   if(error>.0008){if(!positions)beginOutput();interpolate(ab,a,b);interpolate(bc,b,c);interpolate(ca,c,a);splitsRemaining--;triangle(a,ab,ca,depth+1);triangle(ab,b,bc,depth+1);triangle(ca,bc,c,depth+1);triangle(ab,bc,ca,depth+1);return;}
   }
-  for(const v of [a,b,c]){positions.push(...v.p);if(uv)texcoords.push(...v.uv);if(paint)paintcoords.push(...v.paint);}
+  if(positions){emit(a);emit(b);emit(c);}
  };
- for(let i=0;i<sourceCount;i+=3)triangle(...[0,1,2].map(k=>read(index?index.getX(i+k):i+k)),0);
- if(positions.length/3>sourceCount){geometry.setIndex(null);geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));if(uv)geometry.setAttribute('uv',new THREE.Float32BufferAttribute(texcoords,2));if(paint){geometry.setAttribute('roadPaint',new THREE.Float32BufferAttribute(paintcoords,4));geometry.userData.roadPaintPairs=false;}geometry.deleteAttribute('normal');}else p.needsUpdate=true;
- this.markingStats ||= {before:0,after:0};this.markingStats.before+=sourceCount/3;this.markingStats.after+=positions.length/9;
+ for(sourceOffset=0;sourceOffset<sourceCount;sourceOffset+=3)triangle(...[0,1,2].map(k=>read(index?index.getX(sourceOffset+k):sourceOffset+k)),0);
+ if(positions){geometry.setIndex(null);geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));if(uv)geometry.setAttribute('uv',new THREE.Float32BufferAttribute(texcoords,2));if(paint){geometry.setAttribute('roadPaint',new THREE.Float32BufferAttribute(paintcoords,4));geometry.userData.roadPaintPairs=false;}geometry.deleteAttribute('normal');}else p.needsUpdate=true;
+ this.markingStats ||= {before:0,after:0};this.markingStats.before+=sourceCount/3;this.markingStats.after+=positions?positions.length/9:sourceCount/3;
  geometry.computeVertexNormals();geometry.computeBoundingSphere();if(paint)geometry.boundingSphere.radius+=PAINT_MAX_EXPANSION;
 }
 marking(w,mesh){if(mesh){if(mesh.geometry.attributes.roadPaint){this.paintMaterials ||= new Map();const source=mesh.material;let material=this.paintMaterials.get(source);if(!material){material=createPaintMaterial(source);this.paintMaterials.set(source,material);}mesh.material=material;}mesh.userData.roadMarking=true;(this.markingMeshes ||= []).push(mesh);if(!this.building)this.conformMarking(w,mesh.geometry);}return mesh;}

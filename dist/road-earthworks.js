@@ -31,6 +31,14 @@ class Index{
   for(const t of this.large)add(t);for(let x=x0;x<=x1;x++)for(let z=z0;z<=z1;z++)for(const t of this.cells.get(x+','+z)||[])add(t);
   return result.sort((a,b)=>a.id-b.id);
  }
+ // Existence-only callers need neither a sorted result nor duplicate marks.
+ // Keep the same inclusive bounds and oversized-query rules as query().
+ intersects(b){if(!overlaps(this.bounds,b))return false;const x0=Math.floor(b.minX/CELL),x1=Math.floor(b.maxX/CELL),z0=Math.floor(b.minZ/CELL),z1=Math.floor(b.maxZ/CELL);
+  if((x1-x0+1)*(z1-z0+1)>MAX_CELLS){for(const t of this.items)if(overlaps(t.bounds,b))return true;return false;}
+  for(const t of this.large)if(overlaps(t.bounds,b))return true;
+  for(let x=x0;x<=x1;x++)for(let z=z0;z<=z1;z++)for(const t of this.cells.get(x+','+z)||[])if(overlaps(t.bounds,b))return true;
+  return false;
+ }
  at(x,z){const bucket=this.cells.get(Math.floor(x/CELL)+','+Math.floor(z/CELL))||[];return this.large.length?[...bucket,...this.large]:bucket;}
 }
 // Partition a convex polygon into the portion within a convex triangle and
@@ -303,7 +311,11 @@ function buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePlan
  // source foundation plane; exposed terrain queries use emitted triangles.
  function sample(x,z){if(disposed||!Number.isFinite(x)||!Number.isFinite(z))return null;const core=coreAt(x,z);if(core)return core.t.foundation.reduce((sum,p,i)=>sum+p[1]*core.b[i],0);let highest=-Infinity;for(const t of rendered.at(x,z)){const b=pointIn(t,x,z);if(b)highest=Math.max(highest,value(t,b,1));}return highest===-Infinity||protectedPoint(x,z)||excludedPoint(x,z)?null:highest;}
  function applyToGeometry(geometry){
-  const position=geometry.attributes.position,index=geometry.index,count=index?.count??position.count,keep=[],output=[],walls=[],layout=[],vertexHeights=new Map();let offset=3,removedCoreArea=0;
+  const position=geometry.attributes.position,index=geometry.index,count=index?.count??position.count,start=Math.max(0,geometry.drawRange?.start||0),end=Math.min(count,start+(geometry.drawRange?.count??count));
+  // Native triangles retain their original order. A bounded typed buffer avoids
+  // growing a boxed-number array and then converting every retained index.
+  const keep=new Uint32Array(Math.max(0,Math.ceil((end-start)/3))*3),output=[],walls=[],layout=[],vertexHeights=new Map();let kept=0,offset=3,removedCoreArea=0;
+  const retain=(a,b,c)=>{keep[kept++]=a;keep[kept++]=b;keep[kept++]=c;};
   for(const [name,a]of Object.entries(geometry.attributes))if(name!=='position'){layout.push({name,offset,size:a.itemSize,attribute:a});offset+=a.itemSize;}
   const normal=layout.find(a=>a.name==='normal'),read=i=>{const p=[position.getX(i),position.getY(i),position.getZ(i)];for(const {attribute,size}of layout)for(let k=0;k<size;k++)p.push(attribute.array[i*size+k]);return p;};
   const validTriangle=p=>{const a=p[0],b=p[1],c=p[2],longest=Math.max(Math.hypot(a[0]-b[0],a[2]-b[2]),Math.hypot(b[0]-c[0],b[2]-c[2]),Math.hypot(c[0]-a[0],c[2]-a[2])),scale=Math.max(Math.abs(a[0]),Math.abs(a[2]),Math.abs(b[0]),Math.abs(b[2]),Math.abs(c[0]),Math.abs(c[2])),tolerance=Math.max(2e-6,scale*2**-22);return Math.abs(cross(a,b,c))>Math.max(EPS,longest*tolerance);};
@@ -312,18 +324,17 @@ function buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePlan
   const emit=(polygon,patch=null)=>triangulate(polygon,triangle=>{
    const vertices=triangle.map(v=>{const p=v.slice();p.nativeY=p[1];p.changed=!!patch;return project(p);});if(!validTriangle(vertices))return;normals(vertices);output.push(...vertices);
   });
-  const start=Math.max(0,geometry.drawRange?.start||0),end=Math.min(count,start+(geometry.drawRange?.count??count));
   for(let i=start;i+2<end;i+=3){const ia=index?index.getX(i):i,ib=index?index.getX(i+1):i+1,ic=index?index.getX(i+2):i+2,
-   b={minX:Math.min(position.getX(ia),position.getX(ib),position.getX(ic)),maxX:Math.max(position.getX(ia),position.getX(ib),position.getX(ic)),minZ:Math.min(position.getZ(ia),position.getZ(ib),position.getZ(ic)),maxZ:Math.max(position.getZ(ia),position.getZ(ib),position.getZ(ic))};
-   if(disposed||!overlaps(b,regions.bounds)&&!overlaps(b,wallIndex.bounds)){keep.push(ia,ib,ic);continue;}
-   const patchCandidates=regions.query(b),wallCandidates=wallIndex.query(b);if(!patchCandidates.length&&!wallCandidates.length){keep.push(ia,ib,ic);continue;}
+   ax=position.getX(ia),bx=position.getX(ib),cx=position.getX(ic),az=position.getZ(ia),bz=position.getZ(ib),cz=position.getZ(ic),minX=Math.min(ax,bx,cx),maxX=Math.max(ax,bx,cx),minZ=Math.min(az,bz,cz),maxZ=Math.max(az,bz,cz),rb=regions.bounds,wb=wallIndex.bounds;
+   if(disposed||!(minX<=rb.maxX&&maxX>=rb.minX&&minZ<=rb.maxZ&&maxZ>=rb.minZ)&&!(minX<=wb.maxX&&maxX>=wb.minX&&minZ<=wb.maxZ&&maxZ>=wb.minZ)){retain(ia,ib,ic);continue;}
+   const b={minX,maxX,minZ,maxZ},hasPatches=regions.intersects(b);if(!hasPatches&&!wallIndex.intersects(b)){retain(ia,ib,ic);continue;}
    const ids=[ia,ib,ic],original=ids.map(read);original.bounds=b;const terrain=record(original);let changed=false;
    // Buried core surfaces do not need every kerb/bevel micro-edge. Preserve the
    // native triangle whenever it lies entirely in the union footprint; only a
    // true road/protected/wet perimeter can require an additional terrain cut.
    const buried=original.every(p=>coreAt(p[0],p[2],false))&&!perimeterIndex.query(b).some(edge=>lineInterval(edge.a,edge.b,terrain));
    if(buried){changed=true;removedCoreArea+=area(original);}
-   else if(!disposed&&patchCandidates.length){
+   else if(!disposed&&hasPatches){
     const fragments=[];
     for(let x=Math.floor(b.minX/CELL);x<=Math.floor(b.maxX/CELL);x++)for(let z=Math.floor(b.minZ/CELL);z<=Math.floor(b.maxZ/CELL);z++){
      // Intersect disjoint cached cell partitions independently against the
@@ -336,7 +347,7 @@ function buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePlan
     }
     if(changed)for(const {p,kind}of fragments){if(kind==='core')removedCoreArea+=area(p);else emit(p,kind==='shoulder'?{kind}:null);}
    }
-   if(changed)stats.affectedTriangles++;else keep.push(...ids);
+   if(changed)stats.affectedTriangles++;else retain(ia,ib,ic);
    if(disposed)continue;
   }
   // A common height field is insufficient when one polygon has an extra point
@@ -402,7 +413,7 @@ function buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePlan
   }
   stats.applications++;stats.replacementTriangles+=conformed.length/3;stats.wallTriangles+=walls.length/3;stats.removedCoreArea+=removedCoreArea;
   const replacement=geometryFrom(conformed,layout),wallGeometry=walls.length?geometryFrom(walls,[{name:'uv',offset:3,size:2}]):null;
-  return {indices:new Uint32Array(keep),replacement,walls:wallGeometry,removedCoreArea,stats:{...stats}};
+  return {indices:kept===keep.length?keep:keep.slice(0,kept),replacement,walls:wallGeometry,removedCoreArea,stats:{...stats}};
  }
  return {surfaceSnapshot,structuralSnapshot,beginApplication,applyToGeometry,sample,contains,excluded:contains,mayAffectProtectedParcel,stats,
   rebuild(options={}){return createRoadEarthworks({world,surfaces:surfaceSnapshot,structuralSurfaces:structuralSnapshot,bridgePlan,groundHeight,wetness,protectedParcels,...options});},

@@ -1,6 +1,18 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 139 — Faster road terrain and city setup
+
+This is the scheduled optimization after features 136–138. Road terrain fitting skips unnecessary candidate lists and per-triangle data allocation, and writes retained indices into a bounded typed buffer. Road paint builds refinement buffers only when a triangle actually needs subdivision. Both paths retain the previous geometry, surface queries, attribute order and saved-world data.
+
+Opening a city now builds its trees, rocks, ground cover and zoning grid once, after the road terrain is ready. Empty cities, terrain fallbacks and later model loading still finish their scenery before returning. Existing building, tree, terrain and road detail is preserved; resident and traffic simulation clocks are unchanged.
+
+Alternating browser comparisons with assets already loaded measured city setup at 984/996 ms before versus 854/852 ms after for the curved-road fixture, and 893/835 ms versus 769/733 ms for the bridge fixture: about 13–14% faster. These measurements cover synchronous city setup, excluding asset downloads and first-frame GPU upload/presentation; they do not establish a general FPS improvement. Separate CPU road-and-terrain construction medians improved by 3–13% across four scenes, with exactly matching geometry hashes. Isolated paint refinement was 13–30% faster across those scenes with identical output. Large construction rebuilds remain synchronous.
+
+The official [Road Tools highway reference](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/road-tools) was inspected again. Before/after browser views of curves and bridges, including night lighting, retain the same pavement, markings, terrain and scenery. Reference images are not shipped. Visual and simulation equivalence with Cities: Skylines II remains unachieved.
+
+All 794 automated checks pass across 103 test files, including 12 paint-output regression cases, nine terrain/query cases and seven startup lifecycle cases. All 101 root JavaScript modules pass syntax checking; all 89 building assets and five lossless delivery bundles verify. Local browser QA restored Landscape QA 122 with 226 residents and 82 households, verified manual saving at 7:52:55 PM on October 27, and returned home at 7:53:38 PM. A full reload retained that save; Continue restored the city and resumed simulation. Final Save & Exit stored day 83 at 7:56:48 PM. No browser warnings or errors were recorded. The five-minute autosave interval is unchanged; its actual timer was observed in Edition 138, not retimed in this release.
+
 ## Edition 138 — Highway shoulders and clearer road paint
 
 Highways now reserve paved shoulders inside their existing asphalt footprints. The three-lane one-way highway has 2.25 m shoulders and three 3.75 m lanes; the divided highway has 1.5 m outer shoulders. Divider paint, edge lines, tyre wear and vehicle positions use the same carriageway layout. Existing urban road lane positions stay unchanged. Legacy outside connections retain their old lane and edge placement, including after an authored highway is removed from a starter road.

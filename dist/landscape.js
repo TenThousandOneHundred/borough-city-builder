@@ -1,17 +1,17 @@
-import './coastline.js?v=138';
-import './building-entities.js?v=138';
+import './coastline.js?v=139';
+import './building-entities.js?v=139';
 const Buildings=globalThis.BoroughBuildings;
-import {supportsTree} from './tree-placement.js?v=138';
-import {terrainMeshes} from './terrain-mesh.js?v=138';
-import {inlandRelief} from './landforms.js?v=138';
-import {streetStations,atDistance} from './street-geometry.js?v=138';
-import {terrainOffset} from './terrain-edit.js?v=138';
-import {outsidePortals} from './traffic.js?v=138';
-import {ScannedRocks} from './scanned-rocks.js?v=138';
-import {groundCover} from './ground-cover.js?v=138';
-import {terrainField} from './terrain-field.js?v=138';
-import {reflectedWater} from './water.js?v=138';
-import {naturalTerrain} from './terrain-material.js?v=138';
+import {supportsTree} from './tree-placement.js?v=139';
+import {terrainMeshes} from './terrain-mesh.js?v=139';
+import {inlandRelief} from './landforms.js?v=139';
+import {streetStations,atDistance} from './street-geometry.js?v=139';
+import {terrainOffset} from './terrain-edit.js?v=139';
+import {outsidePortals} from './traffic.js?v=139';
+import {ScannedRocks} from './scanned-rocks.js?v=139';
+import {groundCover} from './ground-cover.js?v=139';
+import {terrainField} from './terrain-field.js?v=139';
+import {reflectedWater} from './water.js?v=139';
+import {naturalTerrain} from './terrain-material.js?v=139';
 import * as THREE from './vendor/three.module.js';
 export const TILE=4,SIZE=48,HALF=96;
 const landBase=new THREE.Color('#c8e0ad'),landLight=new THREE.Color('#d4dfb3'),shoreColor=new THREE.Color('#c3bda6'),slopeColor=new THREE.Color('#959a8d');
@@ -33,11 +33,14 @@ export class Landscape{
 constructor(view){this.view=view;this.group=new THREE.Group();view.scene.add(this.group);this.loader=new THREE.TextureLoader();this.assets={};this.scannedRocks=new ScannedRocks(view);this.ready=Promise.all([this.load(),this.scannedRocks.ready]);}
 async load(){const defs=['grass-color','grass-normal','grass-rough','asphalt-color','asphalt-normal','asphalt-rough','road-asphalt-color','road-asphalt-normal','road-asphalt-rough','road-concrete-color','road-concrete-normal','road-concrete-rough','brick-color','brick-normal','brick-rough','rock-color','rock-normal'];await Promise.all(defs.map(async name=>{try{const t=await this.loader.loadAsync(new URL('./assets/'+name+'.jpg',import.meta.url).href);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=name.startsWith('road-')?Math.min(4,this.view.renderer.capabilities.getMaxAnisotropy()):this.view.renderer.capabilities.getMaxAnisotropy();if(name.endsWith('color'))t.colorSpace=THREE.SRGBColorSpace;this.assets[name]=t}catch(e){console.warn('Texture fallback:',name)}}));}
 material(name,repeat=1,color='#ffffff'){const map=this.assets[name+'-color']?.clone(),normal=this.assets[name+'-normal']?.clone(),rough=this.assets[name+'-rough']?.clone();for(let t of [map,normal,rough])if(t){t.repeat.set(repeat,repeat);t.needsUpdate=true}return new THREE.MeshStandardMaterial({color,map:map||null,normalMap:normal||null,roughnessMap:rough||null,normalScale:new THREE.Vector2(.3,.3),roughness:.92});}
-clear(){this.clearRoadEarthworks();this.disposeRetainingMaterial();this.group.traverse(o=>{o.userData.dispose?.();if(o.geometry&&!o.userData.sharedAsset)o.geometry.dispose();if(o.material&&!o.userData.sharedMaterial){for(let m of Array.isArray(o.material)?o.material:[o.material]){if(m===this.leafMat||[...this.view.materials.values()].includes(m))continue;for(let k of ['map','normalMap','roughnessMap'])if(m[k]&&!Object.values(this.assets).includes(m[k]))m[k].dispose();m.dispose()}}});this.group.clear();this.terrainBases=null;this.cover=null;this.trees=null;this.rockGroup=null;this.ground=null;this.surroundings=null;this.world=null;}
-build(w){this.clear();this.world=w;const meshes=terrainMeshes(w,groundHeight,terrainColor),geo=meshes.ground;this.geometryCacheHit=meshes.cacheHit;this.baseColors=geo.attributes.color.array.slice();const mat=naturalTerrain(this.material('grass',14,'#ffffff'),this.assets,w.seed);mat.vertexColors=true;mat.normalScale.set(.55,.55);this.ground=new THREE.Mesh(geo,mat);this.ground.receiveShadow=true;this.group.add(this.ground);
+clear(){this.clearRoadEarthworks();this.disposeRetainingMaterial();this.group.traverse(o=>{o.userData.dispose?.();if(o.geometry&&!o.userData.sharedAsset)o.geometry.dispose();if(o.material&&!o.userData.sharedMaterial){for(let m of Array.isArray(o.material)?o.material:[o.material]){if(m===this.leafMat||[...this.view.materials.values()].includes(m))continue;for(let k of ['map','normalMap','roughnessMap'])if(m[k]&&!Object.values(this.assets).includes(m[k]))m[k].dispose();m.dispose()}}});this.group.clear();this.terrainBases=null;this.cover=null;this.trees=null;this.rockGroup=null;this.ground=null;this.surroundings=null;this.developmentPending=false;this.world=null;}
+build(w,{deferDevelopment=false}={}){this.clear();this.world=w;this.developmentPending=deferDevelopment;const meshes=terrainMeshes(w,groundHeight,terrainColor),geo=meshes.ground;this.geometryCacheHit=meshes.cacheHit;this.baseColors=geo.attributes.color.array.slice();const mat=naturalTerrain(this.material('grass',14,'#ffffff'),this.assets,w.seed);mat.vertexColors=true;mat.normalScale.set(.55,.55);this.ground=new THREE.Mesh(geo,mat);this.ground.receiveShadow=true;this.group.add(this.ground);
 const far=meshes.far;const fm=naturalTerrain(this.material('grass',80.2083,'#ffffff'),this.assets,w.seed);fm.vertexColors=true;this.surroundings=new THREE.Mesh(far,fm);this.surroundings.receiveShadow=true;this.group.add(this.surroundings);
 this.terrainBases=[this.ground,this.surroundings].map(mesh=>({mesh,indices:mesh.geometry.index.array.slice(),drawRange:{...mesh.geometry.drawRange}}));
-this.water=reflectedWater(this.view,geo,far);this.waterMaterial=this.water.material;this.group.add(this.water);this.makeTrees(w);this.rockGroup=new THREE.Group();this.group.add(this.rockGroup);this.makeRocks(w);this.cover=groundCover(this.view,w,groundHeight,wetness);this.group.add(this.cover);}
+this.water=reflectedWater(this.view,geo,far);this.waterMaterial=this.water.material;this.group.add(this.water);if(!deferDevelopment)this.makeTrees(w);this.rockGroup=new THREE.Group();this.group.add(this.rockGroup);if(!deferDevelopment){this.makeRocks(w);this.cover=groundCover(this.view,w,groundHeight,wetness);this.group.add(this.cover);}}
+// Startup can wait for the final road support before constructing scenery.
+// With no support plan, retain the ordinary build's order and natural heights.
+ensureDevelopment(w){if(w!==this.world||!this.developmentPending)return false;if(this.earthworks)this.refreshDevelopment(w);else{this.group.remove(this.rockGroup);this.makeTrees(w);this.group.add(this.rockGroup);this.makeRocks(w);this.cover=groundCover(this.view,w,groundHeight,wetness);this.group.add(this.cover);this.developmentPending=false;}return true;}
 // Earthworks change only render indices and separate clipped fragments. The
 // square terrain samples remain the source for sculpting, water depth and saves.
 retainingMaterial(){
@@ -117,8 +120,8 @@ refreshTerrain(w,bounds,finish=false){
  pos.needsUpdate=true;colors.needsUpdate=true;geometry.computeVertexNormals();geometry.computeBoundingSphere();
  if(finish){this.refreshTrees(w);if(this.rockGroup){this.rockGroup.traverse(o=>{o.userData.dispose?.();if(o.geometry&&!o.userData.sharedAsset)o.geometry.dispose();});this.rockGroup.clear();this.makeRocks(w);}}
 }
-refreshDevelopment(w){this.refreshTrees(w);if(this.rockGroup){this.rockGroup.traverse(o=>{o.userData.dispose?.();if(o.geometry&&!o.userData.sharedAsset)o.geometry.dispose();});this.rockGroup.clear();this.makeRocks(w);}}
-refreshCover(w){if(this.cover){this.group.remove(this.cover);this.cover.userData.dispose();this.cover=groundCover(this.view,w,(world,x,z)=>this.coverHeight(world,x,z),(world,x,z)=>this.coverWetness(world,x,z));this.group.add(this.cover);}}
+refreshDevelopment(w){this.refreshTrees(w);if(this.rockGroup){this.rockGroup.traverse(o=>{o.userData.dispose?.();if(o.geometry&&!o.userData.sharedAsset)o.geometry.dispose();});this.rockGroup.clear();this.makeRocks(w);}this.developmentPending=false;}
+refreshCover(w){if(this.cover||this.developmentPending){if(this.cover){this.group.remove(this.cover);this.cover.userData.dispose();}this.cover=groundCover(this.view,w,(world,x,z)=>this.coverHeight(world,x,z),(world,x,z)=>this.coverWetness(world,x,z));this.group.add(this.cover);}}
 refreshTrees(w){this.refreshCover(w);for(let o of this.trees||[]){this.group.remove(o);o.dispose?.();o.traverse(m=>{if(m.geometry&&!m.userData.sharedAsset)m.geometry.dispose()})}this.makeTrees(w)}
 update(time,night){if(this.cover){this.cover.visible=this.view.detailEnabled!==false;if(this.cover.visible)this.cover.userData.update(this.view.camera);}if(this.waterMaterial){this.waterMaterial.uniforms.time.value=time;this.waterMaterial.uniforms.night.value=night?1:0;this.waterMaterial.uniforms.reflectionEnabled.value=this.view.reflectionsEnabled===false||this.view.detailEnabled===false?0:1}}
 }
