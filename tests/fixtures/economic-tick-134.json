@@ -1,0 +1,80 @@
+{
+  "edition": 134,
+  "revision": "6eecb9558b5e6c98026a5b22c3fd088403a738b9",
+  "sourceHash": "267c4e4d0d248932136ad99d2134d0b43803ff81382163dd888318147bf7b9b2",
+  "ticks": 120,
+  "fixtures": {
+    "starter_curve": {
+      "initial": "bcc1477b17d755ef53c0c0c793eaf1141c1b0850414a1965de9807c12d419309",
+      "final": "51483efbc41b576462bfe5b5e1d6d709503010c7fa04443638a93b0d43196adc",
+      "worldTrace": "6209f8d028dc841c77ffb16b670a496cd837700ac426947eb6e201bca9a006ea",
+      "statsTrace": "02e4652826a34b7a03068f920f08f215d58eff24c3ab5caa5406555e03d886fb",
+      "rng": {
+        "factories": 240,
+        "draws": 0,
+        "hash": "3841b2ea884e39764e83df42e64e7b42194dc330f47d38e1a9df1b04d9f84c9d"
+      },
+      "coverage": {
+        "legacyCompletions": 0,
+        "fineCompletions": 0,
+        "disconnectedTicks": 0
+      },
+      "population": 0,
+      "money": 99996688
+    },
+    "populated_grid": {
+      "initial": "7594a6ff38431f532483fab83730356a5bdbb25326237bd42049beba2470f8fb",
+      "final": "22db6746b1aac127d28606f00153a43d619d9c3dee62feae46f22bc5e24d4738",
+      "worldTrace": "398144b9dc60016dae5ce93c14eb5aa5ed1b68bde766667aec3fe0d45891836f",
+      "statsTrace": "ad2f9e3b01e0186c195bd7b60cfa919363f81fa8fff903450a730db45b8ca584",
+      "rng": {
+        "factories": 240,
+        "draws": 28602,
+        "hash": "29246ddac43c5fee84bd7fc47bd3bf5eec7f831b51d0fb78793aa168a656349f"
+      },
+      "coverage": {
+        "legacyCompletions": 0,
+        "fineCompletions": 0,
+        "disconnectedTicks": 0
+      },
+      "population": 3358,
+      "money": 100253279
+    },
+    "fine_growth": {
+      "initial": "69c4af8491b9c2a92f232c52a8fb6f4b6bc0edf05ca692d8ba7115785af3c085",
+      "final": "6f6d2274f48715d75ee82613a1ecdd496dfb3614b1a04c31583b380a23cf019c",
+      "worldTrace": "2bcb6911c9455aa8f41871b21286cbd57dece3f699e4724bd5522634c81563c4",
+      "statsTrace": "f97befcf1ca99a6814826a0ed78d7a3ace74a6deea310d804f42360df632b8d3",
+      "rng": {
+        "factories": 360,
+        "draws": 5908,
+        "hash": "f1fccf12d8eb089732aff59167edcbb976ad08422d3e0dbbbe8a179d281b1b0b"
+      },
+      "coverage": {
+        "legacyCompletions": 0,
+        "fineCompletions": 84,
+        "disconnectedTicks": 0
+      },
+      "population": 656,
+      "money": 100057739.9
+    },
+    "mixed_edits": {
+      "initial": "e4e148ea8b2ee7cbf0d0b2193ce82fea8fb158875ee6b8662d04a407630e6a0d",
+      "final": "151b2fd90cad862671c2292675293f960a1e9ca4616b0e52fb56424389b18c95",
+      "worldTrace": "299ff4b6488e2768a6732b2661547274ce5adeb249ed4c2997530f32249f9363",
+      "statsTrace": "774bcd5a915f9ded9f07a730c9ea147577b3817721ac87dc201306da8c6a6cc6",
+      "rng": {
+        "factories": 360,
+        "draws": 5233,
+        "hash": "ba6534f3f571927b10c8e7666705b014004c9fd3d2576fa4953936e6b5b2b52d"
+      },
+      "coverage": {
+        "legacyCompletions": 4,
+        "fineCompletions": 67,
+        "disconnectedTicks": 16
+      },
+      "population": 722,
+      "money": 100050253.1
+    }
+  }
+}

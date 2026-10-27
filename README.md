@@ -1,6 +1,20 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 135 — Shorter catch-up pauses and faster city calculations
+
+Delayed simulation work now yields between complete fixed steps after an 8 ms work target while the page is visible. Unprocessed time stays pending in the active session; no resident, vehicle, journey or fixed step is discarded to meet the work target. Hidden pages retain the previous larger catch-up batches so throttled browser timers can continue advancing the city. The 8 ms target is not a hard limit: an individual fixed step can take longer. Pause, speed changes and switching worlds preserve their existing behavior. As before, saves store completed city state; pending catch-up time is not retained after leaving or reloading a world.
+
+Economic updates now reuse the same connected-road set and ordered legacy zoning access within one city day. Fine zoning planning reuses its already resolved layout. These are local calculations, not persistent caches; changes to roads, ground, zoning sides and utilities are observed on the next update. Building, tree, terrain and road detail are unchanged.
+
+Four deterministic 120-day comparisons against the committed Edition 134 engine match entire saved-world states, returned statistics and every random factory/output sequence. They include mixed legacy/fine construction, road disconnection/reconnection, interior road and ground changes, zoning-side edits and lost/restored utilities. Paired CPU tests measured 120-day calculations plus an inert UI at 234→209 ms for a starter city, 1088→891 ms for a populated grid and 887→766 ms for fine zoning growth: about 10–18% less work. This does not establish a browser FPS improvement.
+
+Two alternating-order catch-up comparisons used 4,872 residents and 512 vehicle slots after a ten-second delay. The largest single callback changed from 604/513 ms to 30.3/29.4 ms, with bounded-callback medians of 10.23/9.97 ms. All 200 fixed steps completed, pending time reached zero and final resident/traffic states matched exactly. Work is spread over more callbacks, so full catch-up can take longer; total simulation accuracy is retained. A separate empty-city browser check found similar running and paused frame timing, so it did not establish a running-only simulation bottleneck.
+
+A candidate road/terrain containment optimization was tested and rejected because its timings were inconsistent. The final road/terrain implementation remains Edition 134's. The official Road Tools reference and final visual comparison from that edition continue to apply. This is the scheduled optimization after feature updates 132–134; commercial-game equivalence remains unachieved.
+
+All 646 automated checks pass, including exact economic-state and resident/traffic catch-up comparisons. All 95 root JavaScript modules pass syntax checking, and lossless asset bundles retain identical decoded contents. Browser QA restored the previous curved-road city, verified manual save on day 88 at 5:02:24 PM on October 27, returned home with Save & Exit, and retained its save through a full page reload. Continue restored the curve and resumed the city; final Save & Exit stored day 102 at 5:04:29 PM. No browser warnings or errors were recorded. These are local persistence checks; this release did not wait for a fresh hosted five-minute autosave.
+
 ## Edition 134 — Road snapping and construction guides
 
 Road placement now snaps to the actual centerlines and endpoints of authored streets and paths. Curved and diagonal roads no longer expose off-road raster tile centers as connection points. Nearby endpoint selection is deterministic, legacy road elbows follow their rendered curve, and a spatial index is reused during each drawing session. The tool offers road-connection snapping, relative 45° angle alignment and optional 8 m length steps. Hold Alt to place freely; its key transitions immediately refresh the current preview. Saved road controls remain plain coordinates.
