@@ -46,9 +46,14 @@ test('terrain rendering keeps the traffic simulation and resident state intact',
  const {Traffic}=await import('../dist/traffic.js');
  const w=world();for(let x=0;x<12;x++)w.tiles[24*48+x]={type:'road',ground:'land',roadType:'street'};w.tiles[23*48+10]={type:'commercial',level:1,ground:'land'};const traffic=new Traffic(w,E),agent=traffic.addAgent();traffic.update(2);
  assert.ok(agent.active);const trip=agent.trip,clock={elapsed:10},residents={households:[{home:23*48+9}]},bounds={minX:8,maxX:32,minZ:8,maxZ:32};
- const view={world:w,traffic,residents,simulationClock:clock,cars:[{heightWorld:w}],renderer:{shadowMap:{}},landscape:{refreshTerrain(world,area,finish){assert.equal(world,w);assert.equal(area,bounds);assert.equal(finish,true);}},drawFootpaths(){},makeGrid(){},updateZones(){}};
+ const calls=[],earthworks={};
+ const view={world:w,traffic,residents,simulationClock:clock,overlay:'none',cars:[{heightWorld:w}],buildings:new Map(),renderer:{shadowMap:{}},
+  landscape:{refreshTerrain(world,area,finish){assert.equal(world,w);assert.equal(area,bounds);assert.equal(finish,false,'vegetation waits for rebuilt road support');calls.push('terrain');},applyRoadEarthworks(world,plan){assert.equal(world,w);assert.equal(plan,earthworks);calls.push('earthworks');}},
+  roadworks:{earthworks,build(world){assert.equal(world,w);calls.push('roads');},buildAccess(world,buildings){assert.equal(world,w);assert.equal(buildings,view.buildings);calls.push('access');},syncSignals(source){assert.equal(source,traffic);calls.push('signals');}},
+  streetLife:{build(world){assert.equal(world,w);calls.push('people');}},drawFootpaths(){calls.push('footpaths');},makeGrid(){calls.push('grid');},updateZones(){calls.push('zones');}};
  assert.ok(brush(w,'raise').ok);CityView.prototype.terrainChanged.call(view,bounds,true);
  assert.equal(view.traffic,traffic);assert.equal(view.simulationClock,clock);assert.equal(view.residents,residents);assert.equal(agent.trip,trip);assert.equal(agent.active,true);
+ assert.deepEqual(calls,['terrain','roads','earthworks','access','signals','grid','zones','footpaths','people']);assert.equal(view.cars[0].heightWorld,null);
  for(let i=0;i<4000&&traffic.completed===0;i++)traffic.update(.05);
  assert.ok(traffic.completed>0,'trip finishes with no renderer frame calls');
 });

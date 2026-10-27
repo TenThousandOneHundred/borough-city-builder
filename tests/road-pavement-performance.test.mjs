@@ -33,6 +33,10 @@ export function makePavementFixture(name){
   if(name==='district'){const plan=roadGeometry(w,E),j=plan.junctions.find(j=>Math.hypot(j.x-50,j.z-2)<.01);assert.ok(globalThis.BoroughRoundabouts.apply(w,plan.junctions,globalThis.BoroughRoundabouts.key(j),'medium',E).ok);}
  }
  const previousDocument=globalThis.document,previousEngine=globalThis.CityEngine,stop={},r=new Roadworks(view());let fixture;
+ // This oracle isolates the pavement optimization with its released input
+ // geometry. Road-grade changes have separate continuity/integration tests.
+ r.naturalDatum=(world,x,z)=>r.baseHeight(world,x,z);
+ Object.defineProperty(r,'gradePlan',{get:()=>null,set(){}});
  globalThis.CityEngine=E;globalThis.document={createElement:()=>({getContext:()=>({fillRect(){},strokeRect(){},fillText(){}})})};
  r.finalizePavement=()=>{fixture={strips:[],patches:[]};r.group.traverse(m=>{if(m.userData.roadSurface==='asphalt')(m.userData.roadJunction?fixture.patches:fixture.strips).push(m);});throw stop;};
  try{r.build(w);}catch(error){if(error!==stop)throw error;}finally{globalThis.document=previousDocument;globalThis.CityEngine=previousEngine;}

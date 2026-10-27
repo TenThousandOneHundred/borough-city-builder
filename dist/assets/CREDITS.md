@@ -75,3 +75,9 @@ Tree Small 02 by Rico Cilliers / Poly Haven remains CC0. Its original leaf geome
 - **Clean Asphalt** by Dimitrios Savva / Poly Haven, CC0: https://polyhaven.com/a/clean_asphalt
 - License: https://polyhaven.com/license
 - Original 1K JPEG diffuse, OpenGL normal and roughness maps stored as `road-asphalt-color.jpg`, `road-asphalt-normal.jpg` and `road-asphalt-rough.jpg`. The photograph spans 2.1 metres and is mapped continuously across roads and junctions. Existing industrial-yard and roof maps remain separate. The official Cities: Skylines II Road Tools screenshots were visual references only and are not shipped.
+
+## Edition 132 retaining walls
+
+- **Concrete Wall 008** by Charlotte Baglioni (photography) and Dario Barresi (processing) / Poly Haven, CC0: https://polyhaven.com/a/concrete_wall_008
+- License: https://polyhaven.com/license
+- Original 1K JPEG diffuse, OpenGL normal and roughness maps are supplied as `road-concrete-color.jpg`, `road-concrete-normal.jpg` and `road-concrete-rough.jpg`. Their physical tile width is 2.7 metres; shared wall materials preserve metre-scale mapping. Reference game pictures are not shipped.

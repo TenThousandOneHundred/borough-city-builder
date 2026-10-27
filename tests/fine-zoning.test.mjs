@@ -101,7 +101,8 @@ test('lot proposals are read only and planning caches invalidate after zoning, r
 test('all building lot outlines share one terrain-following draw batch',async()=>{
  const THREE=await import('../dist/vendor/three.module.js'),{CityView}=await import('../dist/renderer.js'),w=fixture(),group=new THREE.Group();
  const frames=Array.from({length:80},(_,i)=>({cx:(i%10)*5-60,cz:Math.floor(i/10)*5-45,width:3.16,depth:4.76,angle:.15}));
- CityView.prototype.zoneLotOutlines.call({world:w,zoneGroup:group},frames);
+ const view=Object.assign(Object.create(CityView.prototype),{world:w,zoneGroup:group});view.zoneLotOutlines(frames);
  assert.equal(group.children.length,1);const lines=group.children[0];assert.ok(lines.isLineSegments);assert.equal(lines.userData.zoningLots,80);assert.ok([...lines.geometry.attributes.position.array].every(Number.isFinite));
- assert.ok(lines.geometry.attributes.position.count<=80*32,'line detail is bounded by lot perimeter');lines.geometry.dispose();lines.material.dispose();
+ const positions=lines.geometry.attributes.position;for(let i=0;i<positions.count;i++)assert.ok(Math.abs(positions.getY(i)-view.renderFloor(w,positions.getX(i),positions.getZ(i))-.19)<2e-5,'lot boundaries rest on the rendered terrain');
+ assert.ok(positions.count<=80*32,'line detail is bounded by lot perimeter');lines.geometry.dispose();lines.material.dispose();
 });

@@ -1,17 +1,17 @@
-import './coastline.js?v=131';
-import './building-entities.js?v=131';
+import './coastline.js?v=132';
+import './building-entities.js?v=132';
 const Buildings=globalThis.BoroughBuildings;
-import {supportsTree} from './tree-placement.js?v=131';
-import {terrainMeshes} from './terrain-mesh.js?v=131';
-import {inlandRelief} from './landforms.js?v=131';
-import {streetStations,atDistance} from './street-geometry.js?v=131';
-import {terrainOffset} from './terrain-edit.js?v=131';
-import {outsidePortals} from './traffic.js?v=131';
-import {ScannedRocks} from './scanned-rocks.js?v=131';
-import {groundCover} from './ground-cover.js?v=131';
-import {terrainField} from './terrain-field.js?v=131';
-import {reflectedWater} from './water.js?v=131';
-import {naturalTerrain} from './terrain-material.js?v=131';
+import {supportsTree} from './tree-placement.js?v=132';
+import {terrainMeshes} from './terrain-mesh.js?v=132';
+import {inlandRelief} from './landforms.js?v=132';
+import {streetStations,atDistance} from './street-geometry.js?v=132';
+import {terrainOffset} from './terrain-edit.js?v=132';
+import {outsidePortals} from './traffic.js?v=132';
+import {ScannedRocks} from './scanned-rocks.js?v=132';
+import {groundCover} from './ground-cover.js?v=132';
+import {terrainField} from './terrain-field.js?v=132';
+import {reflectedWater} from './water.js?v=132';
+import {naturalTerrain} from './terrain-material.js?v=132';
 import * as THREE from './vendor/three.module.js';
 export const TILE=4,SIZE=48,HALF=96;
 const landBase=new THREE.Color('#c8e0ad'),landLight=new THREE.Color('#d4dfb3'),shoreColor=new THREE.Color('#c3bda6'),slopeColor=new THREE.Color('#959a8d');
@@ -31,23 +31,86 @@ export function terrainColor(w,x,z,height=groundHeight){const wet=wetness(w,x,z,
 export function floorHeight(w,x,z){return Math.max(.2,groundHeight(w,x,z))}
 export class Landscape{
 constructor(view){this.view=view;this.group=new THREE.Group();view.scene.add(this.group);this.loader=new THREE.TextureLoader();this.assets={};this.scannedRocks=new ScannedRocks(view);this.ready=Promise.all([this.load(),this.scannedRocks.ready]);}
-async load(){const defs=['grass-color','grass-normal','grass-rough','asphalt-color','asphalt-normal','asphalt-rough','road-asphalt-color','road-asphalt-normal','road-asphalt-rough','brick-color','brick-normal','brick-rough','rock-color','rock-normal'];await Promise.all(defs.map(async name=>{try{const t=await this.loader.loadAsync(new URL('./assets/'+name+'.jpg',import.meta.url).href);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=name.startsWith('road-asphalt')?Math.min(4,this.view.renderer.capabilities.getMaxAnisotropy()):this.view.renderer.capabilities.getMaxAnisotropy();if(name.endsWith('color'))t.colorSpace=THREE.SRGBColorSpace;this.assets[name]=t}catch(e){console.warn('Texture fallback:',name)}}));}
+async load(){const defs=['grass-color','grass-normal','grass-rough','asphalt-color','asphalt-normal','asphalt-rough','road-asphalt-color','road-asphalt-normal','road-asphalt-rough','road-concrete-color','road-concrete-normal','road-concrete-rough','brick-color','brick-normal','brick-rough','rock-color','rock-normal'];await Promise.all(defs.map(async name=>{try{const t=await this.loader.loadAsync(new URL('./assets/'+name+'.jpg',import.meta.url).href);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=name.startsWith('road-')?Math.min(4,this.view.renderer.capabilities.getMaxAnisotropy()):this.view.renderer.capabilities.getMaxAnisotropy();if(name.endsWith('color'))t.colorSpace=THREE.SRGBColorSpace;this.assets[name]=t}catch(e){console.warn('Texture fallback:',name)}}));}
 material(name,repeat=1,color='#ffffff'){const map=this.assets[name+'-color']?.clone(),normal=this.assets[name+'-normal']?.clone(),rough=this.assets[name+'-rough']?.clone();for(let t of [map,normal,rough])if(t){t.repeat.set(repeat,repeat);t.needsUpdate=true}return new THREE.MeshStandardMaterial({color,map:map||null,normalMap:normal||null,roughnessMap:rough||null,normalScale:new THREE.Vector2(.3,.3),roughness:.92});}
-clear(){this.group.traverse(o=>{o.userData.dispose?.();if(o.geometry&&!o.userData.sharedAsset)o.geometry.dispose();if(o.material&&!o.userData.sharedMaterial){for(let m of Array.isArray(o.material)?o.material:[o.material]){if(m===this.leafMat||[...this.view.materials.values()].includes(m))continue;for(let k of ['map','normalMap','roughnessMap'])if(m[k]&&!Object.values(this.assets).includes(m[k]))m[k].dispose();m.dispose()}}});this.group.clear()}
+clear(){this.clearRoadEarthworks();this.disposeRetainingMaterial();this.group.traverse(o=>{o.userData.dispose?.();if(o.geometry&&!o.userData.sharedAsset)o.geometry.dispose();if(o.material&&!o.userData.sharedMaterial){for(let m of Array.isArray(o.material)?o.material:[o.material]){if(m===this.leafMat||[...this.view.materials.values()].includes(m))continue;for(let k of ['map','normalMap','roughnessMap'])if(m[k]&&!Object.values(this.assets).includes(m[k]))m[k].dispose();m.dispose()}}});this.group.clear();this.terrainBases=null;this.cover=null;this.trees=null;this.rockGroup=null;this.ground=null;this.surroundings=null;this.world=null;}
 build(w){this.clear();this.world=w;const meshes=terrainMeshes(w,groundHeight,terrainColor),geo=meshes.ground;this.geometryCacheHit=meshes.cacheHit;this.baseColors=geo.attributes.color.array.slice();const mat=naturalTerrain(this.material('grass',14,'#ffffff'),this.assets,w.seed);mat.vertexColors=true;mat.normalScale.set(.55,.55);this.ground=new THREE.Mesh(geo,mat);this.ground.receiveShadow=true;this.group.add(this.ground);
 const far=meshes.far;const fm=naturalTerrain(this.material('grass',80.2083,'#ffffff'),this.assets,w.seed);fm.vertexColors=true;this.surroundings=new THREE.Mesh(far,fm);this.surroundings.receiveShadow=true;this.group.add(this.surroundings);
+this.terrainBases=[this.ground,this.surroundings].map(mesh=>({mesh,indices:mesh.geometry.index.array.slice(),drawRange:{...mesh.geometry.drawRange}}));
 this.water=reflectedWater(this.view,geo,far);this.waterMaterial=this.water.material;this.group.add(this.water);this.makeTrees(w);this.rockGroup=new THREE.Group();this.group.add(this.rockGroup);this.makeRocks(w);this.cover=groundCover(this.view,w,groundHeight,wetness);this.group.add(this.cover);}
+// Earthworks change only render indices and separate clipped fragments. The
+// square terrain samples remain the source for sculpting, water depth and saves.
+retainingMaterial(){
+ if(this.earthworkWallMaterial)return this.earthworkWallMaterial;
+ const material=this.material('road-concrete',5/2.7,this.assets['road-concrete-color']?'#ffffff':'#9c9e93');material.normalScale.set(.2,.2);material.roughness=.95;
+ // Retain the photographed formwork and pores while reducing its warm cast.
+ // Work on linear diffuse after standard texture decoding, before lighting.
+ material.onBeforeCompile=shader=>{shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`#include <map_fragment>
+ #ifdef USE_MAP
+ float retainingLuminance=dot(diffuseColor.rgb,vec3(.2126,.7152,.0722));
+ diffuseColor.rgb=mix(diffuseColor.rgb,vec3(retainingLuminance),.8);
+ #endif`);};
+ material.customProgramCacheKey=()=> 'borough-retaining-concrete-132';return this.earthworkWallMaterial=material;
+}
+disposeRetainingMaterial(){const material=this.earthworkWallMaterial;if(!material)return;for(const key of ['map','normalMap','roughnessMap'])material[key]?.dispose();material.dispose();this.earthworkWallMaterial=null;}
+clearRoadEarthworks(){
+ const changed=!!this.earthworks;for(const mesh of this.earthworkMeshes||[]){mesh.removeFromParent();mesh.geometry.dispose();}
+ this.earthworkMeshes=[];this.earthworkGroundMeshes=[];
+ if(changed)for(const base of this.terrainBases||[]){const g=base.mesh.geometry;g.index.array.set(base.indices);g.index.needsUpdate=true;g.setDrawRange(base.drawRange.start,base.drawRange.count);}
+ this.earthworks=null;if(changed)this.earthworksRevision=(this.earthworksRevision||0)+1;return changed;
+}
+applyRoadEarthworks(w,earthworks,{refreshVegetation=true}={}){
+ if(w!==this.world||!this.ground||earthworks===this.earthworks)return false;
+ const changed=this.clearRoadEarthworks();if(!earthworks){if(changed&&refreshVegetation)this.refreshDevelopment(w);return changed;}
+ this.terrainBases ||= [this.ground,this.surroundings].filter(Boolean).map(mesh=>({mesh,indices:mesh.geometry.index.array.slice(),drawRange:{...mesh.geometry.drawRange}}));
+ this.earthworks=earthworks;earthworks.beginApplication?.();
+ try{for(const base of this.terrainBases){
+  const geometry=base.mesh.geometry,colors=geometry.attributes.color,overlayColors=colors?.array;let result;
+  // An active heatmap must not be baked into the natural colors of new pieces.
+  if(base.mesh===this.ground&&this.baseColors?.length===overlayColors?.length)colors.array=this.baseColors;
+  try{result=earthworks.applyToGeometry(geometry);}finally{if(colors)colors.array=overlayColors;}
+  // Reuse the original GPU index allocation; unused tail entries are outside
+  // the draw range. Rebuilding or removing roads restores every original entry.
+  geometry.index.array.set(result.indices);geometry.index.needsUpdate=true;geometry.setDrawRange(0,result.indices.length);
+  for(const [part,ground]of [[result.replacement,true],[result.walls,false]]){
+   if(!part)continue;if(!(part.index?.count??part.attributes.position?.count)){part.dispose();continue;}
+   const mesh=new THREE.Mesh(part,ground?base.mesh.material:this.retainingMaterial());mesh.receiveShadow=true;mesh.castShadow=!ground;mesh.userData.sharedMaterial=true;
+   if(ground){mesh.userData.nearTerrain=base.mesh===this.ground;mesh.userData.baseColors=part.attributes.color?.array.slice();}
+   this.group.add(mesh);this.earthworkMeshes.push(mesh);if(ground)this.earthworkGroundMeshes.push(mesh);
+  }
+ }}catch(error){this.clearRoadEarthworks();throw error;}
+ this.earthworksRevision=(this.earthworksRevision||0)+1;if(refreshVegetation)this.refreshDevelopment(w);return true;
+}
+renderHeight(w,x,z){const height=this.world===w?this.earthworks?.sample(x,z):null;return Number.isFinite(height)?height:groundHeight(w,x,z);}
+earthworksExcluded(w,x,z){return this.world===w&&!!this.earthworks?.excluded(x,z);}
+renderGroundTargets(){return [this.ground,this.surroundings,...this.earthworkGroundMeshes||[]].filter(Boolean);}
+applyGroundOverlay(colorAt){
+ for(const mesh of [this.ground,...(this.earthworkGroundMeshes||[]).filter(m=>m.userData.nearTerrain)].filter(Boolean)){
+  const {position,color}=mesh.geometry.attributes;if(!color)continue;
+  for(let i=0;i<position.count;i++){const c=colorAt(position.getX(i),position.getZ(i));color.setXYZ(i,c.r,c.g,c.b);}color.needsUpdate=true;
+ }
+}
+restoreGroundColors(){
+ for(const [mesh,base]of [[this.ground,this.baseColors],...(this.earthworkGroundMeshes||[]).filter(m=>m.userData.nearTerrain).map(m=>[m,m.userData.baseColors])]){
+  const colors=mesh?.geometry.attributes.color;if(!colors||base?.length!==colors.array.length)continue;colors.array.set(base);colors.needsUpdate=true;
+ }
+}
+coverHeight(w,x,z){return this.renderHeight(w,x,z);}
+coverWetness(w,x,z){return this.earthworksExcluded(w,x,z)?1:wetness(w,x,z,(world,px,pz)=>this.renderHeight(world,px,pz));}
 leafMaterial(){if(this.leafMat)return this.leafMat;const c=document.createElement('canvas');c.width=c.height=128;const ctx=c.getContext('2d');for(let i=0;i<380;i++){let a=i*2.39996,r=Math.sqrt(i/380)*59,x=64+Math.cos(a)*r,y=64+Math.sin(a)*r;ctx.fillStyle=['#6c8047','#70874d','#526a36','#8a9659'][i%4];ctx.beginPath();ctx.ellipse(x,y,2.3+(i%3),1.5+(i%2),a,0,Math.PI*2);ctx.fill()}const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;this.leafMat=new THREE.MeshStandardMaterial({map:tex,alphaTest:.45,side:THREE.DoubleSide,roughness:1,envMapIntensity:.1});return this.leafMat}
-makeTrees(w){const positions=[];w.tiles.forEach((t,i)=>{if(t.tree&&!t.type&&t.ground==='land'){const x=(i%48+.5)*4-96,z=(Math.floor(i/48)+.5)*4-96;for(let j=0;j<2;j++){const px=x+hash(i,j,w.seed)*3-1.5,pz=z+hash(j,i,w.seed)*3-1.5;if(wetness(w,px,pz)<.18)positions.push([px,pz,2.8+hash(i,j+3,w.seed)*2,i%4])}}});// Street trees occupy verges on straight road sections, not intersections.
-for(let i=0;i<w.tiles.length;i++){const t=w.tiles[i];if(t.type!=='road'||t.ground!=='land'||t.pathIds?.length||i%3!==0)continue;const near=CityEngine.neighbors(i).filter(j=>w.tiles[j].type==='road');if(near.length!==2||near[0]+near[1]!==2*i)continue;const horizontal=Math.abs(near[0]-i)===1,x=(i%48+.5)*4-96,z=(Math.floor(i/48)+.5)*4-96;for(const side of [-1,1])positions.push([x+(horizontal?0:side*1.73),z+(horizontal?side*1.73:0),1.6+hash(i,side,w.seed)*.5,i%4]);}
+makeTrees(w){const height=(world,x,z)=>this.renderHeight(world,x,z),positions=[];w.tiles.forEach((t,i)=>{if(t.tree&&!t.type&&t.ground==='land'){const x=(i%48+.5)*4-96,z=(Math.floor(i/48)+.5)*4-96;for(let j=0;j<2;j++){const px=x+hash(i,j,w.seed)*3-1.5,pz=z+hash(j,i,w.seed)*3-1.5;if(wetness(w,px,pz)<.18)positions.push([px,pz,2.8+hash(i,j+3,w.seed)*2,i%4])}}});// Street trees occupy verges on straight road sections, not intersections.
+for(let i=0;i<w.tiles.length;i++){const t=w.tiles[i];if(t.type!=='road'||t.ground!=='land'||t.pathIds?.length||i%3!==0)continue;const near=CityEngine.neighbors(i).filter(j=>w.tiles[j].type==='road');if(near.length!==2||near[0]+near[1]!==2*i)continue;const horizontal=Math.abs(near[0]-i)===1,x=(i%48+.5)*4-96,z=(Math.floor(i/48)+.5)*4-96;for(const side of [-1,1])positions.push([x+(horizontal?0:side*1.73),z+(horizontal?side*1.73:0),1.6+hash(i,side,w.seed)*.5,i%4,true]);}
 // Small neighborhood trees soften developed block interiors without hiding roads.
-for(const path of w.roadPaths||[]){const spec=CityEngine.ROADS[path.type];if(!spec?.green)continue;const stations=streetStations(CityEngine.sampleRoad(path.controls).map(p=>({x:(p.x+.5)*4-96,z:(p.y+.5)*4-96})));if(stations.length<2)continue;for(let d=3;d<stations.at(-1).distance-1;d+=12){const p=atDistance(stations,d),x=p.x+p.tz*(spec.width/2+.25),z=p.z-p.tx*(spec.width/2+.25);if(wetness(w,x,z)<.3)positions.push([x,z,2.6,positions.length%4]);}}
+for(const path of w.roadPaths||[]){const spec=CityEngine.ROADS[path.type];if(!spec?.green)continue;const stations=streetStations(CityEngine.sampleRoad(path.controls).map(p=>({x:(p.x+.5)*4-96,z:(p.y+.5)*4-96})));if(stations.length<2)continue;for(let d=3;d<stations.at(-1).distance-1;d+=12){const p=atDistance(stations,d),x=p.x+p.tz*(spec.width/2+.25),z=p.z-p.tx*(spec.width/2+.25);if(wetness(w,x,z)<.3)positions.push([x,z,2.6,positions.length%4,true]);}}
 for(let i=0;i<w.tiles.length;i++){const t=w.tiles[i];if(t.type||t.zone||t.ground!=='land'||t.tree)continue;const neighbors=CityEngine.neighbors(i);if(neighbors.some(j=>['residential','commercial','office'].includes(w.tiles[j].type))&&!neighbors.some(j=>w.tiles[j].type==='road')&&hash(i,307,w.seed)>.4){const x=(i%48+.5)*4-96,z=(Math.floor(i/48)+.5)*4-96;positions.push([x,z,1.9+hash(i,311,w.seed)*1.2,i%4])}}
-for(let k=0;k<4200;k++){const x=hash(k,77,w.seed)*640-320,z=hash(k,83,w.seed)*640-320;if(Math.abs(x)<98&&Math.abs(z)<98||Math.abs(z-2)<4&&x<0||wetness(w,x,z)>.08||noise(x*.017,z*.017,w.seed+7)<.42)continue;positions.push([x,z,4+hash(k,91,w.seed)*4,k%4])}const portals=outsidePortals(w),clearPositions=positions.filter(([x,z])=>!Buildings.blocked(w,x,z)&&supportsTree(w,x,z,groundHeight)&&!portals.some(p=>(x-p.x)*p.dx+(z-p.z)*p.dz>0&&Math.abs((x-p.x)*p.dz-(z-p.z)*p.dx)<3));const realistic=this.view.vegetation.populate(this.group,clearPositions,(x,z)=>floorHeight(w,x,z));if(realistic){this.trees=realistic;return}const trunk=new THREE.InstancedMesh(new THREE.CylinderGeometry(.045,.12,1,7),this.view.mat('#746958'),clearPositions.length),leaves=new THREE.InstancedMesh(new THREE.PlaneGeometry(1,1),this.leafMaterial(),clearPositions.length*24);const d=new THREE.Object3D();clearPositions.forEach(([x,z,h,v],i)=>{const y=floorHeight(w,x,z);d.rotation.set(0,0,0);d.position.set(x,y+h*.43,z);d.scale.set(1,h*.85,1);d.updateMatrix();trunk.setMatrixAt(i,d.matrix);for(let j=0;j<24;j++){const a=j*2.399+i,r=Math.sqrt((j%8)/8)*h*.24;d.position.set(x+Math.cos(a)*r,y+h*.55+Math.sin(j*1.7)*h*.13+(j%3)*h*.08,z+Math.sin(a)*r);d.rotation.set((j%3-1)*.45,a,(j%2)*.25);const size=h*(.42+(j%4)*.035);d.scale.set(size,size*(j%2?.9:1.1),1);d.updateMatrix();leaves.setMatrixAt(i*24+j,d.matrix);const col=new THREE.Color(['#b9cba4','#95b09c','#c7cfa7','#acc294'][v]);leaves.setColorAt(i*24+j,col)}});trunk.castShadow=true;leaves.castShadow=true;leaves.receiveShadow=true;this.group.add(trunk,leaves);this.trees=[trunk,leaves]}
+for(let k=0;k<4200;k++){const x=hash(k,77,w.seed)*640-320,z=hash(k,83,w.seed)*640-320;if(Math.abs(x)<98&&Math.abs(z)<98||Math.abs(z-2)<4&&x<0||wetness(w,x,z)>.08||noise(x*.017,z*.017,w.seed+7)<.42)continue;positions.push([x,z,4+hash(k,91,w.seed)*4,k%4])}const portals=outsidePortals(w),clearPositions=positions.filter(([x,z,h,v,street])=>!Buildings.blocked(w,x,z)&&(street||!this.earthworksExcluded(w,x,z))&&supportsTree(w,x,z,height)&&!portals.some(p=>(x-p.x)*p.dx+(z-p.z)*p.dz>0&&Math.abs((x-p.x)*p.dz-(z-p.z)*p.dx)<3)),streetTrees=new Set(clearPositions.filter(p=>p[4]).map(p=>p[0]+':'+p[1])),treeHeight=(x,z)=>this.earthworks&&streetTrees.has(x+':'+z)?(this.view.roadworks?.surfaceHeight?.(x,z)??Math.max(.2,height(w,x,z))):Math.max(.2,height(w,x,z));const realistic=this.view.vegetation.populate(this.group,clearPositions,treeHeight);if(realistic){this.trees=realistic;return}const trunk=new THREE.InstancedMesh(new THREE.CylinderGeometry(.045,.12,1,7),this.view.mat('#746958'),clearPositions.length),leaves=new THREE.InstancedMesh(new THREE.PlaneGeometry(1,1),this.leafMaterial(),clearPositions.length*24);const d=new THREE.Object3D();clearPositions.forEach(([x,z,h,v],i)=>{const y=treeHeight(x,z);d.rotation.set(0,0,0);d.position.set(x,y+h*.43,z);d.scale.set(1,h*.85,1);d.updateMatrix();trunk.setMatrixAt(i,d.matrix);for(let j=0;j<24;j++){const a=j*2.399+i,r=Math.sqrt((j%8)/8)*h*.24;d.position.set(x+Math.cos(a)*r,y+h*.55+Math.sin(j*1.7)*h*.13+(j%3)*h*.08,z+Math.sin(a)*r);d.rotation.set((j%3-1)*.45,a,(j%2)*.25);const size=h*(.42+(j%4)*.035);d.scale.set(size,size*(j%2?.9:1.1),1);d.updateMatrix();leaves.setMatrixAt(i*24+j,d.matrix);const col=new THREE.Color(['#b9cba4','#95b09c','#c7cfa7','#acc294'][v]);leaves.setColorAt(i*24+j,col)}});trunk.castShadow=true;leaves.castShadow=true;leaves.receiveShadow=true;this.group.add(trunk,leaves);this.trees=[trunk,leaves]}
 
-makeRocks(w){const group=this.rockGroup||this.group,points=[];for(let k=0;k<1700;k++){const x=hash(k,131,w.seed)*470-235,z=hash(k,139,w.seed)*470-235,wet=wetness(w,x,z);if(Buildings.blocked(w,x,z)||wet<.12||wet>.45||Math.abs(z-2)<5&&x<0)continue;const ix=Math.floor((x+96)/4),iy=Math.floor((z+96)/4);if(ix>=0&&iy>=0&&ix<48&&iy<48&&w.tiles[iy*48+ix].type)continue;points.push([x,z,.15+hash(k,143,w.seed)*.5])}if(this.scannedRocks.populate(group,points,groundHeight,w))return;const geo=new THREE.IcosahedronGeometry(1,2),a=geo.attributes.position;for(let i=0;i<a.count;i++){const v=1+.16*Math.sin(a.getX(i)*8+a.getY(i)*7+a.getZ(i)*5);a.setXYZ(i,a.getX(i)*v,a.getY(i)*v,a.getZ(i)*v)}geo.computeVertexNormals();const mesh=new THREE.InstancedMesh(geo,this.view.mat('#87897c'),points.length),d=new THREE.Object3D();points.forEach(([x,z,r],i)=>{d.position.set(x,groundHeight(w,x,z)+r*.23,z);d.scale.set(r*1.4,r*.65,r);d.rotation.set(i*.31,i*.77,0);d.updateMatrix();mesh.setMatrixAt(i,d.matrix);mesh.setColorAt(i,new THREE.Color().setHSL(.14,.06,.68+(i%5)*.035))});mesh.castShadow=true;mesh.receiveShadow=true;group.add(mesh)}
+makeRocks(w){const height=(world,x,z)=>this.renderHeight(world,x,z),group=this.rockGroup||this.group,points=[];for(let k=0;k<1700;k++){const x=hash(k,131,w.seed)*470-235,z=hash(k,139,w.seed)*470-235,wet=wetness(w,x,z);if(this.earthworksExcluded(w,x,z)||Buildings.blocked(w,x,z)||wet<.12||wet>.45||Math.abs(z-2)<5&&x<0)continue;const ix=Math.floor((x+96)/4),iy=Math.floor((z+96)/4);if(ix>=0&&iy>=0&&ix<48&&iy<48&&w.tiles[iy*48+ix].type)continue;points.push([x,z,.15+hash(k,143,w.seed)*.5])}if(this.scannedRocks.populate(group,points,height,w))return;const geo=new THREE.IcosahedronGeometry(1,2),a=geo.attributes.position;for(let i=0;i<a.count;i++){const v=1+.16*Math.sin(a.getX(i)*8+a.getY(i)*7+a.getZ(i)*5);a.setXYZ(i,a.getX(i)*v,a.getY(i)*v,a.getZ(i)*v)}geo.computeVertexNormals();const mesh=new THREE.InstancedMesh(geo,this.view.mat('#87897c'),points.length),d=new THREE.Object3D();points.forEach(([x,z,r],i)=>{d.position.set(x,height(w,x,z)+r*.23,z);d.scale.set(r*1.4,r*.65,r);d.rotation.set(i*.31,i*.77,0);d.updateMatrix();mesh.setMatrixAt(i,d.matrix);mesh.setColorAt(i,new THREE.Color().setHSL(.14,.06,.68+(i%5)*.035))});mesh.castShadow=true;mesh.receiveShadow=true;group.add(mesh)}
 
 refreshTerrain(w,bounds,finish=false){
+ // The caller rebuilds the road plan after the stroke. Never sculpt derived
+ // fragments or let their masks influence the natural terrain normals.
+ this.clearRoadEarthworks?.();
  const geometry=this.ground.geometry,pos=geometry.attributes.position,colors=geometry.attributes.color;
  for(let i=0;i<pos.count;i++){const x=pos.getX(i),z=pos.getZ(i);if(bounds&&(x<bounds.minX-3||x>bounds.maxX+3||z<bounds.minZ-3||z>bounds.maxZ+3))continue;pos.setY(i,groundHeight(w,x,z));const c=terrainColor(w,x,z);colors.setXYZ(i,c.r,c.g,c.b);if(this.baseColors)this.baseColors.set([c.r,c.g,c.b],i*3);}
  this.water?.userData.refreshDepth?.(geometry);
@@ -55,7 +118,7 @@ refreshTerrain(w,bounds,finish=false){
  if(finish){this.refreshTrees(w);if(this.rockGroup){this.rockGroup.traverse(o=>{o.userData.dispose?.();if(o.geometry&&!o.userData.sharedAsset)o.geometry.dispose();});this.rockGroup.clear();this.makeRocks(w);}}
 }
 refreshDevelopment(w){this.refreshTrees(w);if(this.rockGroup){this.rockGroup.traverse(o=>{o.userData.dispose?.();if(o.geometry&&!o.userData.sharedAsset)o.geometry.dispose();});this.rockGroup.clear();this.makeRocks(w);}}
-refreshCover(w){if(this.cover){this.group.remove(this.cover);this.cover.userData.dispose();this.cover=groundCover(this.view,w,groundHeight,wetness);this.group.add(this.cover);}}
+refreshCover(w){if(this.cover){this.group.remove(this.cover);this.cover.userData.dispose();this.cover=groundCover(this.view,w,(world,x,z)=>this.coverHeight(world,x,z),(world,x,z)=>this.coverWetness(world,x,z));this.group.add(this.cover);}}
 refreshTrees(w){this.refreshCover(w);for(let o of this.trees||[]){this.group.remove(o);o.dispose?.();o.traverse(m=>{if(m.geometry&&!m.userData.sharedAsset)m.geometry.dispose()})}this.makeTrees(w)}
 update(time,night){if(this.cover){this.cover.visible=this.view.detailEnabled!==false;if(this.cover.visible)this.cover.userData.update(this.view.camera);}if(this.waterMaterial){this.waterMaterial.uniforms.time.value=time;this.waterMaterial.uniforms.night.value=night?1:0;this.waterMaterial.uniforms.reflectionEnabled.value=this.view.reflectionsEnabled===false||this.view.detailEnabled===false?0:1}}
 }

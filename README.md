@@ -1,6 +1,28 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 132 — Road grades and fitted terrain
+
+Dry roads now use smooth longitudinal profiles and compatible junction elevations. Terrain is cut or filled around the final pavement and sidewalk boundaries. Small differences blend into a shoulder; larger differences and constrained building plots receive solid retaining walls. Wet bridge crossings remain open, and their existing dry-end elevation constraints are retained. Zoning fills and lot outlines, paths, ground picking and vegetation use the resulting surface.
+
+Road-shaped terrain is derived from the original ground rather than written into saves. Rebuilding does not accumulate elevation changes, deleting a road restores the natural surface, and occupied building plots keep their foundations. The road controls, resident and traffic routes, independent offscreen simulation, manual saves, five-minute autosaves and home/Continue flow are preserved. The wall material neutralizes the photograph's warm tint while retaining its detail and uses three shared CC0 [Concrete Wall 008](https://polyhaven.com/a/concrete_wall_008) maps, credited in `dist/assets/CREDITS.md`, adding 1,456,883 image bytes. Existing building, tree and terrain textures are unchanged.
+
+The official [Road Tools pictures](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/road-tools), particularly the hillside cut-and-fill example, guided the road shelves and retaining faces. The reference pictures are not shipped. This release improves those specific features; visual and simulation equivalence with the commercial game remains unachieved.
+
+Close views exposed missing retaining panels caused by collapsed terrain triangles; walls now follow the construction outline and fit their tops to the emitted ground. Actual hill coverage includes 496 cross-sections and 2,976 rays through both wall sides. One river junction retains the older abrupt bridge-height transition and its steep shoulder wedges; correcting that junction profile is separate from this release. Ordinary roads and hill retaining walls do not have those missing-panel gaps.
+
+All 601 checks in 81 local test files pass, including 31,866 actual hill/river asphalt probes, the independent retaining-wall coverage test, structural-copy picking and disposal, occupied-plot refresh, terrain undo, zoning alignment and existing save/routing/offscreen simulation checks. All 93 root JavaScript modules pass syntax checking; model/texture integrity and lossless asset delivery checks pass.
+
+Road terrain fitting adds construction work compared with Edition 131. The final cost fixes reuse ordered query storage, avoid repeated wall-contact scans and skip terrain rebuilds for occupied plots outside the maximum possible road-work corridor. All final road, ground and wall buffers remain byte-identical to the verified pre-optimization output in five scenes. A translated-shape cache was rejected because its extra memory and key processing showed no convincing planning benefit. Heavy memory pressure made CPU timing runs unstable, so these changes do not establish a rebuild-latency or frame-rate guarantee; large road edits and nearby plot changes still require additional terrain work.
+
+In the final 1280×720 district comparison under that load, GPU medians were 45.33/40.02 ms before and 43.68/37.74 ms after; frame medians were 67.3/63.9 ms before and 65.6/61.2 ms after. Main-view triangles rose from 868,009 to 947,097, and main-view draw calls from 305 to 309. These paired observations do not demonstrate a broad FPS improvement or a guarantee for other cities and devices.
+
+The final night bridge comparison was less consistent: GPU medians were 19.33/17.17 ms before and 30.43/19.11 ms after, with 35.6/31.7 ms versus 50.3/34.9 ms frame intervals. Main-view triangles rose from 472,681 to 487,312 and calls from 28 to 29. This records added rendering cost in that scene under the observed conditions; it is not presented as a performance win. Neither comparison scene recorded browser warnings or errors.
+
+Local full-game verification restored the older QA city with 226 residents and 82 households. Manual save succeeded on day 53, Save & Exit stored the 9:30:45 PM timestamp, and a full reload returned to home with the same city and timestamp. Continue restored those residents and households and advanced to day 54; final Save & Exit stored day 60 at 9:32:09 PM on October 26. No browser warnings or errors were recorded. Road rebuilding remains synchronous, and transitions/edits can pause under load. The five-minute save interval remains covered by the existing clock tests; this run did not wait a fresh five minutes to claim a new hosted autosave test.
+
+This is feature update one after optimization 131. Features 133–134 precede the next dedicated optimization, Edition 135.
+
 ## Edition 131 — Faster road rebuilds with identical detail
 
 This is the dedicated optimization after feature updates 128–130. Pavement clipping reuses immutable polygon bounds and query storage, avoids per-query sets, and borrows already ordered spatial buckets when possible. Bridge grading reuses shared longitudinal probes; bridge sweeps reuse station/offset heights within one build. Concrete fitting rejects safely separated planes before clipping. Street-light projection skips triangles outside the light pool and retains polygons unchanged when a clipping edge contains all their vertices. Temporary caches are discarded at the end of their build or projection.
