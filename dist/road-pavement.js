@@ -1,3 +1,4 @@
+import {finishBuild} from './build-scheduler.js?v=143';
 import * as THREE from './vendor/three.module.js';
 
 const CELL=4,MAX_CELLS=4096,AREA_EPS=1e-12;
@@ -92,7 +93,8 @@ function faceNormal([a,b,c]){const ux=b[0]-a[0],uy=b[1]-a[1],uz=b[2]-a[2],vx=c[0
  * no overlap or seam subdivision affects a mesh. All returned stats are plain
  * numbers; fully covered meshes receive valid empty geometry.
  */
-export function unifyPavement(strips,patches){
+export function unifyPavement(strips,patches){return finishBuild(unifyPavementSteps(strips,patches));}
+export function* unifyPavementSteps(strips,patches){
  const stats={inputTriangles:0,outputTriangles:0,changedMeshes:0,emptyMeshes:0,cutTriangles:0,seamVertices:0,candidateTests:0,maxCandidates:0,indexTriangles:0,indexReferences:0,indexCells:0,oversizedTriangles:0};
  const meshes=[...new Set([...patches,...strips])],states=meshes.map(mesh=>({mesh,source:mesh.geometry,layout:attributeLayout(mesh.geometry),triangles:[],changed:false})),index=new TriangleIndex(),canonical=new Map(),candidateScratch=[],seamScratch=[];
  let magnitude=1;for(const {source}of states){const p=source.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i);if(Number.isFinite(x)&&Number.isFinite(z))magnitude=Math.max(magnitude,Math.abs(x),Math.abs(z));}}
@@ -119,7 +121,7 @@ export function unifyPavement(strips,patches){
 
  for(const state of states){
   const geometry=state.source,p=geometry.attributes.position,indices=geometry.index,count=indices?.count??p.count,hasGroups=geometry.groups.length>0;
-  for(let at=0;at+2<count;at+=3){
+  for(let at=0;at+2<count;at+=3){if(at%192===0)yield;
    stats.inputTriangles++;const vertices=[0,1,2].map(k=>readVertex(geometry,state.layout,indices?indices.getX(at+k):at+k)),materialIndex=hasGroups?(geometry.groups.find(group=>at>=group.start&&at<group.start+group.count)?.materialIndex??0):0;
    if(!vertices.every(v=>v.slice(0,3).every(Number.isFinite))||Math.abs(cross(...vertices))<=AREA_EPS){state.triangles.push(record(vertices,state,materialIndex));continue;}
    const sourceTriangle={vertices,determinant:cross(...vertices),bounds:bounds(vertices)},candidates=index.query(sourceTriangle.bounds,candidateScratch);stats.maxCandidates=Math.max(stats.maxCandidates,candidates.length);let fragments=[vertices],cut=false;
@@ -134,7 +136,7 @@ export function unifyPavement(strips,patches){
   }
  }
 
- for(const state of states){
+ for(const state of states){yield;
   const output=[];
   for(const triangle of state.triangles){
    if(!triangle.splits.some(points=>points?.size)){output.push(triangle);continue;}

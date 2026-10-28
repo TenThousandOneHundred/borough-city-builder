@@ -1,7 +1,8 @@
-import {roadGeometry,transitionWidth} from './road-junction-plan.js?v=142';
-import './building-entities.js?v=142';
-import './roundabout-state.js?v=142';
-import {terrainNoise} from './terrain-field.js?v=142';
+import {finishBuild} from './build-scheduler.js?v=143';
+import {roadGeometry,transitionWidth} from './road-junction-plan.js?v=143';
+import './building-entities.js?v=143';
+import './roundabout-state.js?v=143';
+import {terrainNoise} from './terrain-field.js?v=143';
 const Buildings=globalThis.BoroughBuildings;
 export function coverRandom(seed,index){let s=(Math.imul(index+1,2654435761)^(seed>>>0))>>>0;return()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296;};}
 // This mask follows the same sampled road widths, tapers and path centre lines
@@ -19,9 +20,10 @@ export function coverLand(world,engine=globalThis.CityEngine){
   if(Buildings.blocked(world,x,z)||radius>0&&Buildings.overlaps(world,{cx:x,cz:z,width:radius*2,depth:radius*2,angle:0})||globalThis.BoroughRoundabouts.blocked(world,{cx:x,cz:z,width:radius*2,depth:radius*2},.15))return false;return clearance(x,z)>radius;
  };return {clearance,available};
 }
-export function coverPlan(world,height,wetness,engine=globalThis.CityEngine){
+export function coverPlan(world,height,wetness,engine=globalThis.CityEngine){return finishBuild(coverPlanSteps(world,height,wetness,engine));}
+export function* coverPlanSteps(world,height,wetness,engine=globalThis.CityEngine){
  const land=coverLand(world,engine),clumps=[];
- for(let i=0;i<11500;i++){const rand=coverRandom(world.seed,i),x=rand()*330-165,z=rand()*330-165,wet=wetness(world,x,z);if(wet>.38||!land.available(x,z,.16))continue;
+ for(let i=0;i<11500;i++){if(i%64===0)yield;const rand=coverRandom(world.seed,i),x=rand()*330-165,z=rand()*330-165,wet=wetness(world,x,z);if(wet>.38||!land.available(x,z,.16))continue;
   const patch=terrainNoise(x*.043,z*.043,world.seed+9);if(patch<.36)continue;const y=height(world,x,z),sx=(height(world,x+.2,z)-y)/.2,sz=(height(world,x,z+.2)-y)/.2;if(Math.hypot(sx,sz)>.9)continue;
   const clearance=land.clearance(x,z),kind=wet>.06?'reed':clearance<1.05?'verge':'meadow',dry=terrainNoise(x*.017,z*.017,world.seed+51),size=kind==='reed'?.32+rand()*.23:kind==='verge'?.018+rand()*.025:.055+rand()*.065;
   if(!land.available(x,z,size*.56+.15))continue;clumps.push({id:i,x,z,y,sx,sz,kind,dry,height:size,seed:Math.floor(rand()*0xffffffff)});

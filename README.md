@@ -1,6 +1,16 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 143 — Responsive road placement
+
+Road edits prepare an invisible replacement in short, cooperative work slices while the current city and traffic remain visible. Road meshes, fitted terrain, and grass are ready before the scene is swapped. Placement, road replacement and road demolition use this path from the game update. A small “Building road…” indicator appears while construction finishes; further map edits wait, while camera movement, saving and returning home remain available.
+
+Unchanged local terrain footprint partitions are reused, and already uploaded asphalt textures transfer to the new renderer. Building models, road and terrain geometry, textures, grass density and simulation fidelity are unchanged. Saving during preparation records the complete road immediately; leaving the world cancels and disposes unfinished visual work. The normal five-minute autosave remains unchanged.
+
+A browser comparison on the three-avenue test city measured the previous placement blocking for 3.83 seconds with zero intervening animation frames. The sliced path displayed 32 and 34 frames during two placements; its longest work slices were 299 and 333 ms, with final swaps of 165 and 148 ms. Total preparation took 4.54 and 4.91 seconds, so this reduces freezing rather than promising instantaneous construction or higher steady-state FPS. Hardware load affects these timings. Larger networks can still have brief stalls in unsliced setup and final scene updates.
+
+All 815 regression checks pass, along with syntax checks for 105 JavaScript modules and asset integrity checks. Local game verification covered a real street drag, verified manual save, save-and-exit, reload and Continue, with the road retained and no console warnings or errors. This is the scheduled optimization after feature editions 140–142. Regression checks cover exact synchronous/asynchronous geometry, frozen terrain and pavement output, cancellation, repeated edits, in-progress saves, resource disposal, and grass detail.
+
 ## Edition 142 — Highway ramps and a complete one-way lane range
 
 Roads now includes a one-lane highway ramp, a two-lane one-way highway and a four-lane one-way highway alongside the existing three-lane motorway. The catalog contains twelve styles. Each new highway has 3.75-metre lanes, paved shoulders, safety barriers, one-way travel and no roadside zoning. The menu uses the singular label for one lane and explains that traffic follows the drawing direction. The new styles use the existing highway speed behavior.

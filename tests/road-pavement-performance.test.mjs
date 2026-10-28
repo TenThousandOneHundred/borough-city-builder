@@ -38,7 +38,7 @@ export function makePavementFixture(name){
  r.naturalDatum=(world,x,z)=>r.baseHeight(world,x,z);
  Object.defineProperty(r,'gradePlan',{get:()=>null,set(){}});
  globalThis.CityEngine=E;globalThis.document={createElement:()=>({getContext:()=>({fillRect(){},strokeRect(){},fillText(){}})})};
- r.finalizePavement=()=>{fixture={strips:[],patches:[]};r.group.traverse(m=>{if(m.userData.roadSurface==='asphalt')(m.userData.roadJunction?fixture.patches:fixture.strips).push(m);});throw stop;};
+ r.finalizePavementSteps=function*(){fixture={strips:[],patches:[]};r.group.traverse(m=>{if(m.userData.roadSurface==='asphalt')(m.userData.roadJunction?fixture.patches:fixture.strips).push(m);});throw stop;};
  try{r.build(w);}catch(error){if(error!==stop)throw error;}finally{globalThis.document=previousDocument;globalThis.CityEngine=previousEngine;}
  assert.ok(fixture);return fixture;
 }

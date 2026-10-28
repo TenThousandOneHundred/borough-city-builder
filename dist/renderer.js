@@ -1,28 +1,29 @@
-import {RoadGuidePreview} from './road-guide-preview.js?v=142';
-import {SIDEWALK_HEIGHT} from './road-profile.js?v=142';
-import './building-entities.js?v=142';
+import {prepareRoadRefresh} from './road-build-job.js?v=143';
+import {RoadGuidePreview} from './road-guide-preview.js?v=143';
+import {SIDEWALK_HEIGHT} from './road-profile.js?v=143';
+import './building-entities.js?v=143';
 const Buildings=globalThis.BoroughBuildings;
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {ZonePlaneBatch} from './zoning-render-batch.js?v=142';
-import {trackAssetGroups} from './asset-transfer.js?v=142';
-import {buildFootpaths} from './footpaths.js?v=142';
-import {Transit,transitLeg,stopPosition} from './transit.js?v=142';
-import {SimulationClock} from './simulation-clock.js?v=142';
-import {Residents} from './residents.js?v=142';
-import {Traffic,carCapacity} from './traffic.js?v=142';
-import {Vehicles} from './vehicles.js?v=142';
-import {BuildingFactory} from './building-factory.js?v=142';
-import {StreetLife} from './street-life.js?v=142';
-import {changedRoadCells,frontageTouches} from './road-frontage.js?v=142';
-import {visualParcels} from './parcels.js?v=142';
-import {Graphics} from './graphics.js?v=142';
-import {Vegetation} from './vegetation.js?v=142';
+import {ZonePlaneBatch} from './zoning-render-batch.js?v=143';
+import {trackAssetGroups} from './asset-transfer.js?v=143';
+import {buildFootpaths} from './footpaths.js?v=143';
+import {Transit,transitLeg,stopPosition} from './transit.js?v=143';
+import {SimulationClock} from './simulation-clock.js?v=143';
+import {Residents} from './residents.js?v=143';
+import {Traffic,carCapacity} from './traffic.js?v=143';
+import {Vehicles} from './vehicles.js?v=143';
+import {BuildingFactory} from './building-factory.js?v=143';
+import {StreetLife} from './street-life.js?v=143';
+import {changedRoadCells,frontageTouches} from './road-frontage.js?v=143';
+import {visualParcels} from './parcels.js?v=143';
+import {Graphics} from './graphics.js?v=143';
+import {Vegetation} from './vegetation.js?v=143';
 import {RGBELoader} from './vendor/RGBELoader.js';
 import * as THREE from './vendor/three.module.js';
 import {OrbitControls} from './vendor/OrbitControls.js';
-import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=142';
-import {Architecture} from './architecture.js?v=142';
-import {Roadworks} from './roadworks.js?v=142';
+import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=143';
+import {Architecture} from './architecture.js?v=143';
+import {Roadworks} from './roadworks.js?v=143';
 const N=48,T=4,HALF=96,zoneColors={residential:'#54b663',commercial:'#5bb1d8',industrial:'#cdb268',office:'#aa87c9'};
 export class CityView{
 constructor(canvas){this.assetsReady=false;this.loadingElement=document.getElementById('sceneLoading');this.canvas=canvas;this.scene=new THREE.Scene();this.scene.background=new THREE.Color('#aebfca');this.scene.fog=new THREE.FogExp2('#b7c6cc',.00105);
@@ -42,8 +43,9 @@ environment(){const c=document.createElement('canvas');c.width=512;c.height=256;
 mat(color){if(!this.materials.has(color))this.materials.set(color,new THREE.MeshStandardMaterial({color,roughness:.78}));return this.materials.get(color)}
 box(group,x,y,z,sx,sy,sz,color,shadow=true){const m=new THREE.Mesh(this.unitBox,this.mat(color));m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=shadow;m.receiveShadow=true;group.add(m);return m}
 disposeGroup(g){g.traverse(o=>{if(o.geometry&&o.geometry!==this.unitBox&&!o.userData.sharedAsset)o.geometry.dispose()});g.clear()}
-setWorld(w,{menu=false,reset=true}={}){this.clearRoadZoning();this.running=false;this.simulationClock?.reset();this.world=w;this.menu=menu;this.signatures=[];this.renderStates=[];this.fineRenderStates=new Map();this.fineRevision=null;this.disposeGroup(this.tileGroup);for(const g of this.buildings.values())if(g.userData.factory)this.disposeGroup(g);this.buildings.clear();for(const car of this.cars)this.disposeGroup(car.mesh);for(const mesh of this.vehicles.fleet||[])mesh.dispose();this.vehicles.fleet=[];this.disposeGroup(this.carGroup);this.cars=[];this.residents=null;this.transit=null;this.traffic=null;this.transitKey=null;this.walkRevision=null;if(this.transitGroup)this.disposeGroup(this.transitGroup);this.landscape.build(w,{deferDevelopment:true});this.gridPending=true;if(reset){this.focusWorld(menu)}this.refresh(true)}
+setWorld(w,{menu=false,reset=true}={}){this.roadRefreshJob=null;this.onRoadBuildStatus?.(false);this.clearRoadZoning();this.running=false;this.simulationClock?.reset();this.world=w;this.menu=menu;this.signatures=[];this.renderStates=[];this.fineRenderStates=new Map();this.fineRevision=null;this.disposeGroup(this.tileGroup);for(const g of this.buildings.values())if(g.userData.factory)this.disposeGroup(g);this.buildings.clear();for(const car of this.cars)this.disposeGroup(car.mesh);for(const mesh of this.vehicles.fleet||[])mesh.dispose();this.vehicles.fleet=[];this.disposeGroup(this.carGroup);this.cars=[];this.residents=null;this.transit=null;this.traffic=null;this.transitKey=null;this.walkRevision=null;if(this.transitGroup)this.disposeGroup(this.transitGroup);this.landscape.build(w,{deferDevelopment:true});this.gridPending=true;if(reset){this.focusWorld(menu)}this.refresh(true)}
 refreshAssets(){
+ this.roadRefreshJob=null;this.onRoadBuildStatus?.(false);
  // Loading visual assets must not reset a running world's clock or its agents.
  this.assetsReady=true;if(this.loadingElement)this.loadingElement.hidden=true;
  this.architecture.cache.clear();this.models.materials.reset();
@@ -53,7 +55,13 @@ refreshAssets(){
  this.refresh(true);
 }
 makeGrid(){this.disposeGroup(this.grid);const points=[];for(let s=0;s<=48;s++)for(let k=0;k<96;k++){let a=-96+s*4,b=-96+k*2;points.push(a,this.renderFloor(this.world,a,b)+.15,b,a,this.renderFloor(this.world,a,b+2)+.15,b+2);points.push(b,this.renderFloor(this.world,b,a)+.15,a,b+2,this.renderFloor(this.world,b+2,a)+.15,a)}const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(points,3));this.grid.add(new THREE.LineSegments(geo,new THREE.LineBasicMaterial({color:'#b6ced2',transparent:true,opacity:.16})))}
-refresh(force=false){if(!this.world)return;const demographics=Buildings.entries(this.world).map(([id,t])=>[id,t.type,t.level,t.people,t.construction].join('/')).join(';');if(this.residents&&demographics!==this.residentDemographics){this.residents.reconcile();this.ensureCarCapacity();this.residentDemographics=demographics;}const roadChanges=changedRoadCells(this.world.tiles,this.frontageLayout);this.frontageLayout=roadChanges.keys;const parcels=visualParcels(this.world);const roadReplaced=this.roadEditRevision!==undefined&&this.roadEditRevision!==(this.world.roadEditRevision||0);this.roadEditRevision=this.world.roadEditRevision||0;let models=false,roads=roadReplaced,trees=false,zones=false,occupancy=false,destinations=false;this.renderStates ||= [];
+refreshInteractive(){
+ if(this.roadRefreshJob)return this.roadRefreshJob.promise;
+ if(!this.world||this.menu||this.assetsReady===false||this.roadEditRevision===undefined)return this.refresh();
+ if(this.roadEditRevision!==(this.world.roadEditRevision||0)||changedRoadCells(this.world.tiles,this.frontageLayout).changed.length)return prepareRoadRefresh(this);
+ return this.refresh();
+}
+refresh(force=false,prepared=null){if(!this.world)return;if(this.roadRefreshJob){this.roadRefreshJob.force ||= force;return;}const demographics=Buildings.entries(this.world).map(([id,t])=>[id,t.type,t.level,t.people,t.construction].join('/')).join(';');if(this.residents&&demographics!==this.residentDemographics){this.residents.reconcile();this.ensureCarCapacity();this.residentDemographics=demographics;}const roadChanges=changedRoadCells(this.world.tiles,this.frontageLayout);this.frontageLayout=roadChanges.keys;const parcels=visualParcels(this.world);const roadReplaced=this.roadEditRevision!==undefined&&this.roadEditRevision!==(this.world.roadEditRevision||0);this.roadEditRevision=this.world.roadEditRevision||0;let models=false,roads=roadReplaced||prepared?.roads===this.roadworks,trees=false,zones=false,occupancy=false,destinations=false;this.renderStates ||= [];
 this.world.tiles.forEach((t,i)=>{const parcel=parcels.get(i),oldState=this.renderStates[i],isService=t.type&&t.type!=='road'&&!this.models.accepts(t)&&t.level>0;
 const near=isService&&this.camera.position.distanceToSquared(new THREE.Vector3((i%48+.5)*4-96,0,(Math.floor(i/48)+.5)*4-96))<38*38;
 const state={destination:!!(t.level>0&&!t.construction&&this.models.accepts(t)),road:t.type==='road'?[t.roadWidth,t.roadType,t.pathIds?.join(),t.ground].join(':'):'',trees:[t.type,t.zone,t.tree].join(':'),zone:[t.zone,t.type,t.construction].join(':'),occupied:!!t.construction||!!t.type&&t.type!=='road',visual:[parcel?.key,t.type,t.construction,t.level,t.density,t.building,t.variant,this.night,this.overlay,this.detailEnabled,near].join(':')};
@@ -85,8 +93,8 @@ for(const id of this.fineRenderStates.keys())if(!currentFine.has(id)){
 }
 if(fineChanged)trees=true;
 if(models||force)this.models.rebuild(this.buildings);
-if(roads)this.roadworks.build(this.world);
-let earthworksChanged=false;if(roads||occupancy||force){if(!roads)this.roadworks.syncEarthworks?.(this.world);earthworksChanged=this.landscape.applyRoadEarthworks?.(this.world,this.roadworks.earthworks)||false;}
+if(roads&&prepared?.roads!==this.roadworks)this.roadworks.build(this.world);
+let earthworksChanged=false;if(roads||occupancy||force){if(!roads)this.roadworks.syncEarthworks?.(this.world);earthworksChanged=this.landscape.applyRoadEarthworks?.(this.world,this.roadworks.earthworks,{prepared:prepared?.terrain,preparedCover:prepared?.cover})||false;}
 if(earthworksChanged||this.gridPending){this.makeGrid();this.gridPending=false;}
 if(fineChanged&&!earthworksChanged)this.landscape.refreshDevelopment(this.world);
 this.landscape.ensureDevelopment?.(this.world);

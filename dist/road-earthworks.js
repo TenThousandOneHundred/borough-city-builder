@@ -1,3 +1,4 @@
+import {finishBuild} from './build-scheduler.js?v=143';
 import * as THREE from './vendor/three.module.js';
 import clipping from './vendor/polygon-clipping.umd.min.js';
 
@@ -12,6 +13,7 @@ const overlaps=(a,b)=>a.minX<=b.maxX&&a.maxX>=b.minX&&a.minZ<=b.maxZ&&a.maxZ>=b.
 const record=(p,extra={})=>({p,den:cross(...p),bounds:bounds(p),...extra});
 function pointIn(t,x,z,epsilon=0){
  const [a,b,c]=t.p,u=((x-a[0])*(c[2]-a[2])-(z-a[2])*(c[0]-a[0]))/t.den,v=((b[0]-a[0])*(z-a[2])-(b[2]-a[2])*(x-a[0]))/t.den;
+ if(!epsilon)return u>=-1e-8&&v>=-1e-8&&u+v<=1+1e-8?[1-u-v,u,v]:null;
  const den=Math.abs(t.den),ea=1e-8+epsilon*Math.hypot(c[0]-b[0],c[2]-b[2])/den,eb=1e-8+epsilon*Math.hypot(c[0]-a[0],c[2]-a[2])/den,ec=1e-8+epsilon*Math.hypot(b[0]-a[0],b[2]-a[2])/den;
  return u>=-eb&&v>=-ec&&u+v<=1+ea?[1-u-v,u,v]:null;
 }
@@ -135,8 +137,9 @@ function geometryFrom(vertices,layout){
  */
 const warnedWorlds=new WeakSet();let warnedWithoutWorld=false;
 function warnFallback(world,error){const object=world&&typeof world==='object';if(object?warnedWorlds.has(world):warnedWithoutWorld)return;if(object)warnedWorlds.add(world);else warnedWithoutWorld=true;console.warn('Road terrain support was skipped for this layout; the original ground is retained.',error);}
-export function createRoadEarthworks(options){
- try{return buildRoadEarthworks(options);}catch(error){
+export function createRoadEarthworks(options){return finishBuild(createRoadEarthworksSteps(options));}
+export function* createRoadEarthworksSteps(options){
+ try{return yield* buildRoadEarthworks(options);}catch(error){
   warnFallback(options?.world,error);let surfaceSnapshot=[],structuralSnapshot=[];try{surfaceSnapshot=snapshotSurfaces(options?.surfaces);structuralSnapshot=snapshotSurfaces(options?.structuralSurfaces,'structure');}catch{}
   const stats={fallback:true,reason:String(error?.message||error),sourceTriangles:surfaceSnapshot.length,roadTriangles:0,patches:0,influenceTriangles:0,wallSegments:0,affectedTriangles:0,replacementTriangles:0,wallTriangles:0,removedCoreArea:0,applications:0};
   return {surfaceSnapshot,structuralSnapshot,stats,beginApplication(){stats.applications=0;},sample(){return null;},contains(){return false;},excluded(){return false;},mayAffectProtectedParcel(){return true;},dispose(){},rebuild(overrides={}){return createRoadEarthworks({...options,surfaces:surfaceSnapshot,structuralSurfaces:structuralSnapshot,...overrides});},
@@ -145,7 +148,7 @@ export function createRoadEarthworks(options){
    }};
  }
 }
-function buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePlan,groundHeight,wetness=()=>0,protectedParcels=[]}){
+function* buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePlan,groundHeight,wetness=()=>0,protectedParcels=[],regionCache=null}){
  const surfaceSnapshot=snapshotSurfaces(surfaces),structuralSnapshot=snapshotSurfaces(structuralSurfaces,'structure'),natural=(x,z)=>groundHeight(world,x,z),wet=(x,z)=>wetness(world,x,z)>.08;
  const exclusions=new Index(),protectedIndex=new Index(),roadIndex=new Index(),structureIndex=new Index(),patches=new Index(),wallIndex=new Index(),perimeterIndex=new Index(),regions=new Index();
  // The actual concrete tops are opaque covers. Soffits and buried pier faces
@@ -188,7 +191,7 @@ function buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePlan
  function addWall(a,b,nx,nz,u0,u1){let intervals=[[0,1]];for(const e of [...exclusions.query(bounds([a,b])),...roadIndex.query(bounds([a,b]))]){const cut=lineInterval(a,b,e);if(cut)intervals=intervals.flatMap(interval=>removeIntervals(interval,[cut]));}
   for(const [lo,hi]of intervals){const p=mix(a,b,lo),q=mix(a,b,hi);if(!wet((p[0]+q[0])/2,(p[2]+q[2])/2))wallIndex.add({a:p,b:q,bounds:bounds([p,q]),nx,nz,u0:u0+(u1-u0)*lo,u1:u0+(u1-u0)*hi});}
  }
- for(const edge of edges.values()){
+ for(const edge of edges.values()){yield;
   if(!edge.balance)continue;const [a,b]=Math.sign(edge.balance)===edge.sign?[edge.a,edge.b]:[edge.b,edge.a],length=Math.hypot(b[0]-a[0],b[2]-a[2]);if(length<1e-7)continue;
   const nx=(b[2]-a[2])/length,nz=-(b[0]-a[0])/length,probeA=[a[0]+nx*.025,a[1],a[2]+nz*.025],probeB=[b[0]+nx*.025,b[1],b[2]+nz*.025];let intervals=[[0,1]];
   // A long edge may be only partly covered by a junction arm. Clip its outward
@@ -203,7 +206,7 @@ function buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePlan
  // sections. Water/protection cuts do not restart the wall's texture phase.
  for(const seed of boundary){let edge=seed,distance=0;while(edge&&!visited.has(edge)){visited.add(edge);edge.distance=distance;distance+=edge.length;edge=starts.get(key(edge.b))?.find(next=>!visited.has(next));}}
  let nextGroup=0;
- for(const edge of boundary){
+ for(const edge of boundary){yield;
   const {a,b,kind,length,nx,nz}=edge;
   const count=Math.max(1,Math.ceil(length/1.25));
   for(let i=0;i<count;i++){
@@ -242,7 +245,7 @@ function buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePlan
  // Work only with clipped local inputs. Intersecting a small tile with an
  // entire city-sized ring repeats that ring's sweep thousands of times.
  const shoulderIndex=new Index();for(const polygon of shoulderFootprints){const p=polygon[0].map(v=>[v[0],0,v[1]]);shoulderIndex.add({p,bounds:bounds(p)});}
- const cells=new Set([...roadIndex.cells.keys(),...patches.cells.keys()]),regionByCell=new Map();
+ const cells=new Set([...roadIndex.cells.keys(),...patches.cells.keys()]),regionByCell=new Map(),nextRegions=new Map();let reusedRegions=0,builtRegions=0;
  const rectangleClip=(vertices,b)=>{
   let p=vertices.map(v=>[v[0],v[2]]);
   for(const [axis,limit,sign]of [[0,b.minX,1],[0,b.maxX,-1],[1,b.minZ,1],[1,b.maxZ,-1]]){
@@ -252,11 +255,15 @@ function buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePlan
   return p.length>=3&&Math.abs(ringArea(p))>EPS?[p]:null;
  };
  const input=(index,b)=>index.query(b).map(t=>rectangleClip(t.p,b)).filter(Boolean);
- for(const key of cells){const [x,z]=key.split(',').map(Number),b={minX:x*CELL,maxX:(x+1)*CELL,minZ:z*CELL,maxZ:(z+1)*CELL},cp=input(roadIndex,b),sp=input(shoulderIndex,b);if(!cp.length&&!sp.length)continue;
-  const ep=input(exclusions,b),exclusion=union(ep),raw=union(cp);let core=raw,all=union([...raw,...sp]);
-  const concrete=input(structureIndex,b);if(concrete.length&&all.length){const covered=boolean('intersection',union(concrete),all);if(covered.length)core=union([...core,...covered]);}
+ for(const key of cells){yield;const [x,z]=key.split(',').map(Number),b={minX:x*CELL,maxX:(x+1)*CELL,minZ:z*CELL,maxZ:(z+1)*CELL},cp=input(roadIndex,b),sp=input(shoulderIndex,b);if(!cp.length&&!sp.length)continue;
+  const ep=input(exclusions,b),concrete=input(structureIndex,b),signature=regionCache?JSON.stringify([cp,sp,ep,concrete]):null,cached=regionCache?.cells?.get(key);
+  // Cell partitions depend only on these clipped footprints. Heights and
+  // materials are fitted afresh below; a cache never stores simulation state.
+  if(cached&&cached.signature===signature){const r={...cached.region};regions.add(r);regionByCell.set(key,r);nextRegions.set(key,cached);reusedRegions++;continue;}
+  builtRegions++;const exclusion=union(ep),raw=union(cp);let core=raw,all=union([...raw,...sp]);
+  if(concrete.length&&all.length){const covered=boolean('intersection',union(concrete),all);if(covered.length)core=union([...core,...covered]);}
   if(exclusion.length){core=core.length?boolean('difference',core,exclusion):[];all=all.length?boolean('difference',all,exclusion):[];}const shoulder=core.length?boolean('difference',all,core):all;
-  if(all.length){const rectangle=[[[b.minX,b.minZ],[b.maxX,b.minZ],[b.maxX,b.maxZ],[b.minX,b.maxZ]]],outside=boolean('difference',rectangle,all),r={core,shoulder,all,bounds:b,triangles:[...coverage(core,'core'),...coverage(shoulder,'shoulder'),...coverage(outside,'outside')]};regions.add(r);regionByCell.set(key,r);}
+  if(all.length){const rectangle=[[[b.minX,b.minZ],[b.maxX,b.minZ],[b.maxX,b.maxZ],[b.minX,b.maxZ]]],outside=boolean('difference',rectangle,all),r={core,shoulder,all,bounds:b,triangles:[...coverage(core,'core'),...coverage(shoulder,'shoulder'),...coverage(outside,'outside')]};regions.add(r);regionByCell.set(key,r);if(regionCache)nextRegions.set(key,{signature,region:r});}
  }
  const constructionAt=(x,z)=>regions.at(x,z).some(r=>inMulti(x,z,r.all)),perimeter=[],perimeterKeys=new Set();
  for(const region of regions.items)for(const polygon of region.all)for(const ring of polygon)for(let i=1;i<ring.length;i++){
@@ -279,6 +286,8 @@ function buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePlan
   return edge?edgeY/edge:numerator/denominator;
  }
  let rendered=new Index(),usedWalls=new Map(),disposed=false;
+ if(regionCache)regionCache.cells=nextRegions;
+ const cacheStats={reusedRegions,builtRegions};
  const stats={fallback:false,sourceTriangles:surfaceSnapshot.length,roadTriangles:roadIndex.items.length,patches:regions.items.length,influenceTriangles:patches.items.length,wallSegments:wallIndex.items.length,affectedTriangles:0,replacementTriangles:0,wallTriangles:0,removedCoreArea:0,applications:0};
  function beginApplication(){if(disposed)return;rendered=new Index();usedWalls=new Map();stats.affectedTriangles=stats.replacementTriangles=stats.wallTriangles=stats.removedCoreArea=stats.applications=0;}
  function mayAffectProtectedParcel(polygon){
@@ -310,7 +319,8 @@ function buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePlan
  // The opaque road seals the omitted core top. Queries there use the exact
  // source foundation plane; exposed terrain queries use emitted triangles.
  function sample(x,z){if(disposed||!Number.isFinite(x)||!Number.isFinite(z))return null;const core=coreAt(x,z);if(core)return core.t.foundation.reduce((sum,p,i)=>sum+p[1]*core.b[i],0);let highest=-Infinity;for(const t of rendered.at(x,z)){const b=pointIn(t,x,z);if(b)highest=Math.max(highest,value(t,b,1));}return highest===-Infinity||protectedPoint(x,z)||excludedPoint(x,z)?null:highest;}
- function applyToGeometry(geometry){
+ function applyToGeometry(geometry){return finishBuild(applyToGeometrySteps(geometry));}
+ function* applyToGeometrySteps(geometry){
   const position=geometry.attributes.position,index=geometry.index,count=index?.count??position.count,start=Math.max(0,geometry.drawRange?.start||0),end=Math.min(count,start+(geometry.drawRange?.count??count));
   // Native triangles retain their original order. A bounded typed buffer avoids
   // growing a boxed-number array and then converting every retained index.
@@ -324,7 +334,7 @@ function buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePlan
   const emit=(polygon,patch=null)=>triangulate(polygon,triangle=>{
    const vertices=triangle.map(v=>{const p=v.slice();p.nativeY=p[1];p.changed=!!patch;return project(p);});if(!validTriangle(vertices))return;normals(vertices);output.push(...vertices);
   });
-  for(let i=start;i+2<end;i+=3){const ia=index?index.getX(i):i,ib=index?index.getX(i+1):i+1,ic=index?index.getX(i+2):i+2,
+  for(let i=start;i+2<end;i+=3){if((i-start)%384===0)yield;const ia=index?index.getX(i):i,ib=index?index.getX(i+1):i+1,ic=index?index.getX(i+2):i+2,
    ax=position.getX(ia),bx=position.getX(ib),cx=position.getX(ic),az=position.getZ(ia),bz=position.getZ(ib),cz=position.getZ(ic),minX=Math.min(ax,bx,cx),maxX=Math.max(ax,bx,cx),minZ=Math.min(az,bz,cz),maxZ=Math.max(az,bz,cz),rb=regions.bounds,wb=wallIndex.bounds;
    if(disposed||!(minX<=rb.maxX&&maxX>=rb.minX&&minZ<=rb.maxZ&&maxZ>=rb.minZ)&&!(minX<=wb.maxX&&maxX>=wb.minX&&minZ<=wb.maxZ&&maxZ>=wb.minZ)){retain(ia,ib,ic);continue;}
    const b={minX,maxX,minZ,maxZ},hasPatches=regions.intersects(b);if(!hasPatches&&!wallIndex.intersects(b)){retain(ia,ib,ic);continue;}
@@ -362,7 +372,7 @@ function buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePlan
    if((x1-x0+1)*(z1-z0+1)>4096)for(const v of unique.values())add(v);else for(let x=x0;x<=x1;x++)for(let z=z0;z<=z1;z++)for(const v of bins.get(x+','+z)||[])add(v);
    candidates.sort((a,b)=>a.t-b.t);return candidates.map(({v,t})=>{const p=mix(a,b,t);p[0]=v[0];p[2]=v[2];p.nativeY=a.nativeY+(b.nativeY-a.nativeY)*t;p.changed=a.changed;return project(p);});
   };
-  for(let i=0;i<output.length;i+=3){const triangle=output.slice(i,i+3),polygon=[];let split=false;
+  for(let i=0;i<output.length;i+=3){if(i%192===0)yield;const triangle=output.slice(i,i+3),polygon=[];let split=false;
    for(let edge=0;edge<3;edge++){const a=triangle[edge],b=triangle[(edge+1)%3],points=edgePoints(a,b);polygon.push(a,...points);split ||= points.length>0;}
    if(!split){if(validTriangle(triangle))conformed.push(...triangle);continue;}
    const center=triangle[0].map((_,k)=>(triangle[0][k]+triangle[1][k]+triangle[2][k])/3);center.nativeY=(triangle[0].nativeY+triangle[1].nativeY+triangle[2].nativeY)/3;center.changed=triangle[0].changed;project(center);
@@ -374,7 +384,7 @@ function buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePlan
   // counts cannot decide whether an exterior wall exists. Fit each perimeter
   // interval to the actual final shoulder plane, including its original base.
   const boundaryWalls=[];
-  for(const edge of perimeter){
+  for(const edge of perimeter){yield;
    const epsilon=Math.max(2e-5,Math.max(Math.abs(edge.a[0]),Math.abs(edge.a[2]),Math.abs(edge.b[0]),Math.abs(edge.b[2]))*2**-22),box={minX:edge.bounds.minX-epsilon,maxX:edge.bounds.maxX+epsilon,minZ:edge.bounds.minZ-epsilon,maxZ:edge.bounds.maxZ+epsilon},contacts=[];
    for(const t of rendered.query(box)){const range=lineInterval(edge.a,edge.b,t,epsilon);if(range)contacts.push({t,range});}if(!contacts.length)continue;
    const knots=[...new Set(contacts.flatMap(c=>c.range))].sort((a,b)=>a-b),used=usedWalls.get(edge.id)||[],inherited=used.slice(),fitted=[],active=[];
@@ -415,7 +425,7 @@ function buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePlan
   const replacement=geometryFrom(conformed,layout),wallGeometry=walls.length?geometryFrom(walls,[{name:'uv',offset:3,size:2}]):null;
   return {indices:kept===keep.length?keep:keep.slice(0,kept),replacement,walls:wallGeometry,removedCoreArea,stats:{...stats}};
  }
- return {surfaceSnapshot,structuralSnapshot,beginApplication,applyToGeometry,sample,contains,excluded:contains,mayAffectProtectedParcel,stats,
+ return {surfaceSnapshot,structuralSnapshot,beginApplication,applyToGeometry,applyToGeometrySteps,sample,contains,excluded:contains,mayAffectProtectedParcel,stats,cacheStats,
   rebuild(options={}){return createRoadEarthworks({world,surfaces:surfaceSnapshot,structuralSurfaces:structuralSnapshot,bridgePlan,groundHeight,wetness,protectedParcels,...options});},
   dispose(){disposed=true;rendered=new Index();usedWalls.clear();for(const index of [patches,wallIndex,structureIndex]){index.cells.clear();index.items.length=0;index.large.length=0;}}};
 }

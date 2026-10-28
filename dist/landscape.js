@@ -1,17 +1,17 @@
-import './coastline.js?v=142';
-import './building-entities.js?v=142';
+import './coastline.js?v=143';
+import './building-entities.js?v=143';
 const Buildings=globalThis.BoroughBuildings;
-import {supportsTree} from './tree-placement.js?v=142';
-import {terrainMeshes} from './terrain-mesh.js?v=142';
-import {inlandRelief} from './landforms.js?v=142';
-import {streetStations,atDistance} from './street-geometry.js?v=142';
-import {terrainOffset} from './terrain-edit.js?v=142';
-import {outsidePortals} from './traffic.js?v=142';
-import {ScannedRocks} from './scanned-rocks.js?v=142';
-import {groundCover} from './ground-cover.js?v=142';
-import {terrainField} from './terrain-field.js?v=142';
-import {reflectedWater} from './water.js?v=142';
-import {naturalTerrain} from './terrain-material.js?v=142';
+import {supportsTree} from './tree-placement.js?v=143';
+import {terrainMeshes} from './terrain-mesh.js?v=143';
+import {inlandRelief} from './landforms.js?v=143';
+import {streetStations,atDistance} from './street-geometry.js?v=143';
+import {terrainOffset} from './terrain-edit.js?v=143';
+import {outsidePortals} from './traffic.js?v=143';
+import {ScannedRocks} from './scanned-rocks.js?v=143';
+import {groundCover} from './ground-cover.js?v=143';
+import {terrainField} from './terrain-field.js?v=143';
+import {reflectedWater} from './water.js?v=143';
+import {naturalTerrain} from './terrain-material.js?v=143';
 import * as THREE from './vendor/three.module.js';
 export const TILE=4,SIZE=48,HALF=96;
 const landBase=new THREE.Color('#c8e0ad'),landLight=new THREE.Color('#d4dfb3'),shoreColor=new THREE.Color('#c3bda6'),slopeColor=new THREE.Color('#959a8d');
@@ -62,16 +62,16 @@ clearRoadEarthworks(){
  if(changed)for(const base of this.terrainBases||[]){const g=base.mesh.geometry;g.index.array.set(base.indices);g.index.needsUpdate=true;g.setDrawRange(base.drawRange.start,base.drawRange.count);}
  this.earthworks=null;if(changed)this.earthworksRevision=(this.earthworksRevision||0)+1;return changed;
 }
-applyRoadEarthworks(w,earthworks,{refreshVegetation=true}={}){
+applyRoadEarthworks(w,earthworks,{refreshVegetation=true,prepared=null,preparedCover=null}={}){
  if(w!==this.world||!this.ground||earthworks===this.earthworks)return false;
- const changed=this.clearRoadEarthworks();if(!earthworks){if(changed&&refreshVegetation)this.refreshDevelopment(w);return changed;}
+ this.preparedRoadCover=preparedCover;const changed=this.clearRoadEarthworks();if(!earthworks){if(changed&&refreshVegetation)this.refreshDevelopment(w);return changed;}
  this.terrainBases ||= [this.ground,this.surroundings].filter(Boolean).map(mesh=>({mesh,indices:mesh.geometry.index.array.slice(),drawRange:{...mesh.geometry.drawRange}}));
- this.earthworks=earthworks;earthworks.beginApplication?.();
+ this.earthworks=earthworks;if(!prepared)earthworks.beginApplication?.();
  try{for(const base of this.terrainBases){
   const geometry=base.mesh.geometry,colors=geometry.attributes.color,overlayColors=colors?.array;let result;
   // An active heatmap must not be baked into the natural colors of new pieces.
   if(base.mesh===this.ground&&this.baseColors?.length===overlayColors?.length)colors.array=this.baseColors;
-  try{result=earthworks.applyToGeometry(geometry);}finally{if(colors)colors.array=overlayColors;}
+  try{result=prepared?.find(entry=>entry.base===base)?.result||earthworks.applyToGeometry(geometry);}finally{if(colors)colors.array=overlayColors;}
   // Reuse the original GPU index allocation; unused tail entries are outside
   // the draw range. Rebuilding or removing roads restores every original entry.
   geometry.index.array.set(result.indices);geometry.index.needsUpdate=true;geometry.setDrawRange(0,result.indices.length);
@@ -121,7 +121,7 @@ refreshTerrain(w,bounds,finish=false){
  if(finish){this.refreshTrees(w);if(this.rockGroup){this.rockGroup.traverse(o=>{o.userData.dispose?.();if(o.geometry&&!o.userData.sharedAsset)o.geometry.dispose();});this.rockGroup.clear();this.makeRocks(w);}}
 }
 refreshDevelopment(w){this.refreshTrees(w);if(this.rockGroup){this.rockGroup.traverse(o=>{o.userData.dispose?.();if(o.geometry&&!o.userData.sharedAsset)o.geometry.dispose();});this.rockGroup.clear();this.makeRocks(w);}this.developmentPending=false;}
-refreshCover(w){if(this.cover||this.developmentPending){if(this.cover){this.group.remove(this.cover);this.cover.userData.dispose();}this.cover=groundCover(this.view,w,(world,x,z)=>this.coverHeight(world,x,z),(world,x,z)=>this.coverWetness(world,x,z));this.group.add(this.cover);}}
+refreshCover(w){if(this.cover||this.developmentPending){if(this.cover){this.group.remove(this.cover);this.cover.userData.dispose();}this.cover=this.preparedRoadCover||groundCover(this.view,w,(world,x,z)=>this.coverHeight(world,x,z),(world,x,z)=>this.coverWetness(world,x,z));this.preparedRoadCover=null;this.group.add(this.cover);}}
 refreshTrees(w){this.refreshCover(w);for(let o of this.trees||[]){this.group.remove(o);o.dispose?.();o.traverse(m=>{if(m.geometry&&!m.userData.sharedAsset)m.geometry.dispose()})}this.makeTrees(w)}
 update(time,night){if(this.cover){this.cover.visible=this.view.detailEnabled!==false;if(this.cover.visible)this.cover.userData.update(this.view.camera);}if(this.waterMaterial){this.waterMaterial.uniforms.time.value=time;this.waterMaterial.uniforms.night.value=night?1:0;this.waterMaterial.uniforms.reflectionEnabled.value=this.view.reflectionsEnabled===false||this.view.detailEnabled===false?0:1}}
 }
