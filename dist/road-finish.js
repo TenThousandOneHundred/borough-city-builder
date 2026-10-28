@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import {travelHalfWidth} from './road-lanes.js?v=144';
+import {travelHalfWidth} from './road-lanes.js?v=145';
 // The source photograph spans 2.1 metres; one world unit represents five.
 export const ROAD_TEXTURE_REPEAT=5/2.1;
 // Lateral road coordinates and lane spacing ride on the existing pavement mesh.

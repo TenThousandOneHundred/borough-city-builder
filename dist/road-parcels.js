@@ -1,4 +1,4 @@
-import {lotPlan} from './building-plan.js?v=144';
+import {lotPlan} from './building-plan.js?v=145';
 
 // A rotated developed site may own a stair-stepped set of zoning cells. Its
 // complete rectangular ground footprint must be covered by those cells.

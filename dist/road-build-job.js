@@ -1,10 +1,10 @@
-import {constructionGridSteps} from './construction-grid.js?v=144';
-import {groundCoverSteps} from './ground-cover.js?v=144';
-import {groundHeight,wetness} from './landscape.js?v=144';
+import {constructionGridSteps} from './construction-grid.js?v=145';
+import {groundCoverSteps} from './ground-cover.js?v=145';
+import {groundHeight,wetness} from './landscape.js?v=145';
 import * as THREE from './vendor/three.module.js';
-import {changedRoadCells} from './road-frontage.js?v=144';
-import {Roadworks} from './roadworks.js?v=144';
-import {scheduleBuild} from './build-scheduler.js?v=144';
+import {changedRoadCells} from './road-frontage.js?v=145';
+import {Roadworks} from './roadworks.js?v=145';
+import {scheduleBuild} from './build-scheduler.js?v=145';
 
 // Build an invisible replacement. The visible city and its traffic remain live
 // until both road meshes and fitted terrain are ready for one synchronous swap.
@@ -36,6 +36,16 @@ export function prepareRoadRefresh(view,{schedule=scheduleBuild}={}){
    }
    if(view.landscape.cover||view.landscape.developmentPending){const height=(w,x,z)=>{const y=plan?.sample(x,z);return Number.isFinite(y)?y:groundHeight(w,x,z);},wet=(w,x,z)=>plan?.excluded(x,z)?1:wetness(w,x,z,height);cover=await schedule(groundCoverSteps(view,snapshot,height,wet),{cancelled,onSlice});}
    grid=await schedule(constructionGridSteps((x,z)=>{const y=plan?.sample(x,z);return Math.max(.2,Number.isFinite(y)?y:groundHeight(snapshot,x,z));}),{cancelled,onSlice});
+   // Retain the live materials until replacement programs have acquired their
+   // references. Disposing them first evicts otherwise reusable GPU programs.
+   // Compile with the same render target, lighting and fog as the city pass.
+   if(view.renderer?.compileAsync){
+    const target=view.renderer.getRenderTarget(),programStart=performance.now();
+    let ready;
+    try{if(view.graphics?.enabled)view.renderer.setRenderTarget(view.graphics.target);const objects=new THREE.Group();objects.children=[next.group,...(cover?[cover]:[])];ready=view.renderer.compileAsync(objects,view.camera,view.scene);}
+    finally{view.renderer.setRenderTarget(target);}
+    await ready;stats.programMs=performance.now()-programStart;
+   }
    if(cancelled()||changedRoadCells(world.tiles,layout).changed.length||JSON.stringify(world.roadPaths)!==pathsKey)throw new DOMException('Road preparation cancelled','AbortError');
    view.roadRefreshJob=null;next.world=world;next.group.visible=true;next.signalGroup.visible=true;view.roadworks=next;adopted=true;
    const swapStart=performance.now();if(next.asphalt===old.asphalt)old.asphalt=null;old.dispose();

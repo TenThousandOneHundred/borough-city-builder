@@ -1,5 +1,6 @@
 // Arc-length street geometry. Density of input samples must not change pavement
 // texture scale, dash lengths, lamp spacing, or the width around a bend.
+import {finishBuild} from './build-scheduler.js?v=145';
 import * as THREE from './vendor/three.module.js';
 export function streetStations(points){
  const clean=[];for(const p of points){if(!Number.isFinite(p.x)||!Number.isFinite(p.z))continue;const last=clean.at(-1);if(!last||Math.hypot(p.x-last.x,p.z-last.z)>1e-6)clean.push({x:p.x,z:p.z});}
@@ -16,11 +17,13 @@ export function distanceSection(stations,start,end){
 }
 // Profile entries are [lateral offset, elevation above the road datum]. Each
 // profile edge gets its own normal so curb faces stay crisp instead of rounded.
-export function streetSurface(stations,profile,height){
+export function streetSurface(stations,profile,height){return finishBuild(streetSurfaceSteps(stations,profile,height));}
+export function* streetSurfaceSteps(stations,profile,height){
  const positions=[],uv=[],indices=[],profiles=stations.map(p=>typeof profile==='function'?profile(p):profile);
+ const heights=stations.map(()=>new Map());
  for(let k=0;k<profiles[0].length-1;k++){
   const base=positions.length/3;
-  for(let i=0;i<stations.length;i++){const p=stations[i];for(const [offset,raise]of [profiles[i][k],profiles[i][k+1]]){const x=p.x+p.nx*offset,z=p.z+p.nz*offset;positions.push(x,height(x,z)+raise,z);uv.push(offset,p.distance);}}
+  for(let i=0;i<stations.length;i++){if(i%32===0)yield;const p=stations[i];for(const [offset,raise]of [profiles[i][k],profiles[i][k+1]]){const x=p.x+p.nx*offset,z=p.z+p.nz*offset;const cache=heights[i];if(!cache.has(offset))cache.set(offset,height(x,z));positions.push(x,cache.get(offset)+raise,z);uv.push(offset,p.distance);}}
   for(let i=0;i<stations.length-1;i++){const q=base+i*2;indices.push(q,q+1,q+2,q+1,q+3,q+2);}
  }
  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(indices);g.computeVertexNormals();g.computeBoundingSphere();return g;

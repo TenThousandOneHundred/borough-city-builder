@@ -33,3 +33,13 @@ for(const [name,expected]of Object.entries(EDITION143))test('smaller constructio
  const saved=JSON.stringify(w),v=harness(w),r=new Roadworks(v);
  try{r.build(w);assert.equal(digest(r),expected);assert.equal(JSON.stringify(w),saved);}finally{r.dispose();v.cleanup();globalThis.document=originalDocument;}
 });
+
+test('profile edges share exact terrain samples without changing curb vertices or normals',async()=>{
+ const {streetStations,streetSurfaceSteps}=await import('../dist/street-geometry.js');
+ const stations=streetStations(Array.from({length:130},(_,i)=>({x:Math.sin(i*.01)*20,z:i*.3}))),profile=[[-1,.08],[-1,.18],[-.9,.18],[.8,.18],[.9,.08]],positions=[],uv=[],indices=[];
+ const height=(x,z)=>Math.sin(x*.1)*.3+z*.02;
+ for(let k=0;k<profile.length-1;k++){const base=positions.length/3;for(const p of stations)for(const [offset,raise]of [profile[k],profile[k+1]]){const x=p.x+p.nx*offset,z=p.z+p.nz*offset;positions.push(x,height(x,z)+raise,z);uv.push(offset,p.distance);}for(let i=0;i<stations.length-1;i++){const q=base+i*2;indices.push(q,q+1,q+2,q+1,q+3,q+2);}}
+ const expected=new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(positions,3)).setAttribute('uv',new THREE.Float32BufferAttribute(uv,2)).setIndex(indices);expected.computeVertexNormals();
+ let calls=0,yields=0,next;const steps=streetSurfaceSteps(stations,profile,(x,z)=>{calls++;return height(x,z);});do{next=steps.next();if(!next.done)yields++;}while(!next.done);
+ try{for(const name of ['position','normal','uv'])assert.deepEqual(next.value.attributes[name].array,expected.attributes[name].array);assert.deepEqual(next.value.index.array,expected.index.array);assert.equal(calls,stations.length*4);assert.ok(yields>=20,'long curb strips yield within each profile edge');}finally{next.value.dispose();expected.dispose();}
+});

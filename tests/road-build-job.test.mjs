@@ -80,3 +80,28 @@ test('asphalt textures survive cancellation and transfer ownership on adoption',
  try{await assert.rejects(prepareRoadRefresh(v,{schedule:async()=>{throw Error('fixture failure');}}));assert.equal(releases,0);assert.equal(v.roadworks.asphalt,material);await prepareRoadRefresh(v,{schedule:instant});assert.equal(v.roadworks.asphalt,material);assert.equal(releases,0);v.roadworks.dispose();assert.equal(releases,1);}
  finally{v.cleanup();}
 });
+
+test('replacement programs acquire references before old materials are released and use the city render target',async()=>{
+ const w=world(),v=harness(w);v.refresh(true);const old=v.roadworks,previous={name:'screen'},cityTarget={name:'city'},events=[];let current=previous,release;
+ v.graphics={enabled:true,target:cityTarget};Object.assign(v.renderer,{getRenderTarget:()=>current,setRenderTarget(target){current=target;},compileAsync(group,camera,scene){assert.equal(current,cityTarget);assert.equal(scene,v.scene);assert.equal(camera,v.camera);assert.ok(group.children.length);assert.equal(old.group.parent,v.scene);events.push('compile');return new Promise(resolve=>release=resolve);}});
+ const originalDispose=old.dispose.bind(old);old.dispose=()=>{events.push('dispose');originalDispose();};
+ try{const pending=prepareRoadRefresh(v,{schedule:instant});while(!release)await Promise.resolve();assert.equal(current,previous,'restore the renderer before waiting');assert.deepEqual(events,['compile']);assert.equal(v.roadworks,old);release();assert.equal(await pending,true);assert.deepEqual(events,['compile','dispose']);assert.equal(current,previous);}
+ finally{v.roadworks.dispose();v.cleanup();}
+});
+
+test('leaving during program preparation releases only staged roads and restores the render target',async()=>{
+ const w=world(),v=harness(w);v.refresh(true);const old=v.roadworks,previous={};let current=previous,release;
+ v.graphics={enabled:true,target:{}};Object.assign(v.renderer,{getRenderTarget:()=>current,setRenderTarget(target){current=target;},compileAsync(){return new Promise(resolve=>release=resolve);}});
+ try{const pending=prepareRoadRefresh(v,{schedule:instant});while(!release)await Promise.resolve();v.world={...w};v.roadRefreshJob=null;release();assert.equal(await pending,false);assert.equal(v.roadworks,old);assert.equal(current,previous);assert.ok(old.earthworks);assert.equal(v.scene.children.filter(o=>o===old.group).length,1);}
+ finally{v.cleanup();}
+});
+
+test('visible construction waits for animation frames while hidden construction keeps progressing',async()=>{
+ const saved={document:globalThis.document,requestAnimationFrame:globalThis.requestAnimationFrame,cancelAnimationFrame:globalThis.cancelAnimationFrame};let frames=0,time=0;
+ try{
+  globalThis.document={visibilityState:'visible'};globalThis.requestAnimationFrame=callback=>{frames++;return setTimeout(callback,0);};globalThis.cancelAnimationFrame=clearTimeout;
+  function* steps(){for(let i=0;i<4;i++){time+=10;yield;}return 'ready';}
+  assert.equal(await scheduleBuild(steps(),{now:()=>time}),'ready');assert.equal(frames,4);
+  globalThis.document.visibilityState='hidden';assert.equal(await scheduleBuild(steps(),{now:()=>time}),'ready');assert.equal(frames,4,'hidden worlds do not depend on animation frames');
+ }finally{for(const [key,value]of Object.entries(saved)){if(value===undefined)delete globalThis[key];else globalThis[key]=value;}}
+});

@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import {finishBuild} from './build-scheduler.js?v=144';
+import {finishBuild} from './build-scheduler.js?v=145';
 
 export function constructionGrid(height){return finishBuild(constructionGridSteps(height));}
 export function* constructionGridSteps(height){

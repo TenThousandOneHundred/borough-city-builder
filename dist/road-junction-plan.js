@@ -1,5 +1,6 @@
-import {roundaboutCorners} from './roundabout-geometry.js?v=144';
-import {streetStations,atDistance,distanceSection} from './street-geometry.js?v=144';
+import './road-types.js?v=145';
+import {roundaboutCorners} from './roundabout-geometry.js?v=145';
+import {streetStations,atDistance,distanceSection} from './street-geometry.js?v=145';
 const cross=(a,b)=>a.x*b.z-a.z*b.x;
 const point=(j,a,d,offset=0)=>({x:j.x+a.tx*d-a.tz*offset,z:j.z+a.tz*d+a.tx*offset});
 
@@ -18,14 +19,11 @@ export function roadGeometry(world,engine){
 export function roadDescriptors(world,engine){
  const descriptors=[];
  for(const path of world.roadPaths||[])descriptors.push({id:path.id,spec:engine.ROADS[path.type],stations:streetStations(engine.sampleRoad(path.controls).map(p=>({x:(p.x+.5)*4-96,z:(p.y+.5)*4-96})))});
- for(let i=0;i<world.tiles.length;i++){
-  const t=world.tiles[i];if(t.type!=='road'||t.pathIds?.length&&!t.legacyRoad)continue;
-  const x=(i%48+.5)*4-96,z=(Math.floor(i/48)+.5)*4-96,dirs=engine.neighbors(i).filter(n=>world.tiles[n].type==='road').map(n=>({x:n%48-i%48,z:Math.floor(n/48)-Math.floor(i/48)}));
-  const spec={...engine.ROADS.street,width:t.roadWidth===2?3.15:2.45,lanes:t.roadWidth===2?4:2};let points=[];
-  if(dirs.length===2&&dirs[0].x*dirs[1].x+dirs[0].z*dirs[1].z===0){for(let k=0;k<=12;k++){const u=k/12,v=1-u;points.push({x:x+2*(v*v*dirs[0].x+u*u*dirs[1].x),z:z+2*(v*v*dirs[0].z+u*u*dirs[1].z)});}}
-  else if(dirs.length<=2){const d=dirs.find(p=>p.x!==0)||dirs[0]||{x:1,z:0};points=[{x:x-d.x*2,z:z-d.z*2},{x:x+d.x*2,z:z+d.z*2}];}
-  else for(let k=0;k<dirs.length;k++)descriptors.push({id:`grid/${i}/${k}`,legacy:true,spec,stations:streetStations([{x,z},{x:x+dirs[k].x*2,z:z+dirs[k].z*2}])});
-  if(points.length)descriptors.push({id:`grid/${i}`,legacy:true,spec,stations:streetStations(points)});
+ const shapes=globalThis.BoroughRoadTypes.legacyShapes(world,engine.sampleRoad);
+ const worldPoints=points=>points.map(p=>({x:(p.x+.5)*4-96,z:(p.y+.5)*4-96}));
+ for(const [i,shape]of shapes){const t=world.tiles[i],spec={...engine.ROADS.street,width:t.roadWidth===2?3.15:2.45,lanes:t.roadWidth===2?4:2};
+  for(const [k,points]of shape.arms.entries())descriptors.push({id:`grid/${i}/${k}`,legacy:true,spec,stations:streetStations(worldPoints(points))});
+  if(shape.points.length)descriptors.push({id:`grid/${i}`,legacy:true,spec,stations:streetStations(worldPoints(shape.points))});
  }
  return extendJunctionEndpoints(descriptors);
 }

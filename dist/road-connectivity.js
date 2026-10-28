@@ -2,6 +2,7 @@
 // source identity is retained until a real intersection permits a transfer.
 (function(root){
 'use strict';
+const RoadTypes=typeof module!=='undefined'?require('./road-types.js'):root.BoroughRoadTypes;
 const cache=new WeakMap(),EPS=1e-7,BIN=2;
 const neighbors=i=>[i%48?i-1:-1,i%48<47?i+1:-1,i>=48?i-48:-1,i<2256?i+48:-1].filter(i=>i>=0);
 const point=i=>({x:i%48,y:Math.floor(i/48)}),distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
@@ -27,15 +28,14 @@ function build(world,engine){
   }
   for(let n=1;n<record.points.length;n++)addSegment(record,record.points[n-1],record.points[n],n-1);
  }
+ const legacyShapes=RoadTypes.legacyShapes(world,engine.sampleRoad);
  for(let tile=0;tile<world.tiles.length;tile++){
   const t=world.tiles[tile];if(t.type!=='road'||t.pathIds?.length&&!t.legacyRoad&&byTile.has(tile))continue;
   const p=point(tile),spec={...(engine.ROADS[t.roadType]||engine.ROADS.street),width:t.roadWidth===2?3.15:2.45,oneway:!t.pathIds?.length&&!!engine.ROADS[t.roadType]?.oneway},record={key:JSON.stringify(['legacy',tile]),pathId:null,spec,points:[p],mapping:new Map([[tile,0]]),states:new Map(),nodes:new Map(),segments:[],legacy:true};records.set(record.key,record);addState(record,tile);
-  const dirs=neighbors(tile).filter(i=>world.tiles[i].type==='road').map(i=>({x:i%48-p.x,y:Math.floor(i/48)-p.y}));
-  if(dirs.length===2&&dirs[0].x*dirs[1].x+dirs[0].y*dirs[1].y===0){const a={x:p.x+dirs[0].x*.5,y:p.y+dirs[0].y*.5},b={x:p.x+dirs[1].x*.5,y:p.y+dirs[1].y*.5};let previous=a;
-   for(let n=1;n<=12;n++){const t=n/12,u=1-t,q={x:u*u*a.x+2*u*t*p.x+t*t*b.x,y:u*u*a.y+2*u*t*p.y+t*t*b.y};addSegment(record,previous,q);previous=q;}
-  }else if(dirs.length<=2){const d=dirs.find(d=>d.x)||dirs[0]||{x:1,y:0};addSegment(record,{x:p.x-d.x*.5,y:p.y-d.y*.5},{x:p.x+d.x*.5,y:p.y+d.y*.5});}
-  else for(const d of dirs)addSegment(record,p,{x:p.x+d.x*.5,y:p.y+d.y*.5});
+  const shape=legacyShapes.get(tile);if(!shape)continue;
+  for(const points of shape.arms.length?shape.arms:[shape.points])for(let n=1;n<points.length;n++)addSegment(record,points[n-1],points[n]);
  }
+
  function nearest(record,p){if(!record.states.size)return null;if(record.legacy)return record.states.values().next().value;let position=0,error=Infinity;for(const s of record.segments){const q=project(p,s.a,s.b),d=distance(q,p);if(d<error){error=d;position=s.index+q.t;}}if(error>1.1)return null;
   let tile,best=Infinity;for(const i of record.states.keys()){const d=distance(point(i),p);if(d<best){best=d;tile=i;}}return best<=1.3?addState(record,tile,position):null;
  }

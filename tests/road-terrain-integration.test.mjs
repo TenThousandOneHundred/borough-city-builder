@@ -81,7 +81,7 @@ test('vegetation uses derived support and exclusions while planted street trees 
  const world=E.createWorld('Vegetation earthworks','plains',431),land=landscape(world),previous=globalThis.CityEngine;globalThis.CityEngine=E;
  try{
   let trees,treeHeight;land.view.vegetation={populate(group,points,height){trees=points;treeHeight=height;return [];}};
-  land.earthworks={sample:()=>3,excluded:()=>true};land.view.roadworks={surfaceHeight:()=>3.115};land.makeTrees(world);
+  land.earthworks={sample:()=>3,excluded:()=>true};land.view.roadworks={surfaceHeight:(x,z,kind)=>kind==='asphalt'?null:3.115};land.makeTrees(world);
   assert.ok(trees.length>0,'fixture includes planted road trees');assert.ok(trees.every(p=>p[4]===true),'ordinary vegetation cannot grow through earthworks');for(const [x,z]of trees)assert.equal(treeHeight(x,z),3.115);
   land.earthworks={sample:()=>3,excluded:()=>false};land.makeTrees(world);assert.ok(trees.some(p=>!p[4]));const natural=trees.find(p=>!p[4]);assert.equal(treeHeight(natural[0],natural[1]),3);
   let rocks,rockHeight;land.scannedRocks={populate(group,points,height){rocks=points;rockHeight=height;return true;}};
