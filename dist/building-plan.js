@@ -1,5 +1,5 @@
 // Pure, deterministic lot planning. One world unit represents roughly five metres.
-import './road-curves.js?v=139';
+import './road-curves.js?v=140';
 const RoadCurves=globalThis.BoroughRoadCurves;
 const pathIndices=new WeakMap(),pathSamples=new WeakMap();
 function roadsById(world){

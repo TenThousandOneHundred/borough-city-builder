@@ -1,6 +1,6 @@
-import {atDistance} from './street-geometry.js?v=139';
-import {junctionCorners,junctionCuts,transitionWidth} from './road-junction-plan.js?v=139';
-import {bridgeHeight,bridgeWidth} from './bridge-spans.js?v=139';
+import {atDistance} from './street-geometry.js?v=140';
+import {junctionCorners,junctionCuts,transitionWidth} from './road-junction-plan.js?v=140';
+import {bridgeHeight,bridgeWidth} from './bridge-spans.js?v=140';
 
 const CELL=4,EPS=1e-6,clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),smooth=t=>t*t*(3-2*t);
 const key=p=>Math.round(p.x*1000)+','+Math.round(p.z*1000);

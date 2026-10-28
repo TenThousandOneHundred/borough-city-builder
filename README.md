@@ -1,6 +1,14 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 140 — Highway shoulder barriers
+
+Authored ground-level highways now have corrugated metal safety rails on both paved shoulders, with posts every 2.5 metres and lowered end sections. Barriers follow curves, road widths and grades, leave junction mouths open, and stop before bridge spans so the existing bridge rails remain unobstructed. Existing legacy outside connections retain their current appearance.
+
+The official [Road Tools highway image](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/road-tools) guided the roadside rails. Local close-up comparisons covered curved parallel highways and river bridges. The barriers are a step toward the reference; terrain, bridge designs, vegetation and the complete simulation still differ from the commercial game.
+
+All new rails and posts share one static mesh before road batching, with no per-frame construction. The first dense version was reduced to regular 3.75-metre rail samples, while posts keep their spacing. This adds visible geometry and one material batch; it is not a measured FPS improvement. Road controls, traffic routing, buildings and save data are unchanged. All 798 checks pass (794 existing checks plus four new cases); syntax and asset integrity checks also pass. Four focused checks cover grades, curved/tapered roads, junction and bridge openings, and unchanged inputs. This is feature update one after optimization 139.
+
 ## Edition 139 — Faster road terrain and city setup
 
 This is the scheduled optimization after features 136–138. Road terrain fitting skips unnecessary candidate lists and per-triangle data allocation, and writes retained indices into a bounded typed buffer. Road paint builds refinement buffers only when a triangle actually needs subdivision. Both paths retain the previous geometry, surface queries, attribute order and saved-world data.

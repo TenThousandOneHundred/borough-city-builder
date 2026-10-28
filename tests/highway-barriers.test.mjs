@@ -1,0 +1,10 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {highwayBarriers} from '../dist/highway-barriers.js';
+import {streetStations} from '../dist/street-geometry.js';
+const road=(extra={})=>({spec:{width:3.2,limitedAccess:true},stations:streetStations([{x:0,z:0},{x:12,z:0}]),...extra});
+const vertices=g=>{const p=g.attributes.position;return Array.from({length:p.count},(_,i)=>[p.getX(i),p.getY(i),p.getZ(i)]);};
+test('rails remain on both paved shoulders and follow grades without modifying road data',()=>{const r=road(),before=JSON.stringify(r),result=highwayBarriers([r],[],(x,z)=>x*.04+z*.01,()=>false);assert.equal(JSON.stringify(r),before);assert.equal(result.runs,1);assert.equal(result.posts,48);for(const [x,y,z] of vertices(result.geometry)){assert.ok(Math.abs(z)>1.54&&Math.abs(z)<1.62);assert.ok(y-(x*.04+z*.01)>.019&&y-(x*.04+z*.01)<.242);}assert.ok(result.geometry.boundingSphere.radius>6);result.geometry.dispose();});
+test('bridge and junction openings contain no rail or post triangles',()=>{const out=highwayBarriers([road()],[{x:3,z:0,radius:1}],()=>0,(x)=>x>=7&&x<=9);for(const [x]of vertices(out.geometry)){assert.ok(!(x>1.6&&x<4.4));assert.ok(!(x>=7&&x<=9));}assert.equal(out.runs,3);out.geometry.dispose();});
+test('urban streets and fully bridged highways emit no extra meshes',()=>{for(const [r,bridge]of [[road({spec:{width:3.2}}),()=>false],[road(),()=>true]]){const out=highwayBarriers([r],[],()=>0,bridge);assert.equal(out.geometry,null);assert.equal(out.posts,0);}});
+test('curved and tapered barriers follow road width with finite outward normals',()=>{const r=road({stations:streetStations([{x:0,z:0},{x:4,z:1},{x:8,z:4},{x:10,z:8}]),widthAt:p=>3.2+p.distance*.04});const out=highwayBarriers([r],[],(x,z)=>.03*x+.01*z,()=>false);for(const a of Object.values(out.geometry.attributes))assert.ok([...a.array].every(Number.isFinite));assert.ok(out.posts>40);out.geometry.dispose();});
