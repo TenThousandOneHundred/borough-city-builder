@@ -1,9 +1,10 @@
-import {groundCoverSteps} from './ground-cover.js?v=143';
-import {groundHeight,wetness} from './landscape.js?v=143';
+import {constructionGridSteps} from './construction-grid.js?v=144';
+import {groundCoverSteps} from './ground-cover.js?v=144';
+import {groundHeight,wetness} from './landscape.js?v=144';
 import * as THREE from './vendor/three.module.js';
-import {changedRoadCells} from './road-frontage.js?v=143';
-import {Roadworks} from './roadworks.js?v=143';
-import {scheduleBuild} from './build-scheduler.js?v=143';
+import {changedRoadCells} from './road-frontage.js?v=144';
+import {Roadworks} from './roadworks.js?v=144';
+import {scheduleBuild} from './build-scheduler.js?v=144';
 
 // Build an invisible replacement. The visible city and its traffic remain live
 // until both road meshes and fitted terrain are ready for one synchronous swap.
@@ -21,7 +22,7 @@ export function prepareRoadRefresh(view,{schedule=scheduleBuild}={}){
  const cancelled=()=>view.roadRefreshJob!==job||view.world!==world||(world.roadEditRevision||0)!==revision||view.landscape.terrainBases!==bases;
  const onSlice=ms=>{stats.slices++;stats.maxSliceMs=Math.max(stats.maxSliceMs,ms);};
  const layout=changedRoadCells(snapshot.tiles).keys,pathsKey=JSON.stringify(snapshot.roadPaths);
- let adopted=false,cover=null;
+ let adopted=false,cover=null,grid=null;
  job.promise=(async()=>{
   try{
    await schedule(next.buildSteps(snapshot),{cancelled,onSlice});
@@ -34,15 +35,16 @@ export function prepareRoadRefresh(view,{schedule=scheduleBuild}={}){
     if(plan){const result=plan.applyToGeometrySteps?await schedule(plan.applyToGeometrySteps(geometry),{cancelled,onSlice}):plan.applyToGeometry(geometry);terrain.push({base,result});}
    }
    if(view.landscape.cover||view.landscape.developmentPending){const height=(w,x,z)=>{const y=plan?.sample(x,z);return Number.isFinite(y)?y:groundHeight(w,x,z);},wet=(w,x,z)=>plan?.excluded(x,z)?1:wetness(w,x,z,height);cover=await schedule(groundCoverSteps(view,snapshot,height,wet),{cancelled,onSlice});}
+   grid=await schedule(constructionGridSteps((x,z)=>{const y=plan?.sample(x,z);return Math.max(.2,Number.isFinite(y)?y:groundHeight(snapshot,x,z));}),{cancelled,onSlice});
    if(cancelled()||changedRoadCells(world.tiles,layout).changed.length||JSON.stringify(world.roadPaths)!==pathsKey)throw new DOMException('Road preparation cancelled','AbortError');
    view.roadRefreshJob=null;next.world=world;next.group.visible=true;next.signalGroup.visible=true;view.roadworks=next;adopted=true;
    const swapStart=performance.now();if(next.asphalt===old.asphalt)old.asphalt=null;old.dispose();
-   view.refresh(job.force,{roads:next,terrain,cover});
+   view.refresh(job.force,{roads:next,terrain,cover,grid});
    next.night(view.night);stats.swapMs=performance.now()-swapStart;stats.totalMs=performance.now()-started;view.lastRoadBuildStats=stats;
    return true;
   }catch(error){if(error.name!=='AbortError')throw error;return false;}
   finally{
-   if(!adopted){cover?.userData.dispose?.();if(next.asphalt===sharedAsphalt)next.asphalt=null;next.dispose();for(const {result}of terrain){result.replacement?.dispose();result.walls?.dispose();}}
+   if(!adopted){grid?.dispose();cover?.userData.dispose?.();if(next.asphalt===sharedAsphalt)next.asphalt=null;next.dispose();for(const {result}of terrain){result.replacement?.dispose();result.walls?.dispose();}}
    if(view.roadRefreshJob===job)view.roadRefreshJob=null;
    if(!view.roadRefreshJob)view.onRoadBuildStatus?.(false);
   }

@@ -1,29 +1,30 @@
-import {prepareRoadRefresh} from './road-build-job.js?v=143';
-import {RoadGuidePreview} from './road-guide-preview.js?v=143';
-import {SIDEWALK_HEIGHT} from './road-profile.js?v=143';
-import './building-entities.js?v=143';
+import {constructionGrid} from './construction-grid.js?v=144';
+import {prepareRoadRefresh} from './road-build-job.js?v=144';
+import {RoadGuidePreview} from './road-guide-preview.js?v=144';
+import {SIDEWALK_HEIGHT} from './road-profile.js?v=144';
+import './building-entities.js?v=144';
 const Buildings=globalThis.BoroughBuildings;
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {ZonePlaneBatch} from './zoning-render-batch.js?v=143';
-import {trackAssetGroups} from './asset-transfer.js?v=143';
-import {buildFootpaths} from './footpaths.js?v=143';
-import {Transit,transitLeg,stopPosition} from './transit.js?v=143';
-import {SimulationClock} from './simulation-clock.js?v=143';
-import {Residents} from './residents.js?v=143';
-import {Traffic,carCapacity} from './traffic.js?v=143';
-import {Vehicles} from './vehicles.js?v=143';
-import {BuildingFactory} from './building-factory.js?v=143';
-import {StreetLife} from './street-life.js?v=143';
-import {changedRoadCells,frontageTouches} from './road-frontage.js?v=143';
-import {visualParcels} from './parcels.js?v=143';
-import {Graphics} from './graphics.js?v=143';
-import {Vegetation} from './vegetation.js?v=143';
+import {ZonePlaneBatch} from './zoning-render-batch.js?v=144';
+import {trackAssetGroups} from './asset-transfer.js?v=144';
+import {buildFootpaths} from './footpaths.js?v=144';
+import {Transit,transitLeg,stopPosition} from './transit.js?v=144';
+import {SimulationClock} from './simulation-clock.js?v=144';
+import {Residents} from './residents.js?v=144';
+import {Traffic,carCapacity} from './traffic.js?v=144';
+import {Vehicles} from './vehicles.js?v=144';
+import {BuildingFactory} from './building-factory.js?v=144';
+import {StreetLife} from './street-life.js?v=144';
+import {changedRoadCells,frontageTouches} from './road-frontage.js?v=144';
+import {visualParcels} from './parcels.js?v=144';
+import {Graphics} from './graphics.js?v=144';
+import {Vegetation} from './vegetation.js?v=144';
 import {RGBELoader} from './vendor/RGBELoader.js';
 import * as THREE from './vendor/three.module.js';
 import {OrbitControls} from './vendor/OrbitControls.js';
-import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=143';
-import {Architecture} from './architecture.js?v=143';
-import {Roadworks} from './roadworks.js?v=143';
+import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=144';
+import {Architecture} from './architecture.js?v=144';
+import {Roadworks} from './roadworks.js?v=144';
 const N=48,T=4,HALF=96,zoneColors={residential:'#54b663',commercial:'#5bb1d8',industrial:'#cdb268',office:'#aa87c9'};
 export class CityView{
 constructor(canvas){this.assetsReady=false;this.loadingElement=document.getElementById('sceneLoading');this.canvas=canvas;this.scene=new THREE.Scene();this.scene.background=new THREE.Color('#aebfca');this.scene.fog=new THREE.FogExp2('#b7c6cc',.00105);
@@ -54,7 +55,7 @@ refreshAssets(){
  if(this.traffic)this.roadworks.syncSignals(this.traffic);
  this.refresh(true);
 }
-makeGrid(){this.disposeGroup(this.grid);const points=[];for(let s=0;s<=48;s++)for(let k=0;k<96;k++){let a=-96+s*4,b=-96+k*2;points.push(a,this.renderFloor(this.world,a,b)+.15,b,a,this.renderFloor(this.world,a,b+2)+.15,b+2);points.push(b,this.renderFloor(this.world,b,a)+.15,a,b+2,this.renderFloor(this.world,b+2,a)+.15,a)}const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(points,3));this.grid.add(new THREE.LineSegments(geo,new THREE.LineBasicMaterial({color:'#b6ced2',transparent:true,opacity:.16})))}
+makeGrid(prepared=null){this.disposeGroup(this.grid);const geo=prepared||constructionGrid((x,z)=>this.renderFloor(this.world,x,z));this.grid.add(new THREE.LineSegments(geo,new THREE.LineBasicMaterial({color:'#b6ced2',transparent:true,opacity:.16})))}
 refreshInteractive(){
  if(this.roadRefreshJob)return this.roadRefreshJob.promise;
  if(!this.world||this.menu||this.assetsReady===false||this.roadEditRevision===undefined)return this.refresh();
@@ -95,7 +96,7 @@ if(fineChanged)trees=true;
 if(models||force)this.models.rebuild(this.buildings);
 if(roads&&prepared?.roads!==this.roadworks)this.roadworks.build(this.world);
 let earthworksChanged=false;if(roads||occupancy||force){if(!roads)this.roadworks.syncEarthworks?.(this.world);earthworksChanged=this.landscape.applyRoadEarthworks?.(this.world,this.roadworks.earthworks,{prepared:prepared?.terrain,preparedCover:prepared?.cover})||false;}
-if(earthworksChanged||this.gridPending){this.makeGrid();this.gridPending=false;}
+if(earthworksChanged||this.gridPending||prepared?.grid){this.makeGrid(prepared?.grid);this.gridPending=false;}
 if(fineChanged&&!earthworksChanged)this.landscape.refreshDevelopment(this.world);
 this.landscape.ensureDevelopment?.(this.world);
 if(models||roads||occupancy||force||earthworksChanged)this.roadworks.buildAccess(this.world,this.buildings);

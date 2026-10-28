@@ -1,4 +1,4 @@
-import {finishBuild} from './build-scheduler.js?v=143';
+import {finishBuild} from './build-scheduler.js?v=144';
 import * as THREE from './vendor/three.module.js';
 import clipping from './vendor/polygon-clipping.umd.min.js';
 
@@ -76,15 +76,16 @@ function stationAt(points,d){
  let i=1;while(points[i].distance<d)i++;const a=points[i-1],b=points[i],t=(d-a.distance)/(b.distance-a.distance);
  return {x:a.x+(b.x-a.x)*t,z:a.z+(b.z-a.z)*t,width:a.width+(b.width-a.width)*t,distance:d};
 }
-function snapshotSurfaces(surfaces,kindOverride=null){
+function snapshotSurfaces(surfaces,kindOverride=null){return finishBuild(snapshotSurfacesSteps(surfaces,kindOverride));}
+function* snapshotSurfacesSteps(surfaces,kindOverride=null){
  const result=[],point=new THREE.Vector3();let meshId=0;
- for(const source of surfaces||[]){
+ for(const source of surfaces||[]){yield;
   if(source.vertices){result.push({kind:kindOverride||source.kind,meshId:source.meshId??meshId++,vertices:source.vertices.map(v=>v.slice())});continue;}
   const id=meshId++;
   const kind=kindOverride||source.userData?.roadSurface||source.kind;if(kind!=='asphalt'&&kind!=='sidewalk'&&!kindOverride)continue;
   const geometry=source.geometry||source,p=geometry.attributes?.position,index=geometry.index;if(!p)continue;
   source.updateWorldMatrix?.(true,false);const count=index?.count??p.count;
-  for(let i=0;i+2<count;i+=3){const vertices=[];for(let k=0;k<3;k++){point.fromBufferAttribute(p,index?index.getX(i+k):i+k);if(source.matrixWorld)point.applyMatrix4(source.matrixWorld);vertices.push([point.x,point.y,point.z]);}if(vertices.flat().every(Number.isFinite))result.push({kind,meshId:id,vertices});}
+  for(let i=0;i+2<count;i+=3){if(i%384===0)yield;const vertices=[];for(let k=0;k<3;k++){point.fromBufferAttribute(p,index?index.getX(i+k):i+k);if(source.matrixWorld)point.applyMatrix4(source.matrixWorld);vertices.push([point.x,point.y,point.z]);}if(vertices.flat().every(Number.isFinite))result.push({kind,meshId:id,vertices});}
  }
  return result;
 }
@@ -149,7 +150,7 @@ export function* createRoadEarthworksSteps(options){
  }
 }
 function* buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePlan,groundHeight,wetness=()=>0,protectedParcels=[],regionCache=null}){
- const surfaceSnapshot=snapshotSurfaces(surfaces),structuralSnapshot=snapshotSurfaces(structuralSurfaces,'structure'),natural=(x,z)=>groundHeight(world,x,z),wet=(x,z)=>wetness(world,x,z)>.08;
+ const surfaceSnapshot=yield* snapshotSurfacesSteps(surfaces),structuralSnapshot=yield* snapshotSurfacesSteps(structuralSurfaces,'structure'),natural=(x,z)=>groundHeight(world,x,z),wet=(x,z)=>wetness(world,x,z)>.08;
  const exclusions=new Index(),protectedIndex=new Index(),roadIndex=new Index(),structureIndex=new Index(),patches=new Index(),wallIndex=new Index(),perimeterIndex=new Index(),regions=new Index();
  // The actual concrete tops are opaque covers. Soffits and buried pier faces
  // must not remove visible ground merely because they project over it.
@@ -165,7 +166,7 @@ function* buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePla
  }
  const minimum=new Map(),edges=new Map();
  for(const {kind,vertices}of surfaceSnapshot){if(kind==='sidewalk')for(const p of vertices){const k=key(p);minimum.set(k,Math.min(minimum.get(k)??Infinity,p[1]));}}
- for(const {kind,vertices}of surfaceSnapshot){let p=vertices.map(v=>v.slice());if(Math.abs(cross(...p))<EPS)continue;if(cross(...p)<0)p=[p[0],p[2],p[1]];
+ for(const {kind,vertices}of surfaceSnapshot){yield;let p=vertices.map(v=>v.slice());if(Math.abs(cross(...p))<EPS)continue;if(cross(...p)<0)p=[p[0],p[2],p[1]];
   roadIndex.add(record(p,{kind}));
   for(let i=0;i<3;i++){const a=p[i],b=p[(i+1)%3],ka=key(a),kb=key(b),sign=ka<kb?1:-1,k=ka<kb?ka+'|'+kb:kb+'|'+ka,entry=edges.get(k);if(entry)entry.balance+=sign;else edges.set(k,{a,b,kind,sign,balance:sign});}
  }
@@ -204,7 +205,7 @@ function* buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePla
  for(const t of exclusions.items)for(let i=0;i<3;i++){const a=t.p[i],b=t.p[(i+1)%3];perimeterIndex.add({a,b,bounds:bounds([a,b])});}
  // Texture distance follows a continuous boundary chain, including curved
  // sections. Water/protection cuts do not restart the wall's texture phase.
- for(const seed of boundary){let edge=seed,distance=0;while(edge&&!visited.has(edge)){visited.add(edge);edge.distance=distance;distance+=edge.length;edge=starts.get(key(edge.b))?.find(next=>!visited.has(next));}}
+ for(const seed of boundary){yield;let edge=seed,distance=0;while(edge&&!visited.has(edge)){visited.add(edge);edge.distance=distance;distance+=edge.length;edge=starts.get(key(edge.b))?.find(next=>!visited.has(next));}}
  let nextGroup=0;
  for(const edge of boundary){yield;
   const {a,b,kind,length,nx,nz}=edge;
@@ -234,17 +235,18 @@ function* buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePla
    for(const [p,toe,u]of [[aa,endA,edge.distance+length*i/count],[bb,endB,edge.distance+length*(i+1)/count]]){const k=key(p);if(!joins.has(k))joins.set(k,[]);joins.get(k).push({p,toe,wall,u});}
   }
  }
- for(const candidates of joins.values())if(candidates.length===2){
+ for(const candidates of joins.values()){yield;if(candidates.length===2){
   const [a,b]=candidates,p=[[a.p[0],a.p[1],a.p[2],1],[a.toe[0],a.toe[1],a.toe[2],a.toe[3]],[b.toe[0],b.toe[1],b.toe[2],b.toe[3]]];if(Math.abs(cross(...p))>EPS){shoulderRaw.push(record(p,{kind:'shoulder',group:nextGroup++}));shoulderFootprints.push([p.map(v=>[v[0],v[2]])]);
    if(a.wall||b.wall){const dx=b.toe[0]-a.toe[0],dz=b.toe[2]-a.toe[2],length=Math.hypot(dx,dz);let nx=dz/length,nz=-dx/length;if((a.p[0]-(a.toe[0]+b.toe[0])/2)*nx+(a.p[2]-(a.toe[2]+b.toe[2])/2)*nz>0){nx=-nx;nz=-nz;}addWall(a.toe,b.toe,nx,nz,a.u,a.u+length);}
   }
  }
+ }
  // The continuous field gives core pavement precedence at overlaps. Keeping
  // shoulder polygons whole avoids subdividing them by buried kerb profiles.
- for(const t of shoulderRaw)addPatch(t.p,t.kind,t.group);
+ for(const t of shoulderRaw){yield;addPatch(t.p,t.kind,t.group);}
  // Work only with clipped local inputs. Intersecting a small tile with an
  // entire city-sized ring repeats that ring's sweep thousands of times.
- const shoulderIndex=new Index();for(const polygon of shoulderFootprints){const p=polygon[0].map(v=>[v[0],0,v[1]]);shoulderIndex.add({p,bounds:bounds(p)});}
+ const shoulderIndex=new Index();for(const polygon of shoulderFootprints){yield;const p=polygon[0].map(v=>[v[0],0,v[1]]);shoulderIndex.add({p,bounds:bounds(p)});}
  const cells=new Set([...roadIndex.cells.keys(),...patches.cells.keys()]),regionByCell=new Map(),nextRegions=new Map();let reusedRegions=0,builtRegions=0;
  const rectangleClip=(vertices,b)=>{
   let p=vertices.map(v=>[v[0],v[2]]);
@@ -260,13 +262,13 @@ function* buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePla
   // Cell partitions depend only on these clipped footprints. Heights and
   // materials are fitted afresh below; a cache never stores simulation state.
   if(cached&&cached.signature===signature){const r={...cached.region};regions.add(r);regionByCell.set(key,r);nextRegions.set(key,cached);reusedRegions++;continue;}
-  builtRegions++;const exclusion=union(ep),raw=union(cp);let core=raw,all=union([...raw,...sp]);
+  builtRegions++;const exclusion=union(ep);yield;const raw=union(cp);yield;let core=raw,all=union([...raw,...sp]);yield;
   if(concrete.length&&all.length){const covered=boolean('intersection',union(concrete),all);if(covered.length)core=union([...core,...covered]);}
   if(exclusion.length){core=core.length?boolean('difference',core,exclusion):[];all=all.length?boolean('difference',all,exclusion):[];}const shoulder=core.length?boolean('difference',all,core):all;
   if(all.length){const rectangle=[[[b.minX,b.minZ],[b.maxX,b.minZ],[b.maxX,b.maxZ],[b.minX,b.maxZ]]],outside=boolean('difference',rectangle,all),r={core,shoulder,all,bounds:b,triangles:[...coverage(core,'core'),...coverage(shoulder,'shoulder'),...coverage(outside,'outside')]};regions.add(r);regionByCell.set(key,r);if(regionCache)nextRegions.set(key,{signature,region:r});}
  }
  const constructionAt=(x,z)=>regions.at(x,z).some(r=>inMulti(x,z,r.all)),perimeter=[],perimeterKeys=new Set();
- for(const region of regions.items)for(const polygon of region.all)for(const ring of polygon)for(let i=1;i<ring.length;i++){
+ for(const region of regions.items)for(const polygon of region.all)for(const ring of polygon)for(let i=1;i<ring.length;i++){yield;
   let a=[Math.fround(ring[i-1][0]),0,Math.fround(ring[i-1][1])],b=[Math.fround(ring[i][0]),0,Math.fround(ring[i][1])],dx=b[0]-a[0],dz=b[2]-a[2],length=Math.hypot(dx,dz);if(length<1e-5)continue;
   const nx=dz/length,nz=-dx/length,x=(a[0]+b[0])/2,z=(a[2]+b[2])/2,probe=Math.min(.0002,Math.max(.00002,length*.01)),right=constructionAt(x+nx*probe,z+nz*probe),left=constructionAt(x-nx*probe,z-nz*probe);if(right===left)continue;if(right)[a,b]=[b,a];
   const ka=key(a),kb=key(b),id=ka<kb?ka+'|'+kb:kb+'|'+ka;if(perimeterKeys.has(id))continue;perimeterKeys.add(id);perimeter.push({a,b,ka,kb,id,length,bounds:bounds([a,b])});
@@ -334,7 +336,7 @@ function* buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePla
   const emit=(polygon,patch=null)=>triangulate(polygon,triangle=>{
    const vertices=triangle.map(v=>{const p=v.slice();p.nativeY=p[1];p.changed=!!patch;return project(p);});if(!validTriangle(vertices))return;normals(vertices);output.push(...vertices);
   });
-  for(let i=start;i+2<end;i+=3){if((i-start)%384===0)yield;const ia=index?index.getX(i):i,ib=index?index.getX(i+1):i+1,ic=index?index.getX(i+2):i+2,
+  for(let i=start;i+2<end;i+=3){if((i-start)%48===0)yield;const ia=index?index.getX(i):i,ib=index?index.getX(i+1):i+1,ic=index?index.getX(i+2):i+2,
    ax=position.getX(ia),bx=position.getX(ib),cx=position.getX(ic),az=position.getZ(ia),bz=position.getZ(ib),cz=position.getZ(ic),minX=Math.min(ax,bx,cx),maxX=Math.max(ax,bx,cx),minZ=Math.min(az,bz,cz),maxZ=Math.max(az,bz,cz),rb=regions.bounds,wb=wallIndex.bounds;
    if(disposed||!(minX<=rb.maxX&&maxX>=rb.minX&&minZ<=rb.maxZ&&maxZ>=rb.minZ)&&!(minX<=wb.maxX&&maxX>=wb.minX&&minZ<=wb.maxZ&&maxZ>=wb.minZ)){retain(ia,ib,ic);continue;}
    const b={minX,maxX,minZ,maxZ},hasPatches=regions.intersects(b);if(!hasPatches&&!wallIndex.intersects(b)){retain(ia,ib,ic);continue;}
@@ -364,7 +366,7 @@ function* buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePla
   // on its neighbour's edge. Insert every shared XZ vertex before triangulating
   // with an interior fan, retaining collinear boundary points in 3D as well.
   const unique=new Map(),bins=new Map();
-  for(const v of output){const k=v[0]+','+v[2];if(unique.has(k))continue;unique.set(k,v);const cell=Math.floor(v[0])+','+Math.floor(v[2]);if(!bins.has(cell))bins.set(cell,[]);bins.get(cell).push(v);}
+  let vertexCheckpoint=0;for(const v of output){if(vertexCheckpoint++%128===0)yield;const k=v[0]+','+v[2];if(unique.has(k))continue;unique.set(k,v);const cell=Math.floor(v[0])+','+Math.floor(v[2]);if(!bins.has(cell))bins.set(cell,[]);bins.get(cell).push(v);}
   const conformed=[],copy=v=>{const p=v.slice();p.nativeY=v.nativeY;p.changed=v.changed;return p;};
   const edgePoints=(a,b)=>{const dx=b[0]-a[0],dz=b[2]-a[2],length2=dx*dx+dz*dz;if(length2<1e-14)return [];
    const epsilon=Math.max(2e-6,Math.max(Math.abs(a[0]),Math.abs(a[2]),Math.abs(b[0]),Math.abs(b[2]))*2**-22),length=Math.sqrt(length2),x0=Math.floor(Math.min(a[0],b[0])-epsilon),x1=Math.floor(Math.max(a[0],b[0])+epsilon),z0=Math.floor(Math.min(a[2],b[2])-epsilon),z1=Math.floor(Math.max(a[2],b[2])+epsilon),candidates=[];
@@ -372,14 +374,15 @@ function* buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePla
    if((x1-x0+1)*(z1-z0+1)>4096)for(const v of unique.values())add(v);else for(let x=x0;x<=x1;x++)for(let z=z0;z<=z1;z++)for(const v of bins.get(x+','+z)||[])add(v);
    candidates.sort((a,b)=>a.t-b.t);return candidates.map(({v,t})=>{const p=mix(a,b,t);p[0]=v[0];p[2]=v[2];p.nativeY=a.nativeY+(b.nativeY-a.nativeY)*t;p.changed=a.changed;return project(p);});
   };
-  for(let i=0;i<output.length;i+=3){if(i%192===0)yield;const triangle=output.slice(i,i+3),polygon=[];let split=false;
+  for(let i=0;i<output.length;i+=3){if(i%48===0)yield;const triangle=output.slice(i,i+3),polygon=[];let split=false;
    for(let edge=0;edge<3;edge++){const a=triangle[edge],b=triangle[(edge+1)%3],points=edgePoints(a,b);polygon.push(a,...points);split ||= points.length>0;}
    if(!split){if(validTriangle(triangle))conformed.push(...triangle);continue;}
    const center=triangle[0].map((_,k)=>(triangle[0][k]+triangle[1][k]+triangle[2][k])/3);center.nativeY=(triangle[0].nativeY+triangle[1].nativeY+triangle[2].nativeY)/3;center.changed=triangle[0].changed;project(center);
    for(let j=0;j<polygon.length;j++){const child=[copy(center),copy(polygon[j]),copy(polygon[(j+1)%polygon.length])];if(!validTriangle(child))continue;normals(child);conformed.push(...child);}
   }
-  for(let i=0;i<conformed.length;i+=3)if(conformed[i].changed){const p=[conformed[i],conformed[i+1],conformed[i+2]].map(v=>[...v.slice(0,3).map(Math.fround),v.nativeY]);if(Math.abs(cross(...p))>EPS)rendered.add(record(p));}
-  // Authoritative union outlines own the wall runs. Final clipped triangles
+  for(let i=0;i<conformed.length;i+=3){if(i%192===0)yield;if(conformed[i].changed){const p=[conformed[i],conformed[i+1],conformed[i+2]].map(v=>[...v.slice(0,3).map(Math.fround),v.nativeY]);if(Math.abs(cross(...p))>EPS)rendered.add(record(p));}
+  }
+ // Authoritative union outlines own the wall runs. Final clipped triangles
   // can contain coincident edges after Float32 rounding, so incident-face
   // counts cannot decide whether an exterior wall exists. Fit each perimeter
   // interval to the actual final shoulder plane, including its original base.
@@ -405,7 +408,7 @@ function* buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePla
    }usedWalls.set(edge.id,used);
    for(const {a,b,start,end}of fitted){const dx=b[0]-a[0],dz=b[2]-a[2],length=Math.hypot(dx,dz);boundaryWalls.push({a,b,nx:dz/length,nz:-dx/length,u0:edge.u0+edge.length*start,u1:edge.u0+edge.length*end});}
   }
-  for(const wall of boundaryWalls){const {a,b,nx,nz,u0:ua,u1:ub}=wall,ya=a.nativeY,yb=b.nativeY,fill=a[1]+b[1]>=ya+yb,side=fill?-1:1,thickness=.06;
+  for(const wall of boundaryWalls){yield;const {a,b,nx,nz,u0:ua,u1:ub}=wall,ya=a.nativeY,yb=b.nativeY,fill=a[1]+b[1]>=ya+yb,side=fill?-1:1,thickness=.06;
    // A three-centimetre coping stands above the soil shelf. Raising the whole
    // closed upper rim keeps side/end faces joined and avoids a coplanar grass
    // and concrete cap without changing terrain or adding clipping work.

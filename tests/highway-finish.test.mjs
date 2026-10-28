@@ -41,7 +41,7 @@ test('authored highway edges enclose the same lanes as outside connections witho
  const w=E.createWorld('Highway paint','plains',19),materials=new Map(),v={scene:new T.Scene(),unitBox:new T.BoxGeometry(),night:false,landscape:{assets:{}},mat(color){if(!materials.has(color))materials.set(color,new T.MeshStandardMaterial({color}));return materials.get(color);},box(){}};
  const previousDocument=globalThis.document;globalThis.document={createElement:()=>({width:0,height:0,getContext:()=>({fillRect(){},strokeRect(){},fillText(){}})})};
  try{for(const type of ['motorway','highway']){
-  const r=new Roadworks(v),spec=E.ROADS[type],edges=[],outsideEdges=[];r.height=()=>0;r.surface=()=>null;r.ribbon=()=>null;r.dash=()=>{};r.nearJunction=()=>false;
+  const r=new Roadworks(v),spec=E.ROADS[type],edges=[],outsideEdges=[];r.height=()=>0;r.surface=()=>null;r.ribbon=()=>null;r.dash=()=>{};r.dashSteps=function*(){};r.nearJunction=()=>false;
   r.paint=(world,points,width,offset)=>edges.push({width,offset:typeof offset==='function'?offset(points[0]):offset});
   r.path(w,{id:'paint-road',type,controls:[{x:5,y:12},{x:35,y:12}]},v.mat('#333'),v.mat('#aaa'),v.mat('#bbb'));
   assert.equal(edges.length,2,'only the two continuous edge stripes, no free-flow chevrons');

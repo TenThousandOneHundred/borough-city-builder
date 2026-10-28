@@ -1,30 +1,30 @@
-import {finishBuild} from './build-scheduler.js?v=143';
-import {highwayEdges} from './highway-edges.js?v=143';
-import {highwayBarriers} from './highway-barriers.js?v=143';
-import {PedestrianSignals,signalHousing,signalPole} from './pedestrian-signals.js?v=143';
-import {pedestrianCrossings,rampStations,rampAmount} from './pedestrian-network.js?v=143';
-import {roundaboutIsland,addYieldSign} from './roundabout-details.js?v=143';
-import {planBridges,bridgeHeight} from './bridge-spans.js?v=143';
-import {planRoadGrades} from './road-grades.js?v=143';
-import {createRoadEarthworksSteps} from './road-earthworks.js?v=143';
-import {visualParcels} from './parcels.js?v=143';
-import {bridgeGeometry} from './bridge-geometry.js?v=143';
-import {approachMarkings,arrowPolygons} from './road-markings.js?v=143';
-import {roadFinishData,configureRoadFinish,ROAD_TEXTURE_REPEAT} from './road-finish.js?v=143';
-import {laneLayout,travelHalfWidth} from './road-lanes.js?v=143';
-import {roadGeometry,transitionWidth,junctionCorners,junctionCuts,clearRanges,clearSections,signalPlacements} from './road-junction-plan.js?v=143';
-import {lotAccess} from './lot-access.js?v=143';
-import {streetStations,atDistance,distanceSection,streetSurface,pavementMaterial} from './street-geometry.js?v=143';
-import {signalPhase,junctionPolicy} from './junctions.js?v=143';
-import {addStopSign,stopSignMaterial} from './stop-sign.js?v=143';
-import {outsidePortals} from './traffic.js?v=143';
-import {batchStatic} from './static-batch.js?v=143';
+import {finishBuild} from './build-scheduler.js?v=144';
+import {highwayEdges} from './highway-edges.js?v=144';
+import {highwayBarriers} from './highway-barriers.js?v=144';
+import {PedestrianSignals,signalHousing,signalPole} from './pedestrian-signals.js?v=144';
+import {pedestrianCrossings,rampStations,rampAmount} from './pedestrian-network.js?v=144';
+import {roundaboutIsland,addYieldSign} from './roundabout-details.js?v=144';
+import {planBridges,bridgeHeight} from './bridge-spans.js?v=144';
+import {planRoadGrades} from './road-grades.js?v=144';
+import {createRoadEarthworksSteps} from './road-earthworks.js?v=144';
+import {visualParcels} from './parcels.js?v=144';
+import {bridgeGeometry} from './bridge-geometry.js?v=144';
+import {approachMarkings,arrowPolygons} from './road-markings.js?v=144';
+import {roadFinishData,configureRoadFinish,ROAD_TEXTURE_REPEAT} from './road-finish.js?v=144';
+import {laneLayout,travelHalfWidth} from './road-lanes.js?v=144';
+import {roadGeometry,transitionWidth,junctionCorners,junctionCuts,clearRanges,clearSections,signalPlacements} from './road-junction-plan.js?v=144';
+import {lotAccess} from './lot-access.js?v=144';
+import {streetStations,atDistance,distanceSection,streetSurface,pavementMaterial} from './street-geometry.js?v=144';
+import {signalPhase,junctionPolicy} from './junctions.js?v=144';
+import {addStopSign,stopSignMaterial} from './stop-sign.js?v=144';
+import {outsidePortals} from './traffic.js?v=144';
+import {batchStatic,batchStaticSteps} from './static-batch.js?v=144';
 import * as THREE from './vendor/three.module.js';
-import {floorHeight,groundHeight,wetness} from './landscape.js?v=143';
-import {unifyPavementSteps} from './road-pavement.js?v=143';
-import {RoadSurfaceIndex} from './road-surface-index.js?v=143';
-import {annotatePaintRibbon,fitPaintRibbon,createPaintMaterial,PAINT_MAX_EXPANSION} from './road-paint.js?v=143';
-import {ASPHALT_HEIGHT,JUNCTION_HEIGHT,SIDEWALK_HEIGHT,MARKING_HEIGHT,PAINT_CLEARANCE,kerbProfile,kerbCap} from './road-profile.js?v=143';
+import {floorHeight,groundHeight,wetness} from './landscape.js?v=144';
+import {unifyPavementSteps} from './road-pavement.js?v=144';
+import {RoadSurfaceIndex} from './road-surface-index.js?v=144';
+import {annotatePaintRibbon,fitPaintRibbon,createPaintMaterial,PAINT_MAX_EXPANSION} from './road-paint.js?v=144';
+import {ASPHALT_HEIGHT,JUNCTION_HEIGHT,SIDEWALK_HEIGHT,MARKING_HEIGHT,PAINT_CLEARANCE,kerbProfile,kerbCap} from './road-profile.js?v=144';
 export class Roadworks{
 constructor(v){this.v=v;this.group=new THREE.Group();v.scene.add(this.group);this.lamps=[];this.lampMaterial=new THREE.MeshStandardMaterial({color:'#e5e2ca',emissive:'#ffe2a0',emissiveIntensity:v.night?3:0,roughness:.3});this.walkMaterial=pavementMaterial();this.lightPoolMaterial=new THREE.MeshBasicMaterial({color:'#ffe0a0',transparent:true,opacity:.22,depthWrite:false,blending:THREE.AdditiveBlending});this.lightPoolMaterial.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 poolUV;').replace('#include <uv_vertex>','#include <uv_vertex>\npoolUV=uv;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 poolUV;').replace('#include <color_fragment>','#include <color_fragment>\ndiffuseColor.a*=pow(max(0.,1.-length(poolUV*2.-1.)),1.8);');};this.lightPoolMaterial.customProgramCacheKey=()=> 'street-light-pool-v1';this.signalGroup=new THREE.Group();v.scene.add(this.signalGroup);}
 clear(){this.earthworks?.dispose();for(const mesh of [...(this.earthworkSurfaces||[]),...(this.earthworkStructures||[])])mesh.geometry.dispose();this.earthworks=null;this.earthworkSurfaces=[];this.earthworkStructures=[];this.earthworkKey=null;this.earthworkInputKey=null;this.gradePlan=null;this.group.traverse(o=>{if(o.geometry&&o.geometry!==this.v.unitBox)o.geometry.dispose()});this.group.clear();for(const material of this.paintMaterials?.values()||[])material.dispose();this.paintMaterials?.clear();this.lamps=[];this.pendingLamps=[];this.finishingLamps=false;this.signalKey=null;this.bridgePlan=null;this.bridgeStats=null;this.pavementStats=null;this.surfaces=new RoadSurfaceIndex();this.markingMeshes=[];this.markingStats={before:0,after:0};}
@@ -81,15 +81,17 @@ conformMarking(w,geometry){
 }
 marking(w,mesh){if(mesh){if(mesh.geometry.attributes.roadPaint){this.paintMaterials ||= new Map();const source=mesh.material;let material=this.paintMaterials.get(source);if(!material){material=createPaintMaterial(source);this.paintMaterials.set(source,material);}mesh.material=material;}mesh.userData.roadMarking=true;(this.markingMeshes ||= []).push(mesh);if(!this.building)this.conformMarking(w,mesh.geometry);}return mesh;}
 paint(w,points,width,offset,material){const mesh=this.ribbon(w,points,width,offset,material,MARKING_HEIGHT);if(mesh)annotatePaintRibbon(mesh.geometry);return this.marking(w,mesh);}
-curbs(w,points,width,walk,curb,base=ASPHALT_HEIGHT,sidewalk=.42){
+curbs(...args){return finishBuild(this.curbsSteps(...args));}
+*curbsSteps(w,points,width,walk,curb,base=ASPHALT_HEIGHT,sidewalk=.42){
  const stations=rampStations(points,this.crossings||[],width);
  for(const side of [-1,1]){const drop=p=>{const edge=(typeof width==='function'?width(p):width)*.5;return rampAmount(this.crossings||[],{x:p.x+p.nx*edge*side,z:p.z+p.nz*edge*side});};
   const edge=p=>(typeof width==='function'?width(p):width)*.5;
-  this.surface(w,stations,p=>kerbProfile(edge(p),sidewalk,drop(p),side,base),walk,'sidewalk');this.surface(w,stations,p=>kerbCap(edge(p),drop(p),side,base),curb,'kerb');
+  yield;this.surface(w,stations,p=>kerbProfile(edge(p),sidewalk,drop(p),side,base),walk,'sidewalk');yield;this.surface(w,stations,p=>kerbCap(edge(p),drop(p),side,base),curb,'kerb');
  }
 }
 
-dash(w,stations,offset,color,period=1.6,length=.8,raise=MARKING_HEIGHT,cuts=[],visible=null){for(let d=.25;d<stations.at(-1).distance;d+=period)for(const [a,b]of clearRanges(d,Math.min(d+length,stations.at(-1).distance),cuts)){const segment=distanceSection(stations,a,b);for(const part of visible?visible(segment):[segment])this.paint(w,part,.028,offset,this.v.mat(color));}}
+dash(...args){return finishBuild(this.dashSteps(...args));}
+*dashSteps(w,stations,offset,color,period=1.6,length=.8,raise=MARKING_HEIGHT,cuts=[],visible=null){for(let d=.25;d<stations.at(-1).distance;d+=period){yield;for(const [a,b]of clearRanges(d,Math.min(d+length,stations.at(-1).distance),cuts)){const segment=distanceSection(stations,a,b);for(const part of visible?visible(segment):[segment])this.paint(w,part,.028,offset,this.v.mat(color));}}}
 sections(points,padding=0){const stations=streetStations(points),cuts=junctionCuts(stations,this.junctionPlan?.junctions||[],padding);return clearSections(stations,cuts);}
 legacyPoints(id,points){
  const planned=this.gradePlan?.stationsFor(id);if(!planned)return points;
@@ -109,11 +111,11 @@ nearJunction(x,z,padding=0){return this.junctionPlan?.junctions.some(j=>Math.hyp
 
 line(w,points,width=.025,color='#e2ded0',offset=0){return this.paint(w,points,width,offset,this.v.mat(color))}
 build(w){return finishBuild(this.buildSteps(w));}
-*buildSteps(w){if(this.world!==w)this.earthworkRegionCache={cells:new Map()};this.clear();this.building=true;this.world=w;this.heightRevision=(this.heightRevision||0)+1;this.junctionPlan=roadGeometry(w,CityEngine);this.crossings=pedestrianCrossings(w,this.junctionPlan);this.crossingKey=(w.transit?.lines||[]).map(l=>l.id+':'+l.stops.join(',')).join(';');this.roadDescriptors=this.junctionPlan.roads;this.renderRoads=new Map(this.roadDescriptors.map(r=>[r.id,r]));this.bridgePlan=planBridges(this.roadDescriptors.map(r=>({...r,widthAt:p=>transitionWidth(r,this.junctionPlan.tapers.get(r.id)||[],p.distance)})),(x,z)=>{const gx=Math.floor((x+96)/4),gy=Math.floor((z+96)/4);return wetness(w,x,z)>.08||(gx>=0&&gy>=0&&gx<48&&gy<48&&w.tiles[gy*48+gx].ground==='water');},(x,z)=>this.baseHeight(w,x,z),(x,z)=>floorHeight(w,x,z));this.gradePlan=planRoadGrades(this.junctionPlan,this.bridgePlan,(x,z)=>this.naturalDatum(w,x,z));const sources=['color','normal','rough'].map(slot=>this.v.landscape.assets?.['road-asphalt-'+slot]);if(!this.asphalt||sources.some((source,i)=>this.asphaltSources?.[i]!==source)){if(this.asphalt){for(const key of ['map','normalMap','roughnessMap'])this.asphalt[key]?.dispose();this.asphalt.dispose();}this.asphalt=configureRoadFinish(this.v.landscape.material('road-asphalt',ROAD_TEXTURE_REPEAT,sources[0]?'#ffffff':'#55585b'));if(sources[0])this.asphalt.color.multiplyScalar(1.55);this.asphaltSources=sources;}const asphalt=this.asphalt,walk=this.walkMaterial,curb=this.v.mat('#bec0b5');const roads=w.tiles.map((t,i)=>t.type==='road'?i:-1).filter(i=>i>=0);
+*buildSteps(w){if(this.world!==w)this.earthworkRegionCache={cells:new Map()};this.clear();this.building=true;this.world=w;this.heightRevision=(this.heightRevision||0)+1;this.junctionPlan=roadGeometry(w,CityEngine);yield;this.crossings=pedestrianCrossings(w,this.junctionPlan);this.crossingKey=(w.transit?.lines||[]).map(l=>l.id+':'+l.stops.join(',')).join(';');this.roadDescriptors=this.junctionPlan.roads;this.renderRoads=new Map(this.roadDescriptors.map(r=>[r.id,r]));this.bridgePlan=planBridges(this.roadDescriptors.map(r=>({...r,widthAt:p=>transitionWidth(r,this.junctionPlan.tapers.get(r.id)||[],p.distance)})),(x,z)=>{const gx=Math.floor((x+96)/4),gy=Math.floor((z+96)/4);return wetness(w,x,z)>.08||(gx>=0&&gy>=0&&gx<48&&gy<48&&w.tiles[gy*48+gx].ground==='water');},(x,z)=>this.baseHeight(w,x,z),(x,z)=>floorHeight(w,x,z));yield;this.gradePlan=planRoadGrades(this.junctionPlan,this.bridgePlan,(x,z)=>this.naturalDatum(w,x,z));const sources=['color','normal','rough'].map(slot=>this.v.landscape.assets?.['road-asphalt-'+slot]);if(!this.asphalt||sources.some((source,i)=>this.asphaltSources?.[i]!==source)){if(this.asphalt){for(const key of ['map','normalMap','roughnessMap'])this.asphalt[key]?.dispose();this.asphalt.dispose();}this.asphalt=configureRoadFinish(this.v.landscape.material('road-asphalt',ROAD_TEXTURE_REPEAT,sources[0]?'#ffffff':'#55585b'));if(sources[0])this.asphalt.color.multiplyScalar(1.55);this.asphaltSources=sources;}const asphalt=this.asphalt,walk=this.walkMaterial,curb=this.v.mat('#bec0b5');const roads=w.tiles.map((t,i)=>t.type==='road'?i:-1).filter(i=>i>=0);
 for(let i of roads){yield;if(w.tiles[i].pathIds?.length&&!w.tiles[i].legacyRoad)continue;const x=(i%48+.5)*4-96,z=(Math.floor(i/48)+.5)*4-96,t=w.tiles[i],near=CityEngine.neighbors(i).filter(n=>w.tiles[n].type==='road'),dirs=near.map(n=>({x:(n%48-i%48),z:(Math.floor(n/48)-Math.floor(i/48))})),wide=t.roadWidth===2,width=wide?3.15:2.45;let points=[];
 if(dirs.length===2&&dirs[0].x*dirs[1].x+dirs[0].z*dirs[1].z===0){const a=new THREE.Vector3(x+dirs[0].x*2,0,z+dirs[0].z*2),b=new THREE.Vector3(x+dirs[1].x*2,0,z+dirs[1].z*2);for(let s=0;s<=12;s++){const f=s/12,q=1-f;points.push({x:q*q*a.x+2*q*f*x+f*f*b.x,z:q*q*a.z+2*q*f*z+f*f*b.z})}}
 else if(dirs.length<=2){let d=dirs.find(p=>p.x!==0)||dirs[0]||{x:1,z:0};const horizontal=d.x!==0;for(let j=0;j<=4;j++)points.push({x:x+(horizontal?j-2:0),z:z+(horizontal?0:j-2)})}
-if(points.length){points=this.legacyPoints('grid/'+i,points);this.ribbon(w,points,width,0,asphalt,.08,{width,lanes:wide?4:2,oneway:!!CityEngine.ROADS[t.roadType]?.oneway});for(const section of this.sections(points))this.curbs(w,section,width,walk,curb);const stations=streetStations(points),cuts=this.markingCuts(stations,1.2);for(const lane of laneLayout({width,lanes:wide?4:2,oneway:!!CityEngine.ROADS[t.roadType]?.oneway}).dividers)this.dash(w,stations,lane.offset,lane.center?'#d4cba8':'#dfded3',1.6,.8,.105,cuts);}
+if(points.length){points=this.legacyPoints('grid/'+i,points);this.ribbon(w,points,width,0,asphalt,.08,{width,lanes:wide?4:2,oneway:!!CityEngine.ROADS[t.roadType]?.oneway});for(const section of this.sections(points))yield* this.curbsSteps(w,section,width,walk,curb);const stations=streetStations(points),cuts=this.markingCuts(stations,1.2);for(const lane of laneLayout({width,lanes:wide?4:2,oneway:!!CityEngine.ROADS[t.roadType]?.oneway}).dividers)this.dash(w,stations,lane.offset,lane.center?'#d4cba8':'#dfded3',1.6,.8,.105,cuts);}
 else{for(let k=0;k<dirs.length;k++){const d=dirs[k];this.ribbon(w,this.legacyPoints('grid/'+i+'/'+k,[{x,z},{x:x+d.x*2,z:z+d.z*2}]),width,0,asphalt,.08);}}
 
 
@@ -121,9 +123,9 @@ else{for(let k=0;k<dirs.length;k++){const d=dirs[k];this.ribbon(w,this.legacyPoi
 if(i%5===0&&t.ground!=='water'&&!this.nearJunction(x,z,1.5)){let horizontal=dirs.some(d=>d.x),lx=x+(horizontal?0:1.8),lz=z+(horizontal?1.8:0),y=this.height(w,lx,lz);this.lamp(lx,y,lz,horizontal)}
 }
 this.highwayEdges=highwayEdges(this.roadDescriptors.map(r=>({...r,widthAt:p=>transitionWidth(r,this.junctionPlan.tapers.get(r.id)||[],p.distance)})));
-for(const path of w.roadPaths||[]){yield;this.path(w,path,asphalt,walk,curb);}
+for(const path of w.roadPaths||[]){yield;yield* this.pathSteps(w,path,asphalt,walk,curb);}
 for(const junction of this.junctionPlan.junctions){yield;this.sharedJunction(w,junction,junction.arms.every(a=>a.spec===CityEngine.ROADS.gravel)?this.v.mat('#928875'):asphalt,walk,curb);}
-for(const crossing of this.crossings)if(crossing.stop!==undefined)this.paintCrossing(w,crossing);this.buildApproachMarkings(w);for(const portal of outsidePortals(w))this.outside(w,portal,asphalt);yield* this.finalizePavementSteps();yield;this.buildBridges(w);yield;this.buildHighwayBarriers(w);this.captureEarthworkSurfaces();yield* this.syncEarthworksSteps(w);yield* this.finalizeLampsSteps();for(const mesh of this.markingMeshes){yield;this.conformMarking(w,mesh.geometry);}this.building=false;this.markingMeshes=[];this.batchStats=batchStatic(this.group,this.v.unitBox);this.night(this.v.night);}
+for(const crossing of this.crossings)if(crossing.stop!==undefined)this.paintCrossing(w,crossing);this.buildApproachMarkings(w);for(const portal of outsidePortals(w))this.outside(w,portal,asphalt);yield* this.finalizePavementSteps();yield;this.buildBridges(w);yield;this.buildHighwayBarriers(w);this.captureEarthworkSurfaces();yield* this.syncEarthworksSteps(w);yield* this.finalizeLampsSteps();for(const mesh of this.markingMeshes){yield;this.conformMarking(w,mesh.geometry);}this.building=false;this.markingMeshes=[];this.batchStats=yield* batchStaticSteps(this.group,this.v.unitBox);this.night(this.v.night);}
 buildHighwayBarriers(w){
  const roads=this.roadDescriptors.filter(r=>!r.legacy).map(r=>({...r,stations:this.gradePlan?.stationsFor(r.id)||r.stations,widthAt:p=>transitionWidth(r,this.junctionPlan.tapers.get(r.id)||[],p.distance)}));
  for(const road of roads)road.visibleSections=(points,side)=>this.highwayEdges.sections(road.id,points,p=>side*(road.widthAt(p)/2-.025));
@@ -169,16 +171,17 @@ buildAccess(world,buildings){
 outside(w,p,asphalt){const points=[];for(let d=0;d<=280;d+=4)points.push({x:p.x+p.dx*d,z:p.z+p.dz*d});const tile=w.tiles[p.id],source=CityEngine.ROADS[tile.roadType]||CityEngine.ROADS.street,spec=tile.pathIds?.length?source:{...source,width:tile.roadWidth===2?3.15:2.45,lanes:tile.roadWidth===2?4:2,median:false,shoulder:0,limitedAccess:false},stations=streetStations(points);this.ribbon(w,points,spec.width,0,asphalt,.08,spec);for(const lane of laneLayout(spec).dividers)this.dash(w,stations,lane.offset,lane.center?'#e4d9a2':'#e3e2d6',2.4,1.25,.105);if(spec.median)this.surface(w,points,[[-.16,.09],[-.13,.16],[.13,.16],[.16,.09]],this.v.mat('#bec0b5'));for(const side of [-1,1])this.line(w,points,.045,'#e3e2d6',side*(spec.limitedAccess?travelHalfWidth(spec):spec.width/2-.12));
  const x=p.x+p.dx*8+p.dz*2.8,z=p.z+p.dz*8-p.dx*2.8,y=this.height(w,x,z);this.v.box(this.group,x,y+2,z,.08,4,.08,'#747d79');
  const canvas=document.createElement('canvas');canvas.width=512;canvas.height=128;const c=canvas.getContext('2d');c.fillStyle='#164f43';c.fillRect(0,0,512,128);c.strokeStyle='#ffffff';c.lineWidth=6;c.strokeRect(5,5,502,118);c.fillStyle='#ffffff';c.font='bold 34px sans-serif';c.textAlign='center';c.fillText('OUTSIDE CONNECTION',256,54);c.font='27px sans-serif';c.fillText('Regional highway  ↔',256,97);const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;const sign=new THREE.Mesh(new THREE.PlaneGeometry(5,1.25),new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide}));sign.position.set(x,y+4,z);sign.rotation.y=p.dx?Math.PI/2:0;this.group.add(sign);}
-path(w,path,asphalt,walk,curb){const spec=CityEngine.ROADS[path.type],planned=this.renderRoads?.get(path.id),points=this.gradePlan?.stationsFor(path.id)||planned?.stations||CityEngine.sampleRoad(path.controls).map(p=>({x:(p.x+.5)*4-96,z:(p.y+.5)*4-96})),stations=this.gradePlan?.stationsFor(path.id)||planned?.stations||streetStations(points),width=spec.width;
+path(w,path,asphalt,walk,curb){return finishBuild(this.pathSteps(w,path,asphalt,walk,curb));}
+*pathSteps(w,path,asphalt,walk,curb){const spec=CityEngine.ROADS[path.type],planned=this.renderRoads?.get(path.id),points=this.gradePlan?.stationsFor(path.id)||planned?.stations||CityEngine.sampleRoad(path.controls).map(p=>({x:(p.x+.5)*4-96,z:(p.y+.5)*4-96})),stations=this.gradePlan?.stationsFor(path.id)||planned?.stations||streetStations(points),width=spec.width;
 if(stations.length<2)return;
 const tapers=this.junctionPlan?.tapers?.get(path.id),widthAt=p=>tapers?transitionWidth(planned,tapers,p.distance):width;
 const sections=clearSections(stations,junctionCuts(stations,this.junctionPlan?.junctions||[])),cuts=this.markingCuts(stations,1.2);
 if(!spec.sidewalk)this.ribbon(w,points,p=>widthAt(p)+.35,0,this.v.mat('#a39f8b'),.04);
-this.ribbon(w,points,widthAt,0,path.type==='gravel'?this.v.mat('#928875'):asphalt,.08,spec);
-for(const section of sections){if(spec.sidewalk)this.curbs(w,section,widthAt,walk,curb,.08,.38);else if(path.type!=='gravel')for(const side of [-1,1]){const offset=p=>side*(spec.limitedAccess?travelHalfWidth(spec,widthAt(p)):widthAt(p)/2-.12);for(const visible of spec.limitedAccess&&this.highwayEdges?this.highwayEdges.sections(path.id,section,offset):[section])this.paint(w,visible,.04,offset,this.v.mat('#e0dfd0'));}}
+yield;this.ribbon(w,points,widthAt,0,path.type==='gravel'?this.v.mat('#928875'):asphalt,.08,spec);
+for(const section of sections){yield;if(spec.sidewalk)yield* this.curbsSteps(w,section,widthAt,walk,curb,.08,.38);else if(path.type!=='gravel')for(const side of [-1,1]){const offset=p=>side*(spec.limitedAccess?travelHalfWidth(spec,widthAt(p)):widthAt(p)/2-.12);for(const visible of spec.limitedAccess&&this.highwayEdges?this.highwayEdges.sections(path.id,section,offset):[section])this.paint(w,visible,.04,offset,this.v.mat('#e0dfd0'));}}
 if(spec.median)for(const section of clearSections(stations,this.markingCuts(stations,1.1)))this.surface(w,section,p=>{let scale=1;for(const t of tapers||[])if(!t.median)scale=Math.min(scale,Math.max(0,(t.end?stations.at(-1).distance-p.distance:p.distance)/2));return [[-.16*scale,.09],[-.13*scale,.09+.07*scale],[.13*scale,.09+.07*scale],[.16*scale,.09]];},curb);
 const laneCuts=[...cuts,...(tapers||[]).map(t=>t.end?[stations.at(-1).distance-t.length,stations.at(-1).distance]:[0,t.length])];
-if(path.type!=='gravel')for(const lane of laneLayout(spec).dividers)this.dash(w,stations,lane.offset,lane.center?'#d4cba8':'#e0ded2',2.4,1.25,.105,laneCuts,spec.limitedAccess&&this.highwayEdges?segment=>this.highwayEdges.sections(path.id,segment,()=>lane.offset,true):null);
+if(path.type!=='gravel')for(const lane of laneLayout(spec).dividers)yield* this.dashSteps(w,stations,lane.offset,lane.center?'#d4cba8':'#e0ded2',2.4,1.25,.105,laneCuts,spec.limitedAccess&&this.highwayEdges?segment=>this.highwayEdges.sections(path.id,segment,()=>lane.offset,true):null);
 for(let distance=3;distance<stations.at(-1).distance-1;distance+=12){const p=atDistance(stations,distance),dx=p.tx,dz=p.tz;if(this.nearJunction(p.x,p.z,1.5))continue;
  if(spec.sidewalk)this.lamp(p.x-dz*(widthAt(p)/2+.25),this.height(w,p.x,p.z),p.z+dx*(widthAt(p)/2+.25),Math.abs(dx)>Math.abs(dz),{x:dz,z:-dx});
  if(spec.oneway&&!spec.limitedAccess)for(const side of [-1,1])this.paint(w,[{x:p.x-dx*.4-dz*side*.22,z:p.z-dz*.4+dx*side*.22},p],.07,0,this.v.mat('#dedbc9'));

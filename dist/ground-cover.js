@@ -1,6 +1,6 @@
-import {finishBuild} from './build-scheduler.js?v=143';
-import {coverPlanSteps,coverRandom} from './ground-cover-plan.js?v=143';
-import {coverBatches} from './ground-cover-batches.js?v=143';
+import {finishBuild} from './build-scheduler.js?v=144';
+import {coverPlanSteps,coverRandom} from './ground-cover-plan.js?v=144';
+import {coverBatches} from './ground-cover-batches.js?v=144';
 import * as THREE from './vendor/three.module.js';
 // Narrow, curved leaf ribbons replace the old solid triangular grass spikes.
 // Shared static buffers retain the bounded draw ranges and reflection handling.

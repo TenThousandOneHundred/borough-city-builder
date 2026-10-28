@@ -1,6 +1,16 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 144 — Smaller road-placement pauses
+
+Road construction now yields within terrain surface copying, shoulder and boundary preparation, terrain fitting, curb and lane-marking preparation, and static mesh batching. The construction grid is prepared before the final scene swap and reuses shared height samples. The completed road and terrain retain their geometry, materials and detail; buildings, trees, grass density and offscreen simulation are unchanged. Cancellation frees temporary batching buffers and the staged grid. Saves and the five-minute autosave interval retain their existing behavior.
+
+In the same three-avenue browser fixture, two final released-version placements had longest construction work slices of 59 and 71 ms. The updated placements measured 44 and 32 ms; the warmed final scene swap fell from 42–55 ms to 37 ms. Total preparation was 1.05–1.06 seconds before and 1.16–1.45 seconds after. This trades some completion time for shorter uninterrupted work, not a claim of instant construction or universally higher FPS. Initial cold/load-sensitive measurements varied much more (up to 417 ms before and 70 ms after); final frame gaps still ranged around 107–127 ms. Individual geometry operations and final scene work can still cause a hitch.
+
+Released road geometry hashes match byte for byte for starter, district, river and island fixtures. Terrain/pavement oracles, in-progress save and cancellation tests pass. The new construction-grid test preserves every vertex while at least halving repeated height queries. A road-marking test now intercepts the equivalent generator hook, preserving its original edge-stripe assertions. All 106 JavaScript modules pass syntax checks and all model/texture assets and five lossless compressed bundles verify unchanged.
+
+Local browser QA resumed Road Performance QA 143, placed a two-lane street for ₡650, and verified manual save at 7:02:26 PM on October 28. Save & Exit stored 7:03:42 PM; full reload and Continue restored the extended road and its two controlled intersections without browser warnings or errors. The five-minute autosave interval was not retimed. This is an additional performance update following optimization 143; the next feature cycle has not begun.
+
 ## Edition 143 — Responsive road placement
 
 Road edits prepare an invisible replacement in short, cooperative work slices while the current city and traffic remain visible. Road meshes, fitted terrain, and grass are ready before the scene is swapped. Placement, road replacement and road demolition use this path from the game update. A small “Building road…” indicator appears while construction finishes; further map edits wait, while camera movement, saving and returning home remain available.
