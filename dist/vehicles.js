@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import {MeshBuilder} from './mesh-builder.js?v=141';
+import {MeshBuilder} from './mesh-builder.js?v=142';
 export class Vehicles{
  constructor(){this.materials=new Map();}
  rebuildFleet(cars,group){for(const mesh of this.fleet||[]){group.remove(mesh);mesh.dispose();mesh.geometry.dispose()}this.fleet=[];this.transforms=new WeakMap();this.revisions=new WeakMap();this.visibleCars=new Set();const batches=new Map();cars.forEach((car,i)=>{group.remove(car.mesh);car.mesh.updateMatrix();for(const part of car.mesh.children){part.updateMatrix();const key=(car.mesh.userData.vehicleKind||String(i%8===0))+':'+part.material.uuid;if(!batches.has(key))batches.set(key,{geometry:part.geometry,material:part.material,parts:[]});batches.get(key).parts.push({car,local:part.matrix.clone()});}});for(const {geometry,material,parts}of batches.values()){const mesh=new THREE.InstancedMesh(geometry.clone(),material,parts.length);mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);mesh.castShadow=true;mesh.frustumCulled=false;mesh.userData.parts=parts;mesh.userData.packedCars=[];mesh.userData.packedVersions=[];group.add(mesh);this.fleet.push(mesh)}this.updateFleet(cars);}

@@ -1,15 +1,15 @@
-import {IndustrialSurfaces,configureIndustrialPaint} from './industrial-surfaces.js?v=141';
-import {lotMaterials} from './lot-surfaces.js?v=141';
-import {bakeRoofFinish} from './roof-finishes.js?v=141';
-import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=141';
-import {loadBinary} from './asset-transfer.js?v=141';
-import {SiteDetails} from './site-details.js?v=141';
-import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=141';
+import {IndustrialSurfaces,configureIndustrialPaint} from './industrial-surfaces.js?v=142';
+import {lotMaterials} from './lot-surfaces.js?v=142';
+import {bakeRoofFinish} from './roof-finishes.js?v=142';
+import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=142';
+import {loadBinary} from './asset-transfer.js?v=142';
+import {SiteDetails} from './site-details.js?v=142';
+import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=142';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {lotPlan} from './building-plan.js?v=141';
-import {floorHeight} from './landscape.js?v=141';
+import {lotPlan} from './building-plan.js?v=142';
+import {floorHeight} from './landscape.js?v=142';
 const IDENTITY=new THREE.Matrix4();
 const civicDefaults={hospital:'clinic',school:'elementary',police:'police',fire:'fire'};
 // Complete textured assets are loaded once, batched per material, and instanced.

@@ -1,4 +1,4 @@
-import {industrialSitePlan} from './industrial-site-plan.js?v=141';
+import {industrialSitePlan} from './industrial-site-plan.js?v=142';
 // Layout in the building's local coordinates. Features stay inside the owned
 // rotated envelope and outside the complete model bounds, including balconies.
 export function sitePlan(plan,footprint){

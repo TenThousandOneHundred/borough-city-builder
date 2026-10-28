@@ -1,6 +1,16 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 142 — Highway ramps and a complete one-way lane range
+
+Roads now includes a one-lane highway ramp, a two-lane one-way highway and a four-lane one-way highway alongside the existing three-lane motorway. The catalog contains twelve styles. Each new highway has 3.75-metre lanes, paved shoulders, safety barriers, one-way travel and no roadside zoning. The menu uses the singular label for one lane and explains that traffic follows the drawing direction. The new styles use the existing highway speed behavior.
+
+When a new highway overlaps another highway at a ramp entrance or exit, edge paint and barriers stop inside the shared pavement. A narrower approach's divider paint also stops where the wider highway's lane pattern takes over. A spatial lookup computes these cuts during road construction; it adds no per-frame work. Worlds without the new highway types retain their previous edge geometry. These are original ramp connections, not a full reproduction of Cities: Skylines II's lane-specific acceleration/deceleration system or interchange presets.
+
+The official [Road Tools highway reference](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/road-tools) guided the narrower ramps and unobstructed openings. Local browser inspection exposed overlapping approach paint, which was corrected before release. Focused tests cover exact lane widths, source-specific forward/reverse reachability, a vehicle completing an exit journey, entrance routing, saved road types, barrier openings and wider-road paint priority. Existing buildings and terrain retain their assets and geometry quality. Large construction rebuilds remain synchronous; no frame-rate improvement is claimed.
+
+The full local suite passed 805 checks; after the final divider correction, all 26 focused checks passed, including one additional case. Syntax and asset integrity checks passed. The browser menu was checked in Landscape QA 122 with 226 residents and 82 households. Manual save verified on October 28 at 6:05:26 PM, and Save & Exit returned home with a 6:05:48 PM save. No browser warnings or errors were recorded. The five-minute autosave interval remains unchanged; this check did not retime it. This is feature update three after optimization 139; Edition 143 is the next dedicated optimization. The broader visual and simulation equivalence goal remains unachieved.
+
 ## Edition 141 — Two-rail bridges and joined safety barriers
 
 Bridge parapets now have two slender horizontal metal rails, guided by the official [Road Tools highway reference](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/road-tools). Ground-level highway barriers locate bridge boundaries precisely instead of dropping an entire sampling interval. Over the final ten metres, they flare outward and rise into the bridge's lower rail. Ordinary exposed ends retain their lowered terminals, and junction openings remain clear.

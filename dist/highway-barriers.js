@@ -29,12 +29,13 @@ export function highwayBarriers(roads,junctions,height,onBridge){
       // Closed thin W-section, mirrored toward traffic on each shoulder.
       const face=[[0,0],[-.012,.014],[0,.03],[-.012,.046],[0,.06]],back=face.map(([x,y])=>[x+.004,y]).reverse();
       return [...face,...back].map(([x,y])=>point(p,u+side*x,base+y));};
-     const profiles=run.map(profile);
-     for(let i=1;i<run.length;i++)for(let k=0;k<10;k++){const n=(k+1)%10;const q=[profiles[i-1][k],profiles[i-1][n],profiles[i][n],profiles[i][k]];if(side<0)q.reverse();quad(...q);}
+     for(const visible of road.visibleSections?road.visibleSections(run,side):[run]){
+     const profiles=visible.map(profile);
+     for(let i=1;i<visible.length;i++)for(let k=0;k<10;k++){const n=(k+1)%10;const q=[profiles[i-1][k],profiles[i-1][n],profiles[i][n],profiles[i][k]];if(side<0)q.reverse();quad(...q);}
      // End plates close each terminal without an open steel edge.
      for(const [p,reverse]of [[profiles[0],side>0],[profiles.at(-1),side<0]])for(let k=1;k<9;k++){const t=[p[0],p[k],p[k+1]];if(reverse)t.reverse();vertices.push(...t.flat());}
-     for(let d=run[0].distance+.15;d<run.at(-1).distance-.05;d+=.5){const p=atDistance(stations,d);const t=join(p);post(p,side*((road.widthAt?road.widthAt(p):road.spec.width)/2-.007+.16*t*t*(3-2*t)));}
-    }run=[];
+     for(let d=visible[0].distance+.15;d<visible.at(-1).distance-.05;d+=.5){const p=atDistance(stations,d);const t=join(p);post(p,side*((road.widthAt?road.widthAt(p):road.spec.width)/2-.007+.16*t*t*(3-2*t)));}
+    }}run=[];
    };
    // Locate each shore boundary to sub-millimetre precision rather than
    // dropping the last full sample interval. Keep the endpoint on dry ground.
