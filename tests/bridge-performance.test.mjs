@@ -12,51 +12,52 @@ import {floorHeight,groundHeight,wetness} from '../dist/landscape.js';
 globalThis.CityEngine=E;
 
 // Edition130 release oracles include every profile scalar, station and width,
-// plus every geometry attribute byte in its original triangle/vertex order.
+// plus concrete geometry bytes isolated from committed Edition140 (23e5101).
+// Edition141 intentionally replaces metal rails; their shape has separate tests.
 const ORACLES={
  "islands23": {
   "profile": "bc9a344355dd467a5ef10594533a4676750714e82ca40c2da207eec4c7559838",
-  "geometry": "4996266c6abc220f516a9850404e22ab1630325aed4d380862e7271f64971933"
+  "geometry": "4f728e78b9b20cb86ae5e195535162f234a1c5664e980b1f7f160ddd1a0108b2"
  },
  "river23": {
   "profile": "e445f34c2f0f4698a5e96ccfdac607aed8bb06e4a85c80e14571d2c7f9c286e9",
-  "geometry": "08b5362ba4c449e31fc854ad91f28115b47021b8bdb5d9116b510bb9ae457dcb"
+  "geometry": "fc87a1d99c5b43e1dcc40305e1581ebaffc45e0f0897c76ef017b5cef9ed6856"
  },
  "gravel431": {
   "profile": "5a36110b121f1307eb4dbe890485480775bd6eae65265ab5b399d98a47486355",
-  "geometry": "a281f91ad99167542ae8e9031e8ce69c1290919b9048ac30bc28d3aa661a5b9e"
+  "geometry": "040a50dbfd076898ce8f9c5c6511bc1df5d64780d79575bc4027ecfed9545b67"
  },
  "alley431": {
   "profile": "ae2229d4b44c5eb13fc8483319e871b1c2e919d52dae6798a4485cc10026b002",
-  "geometry": "2acc7b8ded44d741cd4329292308c4cc938476ff39b299d46be00677eb485996"
+  "geometry": "d076d0d1ae2142f5820d33eccad53bbef0ab779e646aa7ba54d1ca79b4b5eb3d"
  },
  "street431": {
   "profile": "b4f2e83ea720f81defe11267a1e86d7ebdc6a480dc4107e4420776b9f382502d",
-  "geometry": "9fe5ab09fa7a2cc98a5c6faa9e36e7fa3d956fb0a20236f6ff970e3668da7f1a"
+  "geometry": "5b26f91cba523e8e05230714c059f9615f3da64641862393d90a4d0ba4ab90e8"
  },
  "oneway431": {
   "profile": "b4f2e83ea720f81defe11267a1e86d7ebdc6a480dc4107e4420776b9f382502d",
-  "geometry": "9fe5ab09fa7a2cc98a5c6faa9e36e7fa3d956fb0a20236f6ff970e3668da7f1a"
+  "geometry": "5b26f91cba523e8e05230714c059f9615f3da64641862393d90a4d0ba4ab90e8"
  },
  "avenue431": {
   "profile": "866efbad8081db9d5c348823d415bf13fcfd11e323b8911494c778b7781d4f5d",
-  "geometry": "62c7271fe9e3165dedd0edb49450364a3ec112239e0d0f77ac63b84c09b20923"
+  "geometry": "9d2f28948785a4e8a148e9bb89faeff5b3eab4450dd228befd255699812c37f1"
  },
  "green431": {
   "profile": "cbf7c9b418a6d56de0813d20b918106a31b9f0bd93270c0dd665e754c33ab794",
-  "geometry": "21780a1869b60b4b5f9e3187ce83cd6cebc0bf1950ff505ef4d4cfc2fdf32d92"
+  "geometry": "9e8f4f716921e006ebfc97e8f5c95938b64d6a39d70a307fdc9e92239f188007"
  },
  "boulevard431": {
   "profile": "5813b7dfee8c4e53bfaf8556596e099cc96ca250892601e8f745d6d462aabe1d",
-  "geometry": "6901eb9ca2e54911c6acb2014a1d4b372d6abfb1b33df2196fabed1c35bbe486"
+  "geometry": "3c29a758924ab1a981b770d155ce792d1c153aa7610f036729bff2f944fd0da7"
  },
  "highway431": {
   "profile": "f767f0d06d0eb46066573ad88c7d7c7cf5743ccd46bdeec4979b2e0403eb2a8e",
-  "geometry": "c1830bbee553b6a70ba12089f92915b18e483ef22719e40910611432eb085cb2"
+  "geometry": "968d597c3303682ae5aed28035902436be83fb17ce25f2fd29b7331423559d69"
  }
 };
 const hash=value=>createHash('sha256').update(value).digest('hex');
-function geometryHash(result){const digest=createHash('sha256');digest.update(JSON.stringify({piers:result.piers,contact:result.contact}));for(const [name,g]of Object.entries(result.geometries)){digest.update(name);for(const key of Object.keys(g.attributes).sort()){const a=g.attributes[key];digest.update(key);digest.update(Buffer.from(a.array.buffer,a.array.byteOffset,a.array.byteLength));}if(g.index){const a=g.index.array;digest.update(Buffer.from(a.buffer,a.byteOffset,a.byteLength));}}return digest.digest('hex');}
+function geometryHash(result){const digest=createHash('sha256');digest.update(JSON.stringify({piers:result.piers,contact:result.contact}));for(const [name,g]of Object.entries(result.geometries)){if(name==='metal')continue;digest.update(name);for(const key of Object.keys(g.attributes).sort()){const a=g.attributes[key];digest.update(key);digest.update(Buffer.from(a.array.buffer,a.array.byteOffset,a.array.byteLength));}if(g.index){const a=g.index.array;digest.update(Buffer.from(a.buffer,a.byteOffset,a.byteLength));}}return digest.digest('hex');}
 function fixture(terrain,type,seed){
  const w=E.createWorld('Bridge optimization',terrain,seed);for(const tile of w.tiles)Object.assign(tile,{type:null,level:0,construction:undefined});w.roadPaths=[];w.money=1e8;
  const controls=seed===23?[[{x:10,y:24},{x:22,y:18},{x:40,y:24}],[{x:32,y:10},{x:32,y:35}]]:[[{x:20,y:24},{x:32,y:18},{x:44,y:24}]];
@@ -78,7 +79,7 @@ function evaluate(world){
  return {actual,calls};
 }
 
-test('bridge optimization preserves released profiles and every geometry byte on real terrain and original road styles',()=>{
+test('bridge optimization preserves released profiles and every concrete geometry byte on real terrain and original road styles',()=>{
  // Freeze the Edition130 catalog with its oracles: later road styles have no
  // historical geometry to compare, and are covered by their behavior tests.
  const originalStyles=Object.keys(ORACLES).filter(key=>key.endsWith('431')).map(key=>[key,'river',key.slice(0,-3),431]);

@@ -1,6 +1,14 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 141 — Two-rail bridges and joined safety barriers
+
+Bridge parapets now have two slender horizontal metal rails, guided by the official [Road Tools highway reference](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/road-tools). Ground-level highway barriers locate bridge boundaries precisely instead of dropping an entire sampling interval. Over the final ten metres, they flare outward and rise into the bridge's lower rail. Ordinary exposed ends retain their lowered terminals, and junction openings remain clear.
+
+Metal bridge sweeps omit redundant samples with a maximum 5 mm deviation at the original sampled rail edges. Concrete decks, piers, abutments, contact clipping and all bridge grades remain unchanged: comparisons against committed Edition 140 retain identical concrete geometry hashes across ten terrain/road fixtures. The new lower rail adds geometry; the nine-style bridge fixture ranges from 18,192 to 18,395 total bridge triangles, below the explicit 19,000 budget. Rails remain static and use the existing metal material batch. This is not a general frame-rate guarantee.
+
+All 800 checks pass, along with JavaScript syntax and asset integrity checks. Local browser views covered close bridge decks and the flared approaches, with no recorded warnings or errors. Tests check both horizontal rails and the open gap between them, exact shore joins, unobstructed junctions, unchanged concrete and saved-world inputs. The game still differs visibly from the reference in terrain, bridge structures and vegetation; commercial-game equivalence is unachieved. This is feature update two after optimization 139, with optimization due after feature 142.
+
 ## Edition 140 — Highway shoulder barriers
 
 Authored ground-level highways now have corrugated metal safety rails on both paved shoulders, with posts every 2.5 metres and lowered end sections. Barriers follow curves, road widths and grades, leave junction mouths open, and stop before bridge spans so the existing bridge rails remain unobstructed. Existing legacy outside connections retain their current appearance.

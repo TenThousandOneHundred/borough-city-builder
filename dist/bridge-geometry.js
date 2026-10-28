@@ -1,8 +1,8 @@
-import {bridgeWidth} from './bridge-spans.js?v=140';
+import {bridgeWidth} from './bridge-spans.js?v=141';
 import * as THREE from './vendor/three.module.js';
-import {atDistance,distanceSection} from './street-geometry.js?v=140';
-import {junctionCuts,clearRanges} from './road-junction-plan.js?v=140';
-import {SIDEWALK_HEIGHT,ASPHALT_HEIGHT} from './road-profile.js?v=140';
+import {atDistance,distanceSection} from './street-geometry.js?v=141';
+import {junctionCuts,clearRanges} from './road-junction-plan.js?v=141';
+import {SIDEWALK_HEIGHT,ASPHALT_HEIGHT} from './road-profile.js?v=141';
 // Concrete profiles and rail sections are swept along the complete crossing.
 // One buffer per material is added to the existing static road batches.
 export function bridgeGeometry(plan,height,ground,junctions=[],pavement=[],stationsForSpan=span=>span.points){
@@ -27,10 +27,16 @@ export function bridgeGeometry(plan,height,ground,junctions=[],pavement=[],stati
   for(const side of [-1,1])sweep(points,p=>{const x=side*p.width*.26;return [[x-.12,-.28],[x+.12,-.28],[x+.08,-.52],[x-.08,-.52]];});
   const cuts=junctionCuts(points,junctions,.2),ranges=clearRanges(span.start,span.end,cuts);
   for(const [start,end]of ranges){if(end-start<.05)continue;const section=distanceSection(points,start,end);section.forEach(p=>{p.width=bridgeWidth(points,p.distance);});
+   // The road's paint sampling is much denser than slender rails need.
+   // Simplify only metal sweeps, bounding both rail-edge 3D errors to 5 mm.
+   const railSamples=section.map(p=>[-1,1].flatMap(side=>[-.012,.012].map(offset=>point(p,side*(edge(p)-.065)+offset,0))));
+   const kept=new Set([0,section.length-1]),pending=[[0,section.length-1]];
+   while(pending.length){const [a,b]=pending.pop();let worst=.001,index=-1;for(let i=a+1;i<b;i++){const t=(section[i].distance-section[a].distance)/(section[b].distance-section[a].distance);let error=0;for(let k=0;k<4;k++)error=Math.max(error,Math.hypot(...railSamples[i][k].map((v,c)=>v-(railSamples[a][k][c]+(railSamples[b][k][c]-railSamples[a][k][c])*t))));if(error>worst){worst=error;index=i;}}if(index>=0){kept.add(index);pending.push([a,index],[index,b]);}}
+   const railSection=[...kept].sort((a,b)=>a-b).map(i=>section[i]);
    for(const side of [-1,1]){
     const foot=span.sidewalk?SIDEWALK_HEIGHT:ASPHALT_HEIGHT;
     sweep(section,p=>{const x=side*(edge(p)-.065);return [[x-.065,foot],[x+.065,foot],[x+.04,foot+.1],[x-.04,foot+.1]];});
-    sweep(section,p=>{const x=side*(edge(p)-.065),top=foot+.25;return [[x-.018,top-.018],[x+.018,top-.018],[x+.018,top+.018],[x-.018,top+.018]];},'metal');
+    for(const level of [.13,.25])sweep(railSection,p=>{const x=side*(edge(p)-.065),top=foot+level;return [[x-.012,top-.012],[x+.012,top-.012],[x+.012,top+.012],[x-.012,top+.012]];},'metal');
     for(let d=start+.15;d<end;d+=.55){const p=atDistance(section,d),width=bridgeWidth(section,d),offset=side*(width/2+(span.sidewalk?.42:.2)-.065);p.x+=p.nx*offset;p.z+=p.nz*offset;const y=height(p.x,p.z);box(p,.026,.035,y+foot+.09,y+foot+.24,'metal');}
    }
   }

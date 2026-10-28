@@ -43,7 +43,7 @@ test('bridge railings stop outside junction mouths and road-width transitions re
 test('road rebuilds derive bridges for every road style without editing saved worlds and remove obsolete structures',()=>{
  for(const type of Object.keys(E.ROADS)){
   const w=E.createWorld('Bridge QA','river',431);for(const t of w.tiles)Object.assign(t,{type:null,level:0});w.money=1e6;const result=E.buildRoadPath(w,[{x:20,y:24},{x:32,y:18},{x:44,y:24}],type);assert.ok(result.ok);
-  const saved=JSON.stringify(w),v=view(),r=new Roadworks(v);r.outside=()=>{};r.build(w);assert.equal(JSON.stringify(w),saved);assert.ok(r.bridgeStats.spans>=1);assert.ok(r.bridgeStats.piers>=1);assert.ok(r.bridgeStats.triangles<17500,'longer supported approaches and local pavement contact cuts remain a bounded static mesh');assert.ok(r.batchStats.after<=r.batchStats.before);
+  const saved=JSON.stringify(w),v=view(),r=new Roadworks(v);r.outside=()=>{};r.build(w);assert.equal(JSON.stringify(w),saved);assert.ok(r.bridgeStats.spans>=1);assert.ok(r.bridgeStats.piers>=1);assert.ok(r.bridgeStats.triangles<19000,'two-rail bridges stay below 19000 triangles including piers and fitted concrete');assert.ok(r.batchStats.after<=r.batchStats.before);
   const restored=new Roadworks(view());restored.outside=()=>{};restored.build(JSON.parse(saved));assert.deepEqual(restored.bridgePlan.spans,r.bridgePlan.spans,'restored cities derive identical bridge geometry');
   const span=r.bridgePlan.spans[0],point=span.points[Math.floor(span.points.length/2)],h=r.drivingHeight(w,point.x,point.z);assert.ok(h>1.6);const car={agent:{active:true,x:point.x,z:point.z,heading:0},mesh:new THREE.Object3D()},city={world:w,roadworks:r,running:false};CityView.prototype.moveCar.call(city,car);assert.ok(Math.abs(car.mesh.position.y-h)<1e-6);
   E.removeRoadPath(w,result.path.id);r.build(w);assert.equal(r.bridgeStats.spans,0);assert.equal(r.bridgeStats.triangles,0);CityView.prototype.moveCar.call(city,car);assert.equal(car.heightRevision,r.heightRevision);assert.ok(Math.abs(car.mesh.position.y-r.drivingHeight(w,point.x,point.z))<1e-6,'a stationary vehicle cannot retain the demolished bridge height');
@@ -55,4 +55,13 @@ test('bridge height stops at each shore endpoint rather than leaking from adjace
  const plan=planBridges([straight()],water,()=>.8),s=plan.spans[0];
  for(const offset of [0,.8,-.8,1.5])for(const d of [.01,.1,.5,1,2]){assert.equal(bridgeHeight(plan,s.start-d,offset),null);assert.equal(bridgeHeight(plan,s.end+d,offset),null);}
  assert.ok(Math.abs(bridgeHeight(plan,s.start,0)-.8)<1e-8);assert.ok(Math.abs(bridgeHeight(plan,s.end,0)-.8)<1e-8);
+});
+test('bridge rails have two slender horizontal levels and leave the space between open',()=>{
+ const plan=planBridges([straight()],water,()=>.8),height=(x,z)=>bridgeHeight(plan,x,z)??.8,result=bridgeGeometry(plan,height,()=>-1.6);
+ const mesh=new THREE.Mesh(result.geometries.metal,new THREE.MeshBasicMaterial());mesh.updateMatrixWorld();
+ for(const side of [-1,1])for(const x of [12.37,16.37,20.37]){const edge=side*(2.45/2+.42-.065),base=height(x,edge)+.115;
+  const cast=y=>new THREE.Raycaster(new THREE.Vector3(x,base+y,edge-side*.1),new THREE.Vector3(0,0,side)).intersectObject(mesh)[0];
+  assert.ok(cast(.13),'lower rail');assert.ok(cast(.25),'upper rail');assert.equal(cast(.19),undefined,'open gap between rails');
+ }
+ for(const g of Object.values(result.geometries))g.dispose();
 });

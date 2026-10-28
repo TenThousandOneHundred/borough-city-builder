@@ -8,3 +8,8 @@ test('rails remain on both paved shoulders and follow grades without modifying r
 test('bridge and junction openings contain no rail or post triangles',()=>{const out=highwayBarriers([road()],[{x:3,z:0,radius:1}],()=>0,(x)=>x>=7&&x<=9);for(const [x]of vertices(out.geometry)){assert.ok(!(x>1.6&&x<4.4));assert.ok(!(x>=7&&x<=9));}assert.equal(out.runs,3);out.geometry.dispose();});
 test('urban streets and fully bridged highways emit no extra meshes',()=>{for(const [r,bridge]of [[road({spec:{width:3.2}}),()=>false],[road(),()=>true]]){const out=highwayBarriers([r],[],()=>0,bridge);assert.equal(out.geometry,null);assert.equal(out.posts,0);}});
 test('curved and tapered barriers follow road width with finite outward normals',()=>{const r=road({stations:streetStations([{x:0,z:0},{x:4,z:1},{x:8,z:4},{x:10,z:8}]),widthAt:p=>3.2+p.distance*.04});const out=highwayBarriers([r],[],(x,z)=>.03*x+.01*z,()=>false);for(const a of Object.values(out.geometry.attributes))assert.ok([...a.array].every(Number.isFinite));assert.ok(out.posts>40);out.geometry.dispose();});
+test('ground barriers reach both bridge boundaries and flare to bridge rail offsets',()=>{
+ const out=highwayBarriers([road()],[],()=>0,x=>x>=5.1&&x<=8.2),v=vertices(out.geometry);
+ for(const shore of [5.1,8.2]){const near=v.filter(([x])=>Math.abs(x-shore)<.00001);assert.ok(near.length>0,'no dropped sampling interval at shore');assert.ok(near.some(([,,z])=>Math.abs(Math.abs(z)-1.735)<.00001),'rail meets bridge edge');}
+ for(const [x]of v)assert.ok(x<=5.1||x>=8.2,'no duplicate rail across bridge');out.geometry.dispose();
+});
