@@ -1,6 +1,14 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 148 — Smoother road placement without reduced detail
+
+Driveway meshes and tree placement now prepare in small cancellable steps before the visible road changes. The final scene update reuses that work when its buildings and occupancy still match; it rebuilds safely if they changed while construction was pending. Grass triangle packing also yields within both its spatial partition and vertex-remapping loops. Shader preparation includes the staged driveway material. Leaving a world releases the hidden scenery without altering the visible roads or saved state.
+
+The same deterministic three-avenue, 48-row-house browser fixture was checked before and after. In the warmed repeat, the final swap fell from 32.0 to 17.2 ms, the largest preparation slice from 41.1 to 15.7 ms, and the largest frame gap during preparation from 50.7 to 27.1 ms. Total construction remained about 1.53 seconds in both versions. The first pair varied more (80.7 to 18.1 ms swap), so the warmed repeat is the conservative comparison. These are bounded local measurements, not a universal FPS guarantee; larger cities can still hitch during road topology and agent updates.
+
+Tree positions, sizes, species and elevations match Edition 147 on all three terrain types. Existing exact triangle tests preserve grass, terrain and driveway geometry. Building assets, texture resolution and vegetation density are unchanged, and matching-layout screenshots retain the same roads and neighborhood. Manual save, Continue and save-and-exit were checked in the populated local world. The full local suite passed 846 tests, with focused cancellation and ownership checks also passing after release preparation. Offscreen simulation and five-minute autosave remain enabled. This completes the scheduled optimization after updates 145–147.
+
 ## Edition 147 — Rebuilt street-house facades and front gardens
 
 The raised-stoop and dormer row-house models now have taller, narrower recessed sash windows, quieter frame profiles, projecting entrance surrounds, wall lamps and address plates. Raised-stoop homes retain open entrance railings and gain a window air conditioner. Dormer homes have a steeper roof, a repositioned dormer with a real roof opening, and fine roof seams. The official [residential style and row-neighborhood pictures](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/zones-signature-buildings) guided the proportions, entries and low front planting. These improve the street frontage; the reference still differs in facade variety, balconies, surrounding density, street activity and lighting. Overall equivalence remains unachieved.

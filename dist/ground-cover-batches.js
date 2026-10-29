@@ -1,13 +1,15 @@
+import {finishBuild} from './build-scheduler.js?v=148';
 import * as THREE from './vendor/three.module.js';
 // Shared vertices, at most four contiguous draws. Only wholly invisible chunks
 // may be skipped; reflection cameras receive their own selection before drawing.
-export function coverBatches(positions,normals,colors,material,sourceIndices){
+export function coverBatches(...args){return finishBuild(coverBatchSteps(...args));}
+export function* coverBatchSteps(positions,normals,colors,material,sourceIndices){
  const buckets=new Map(),count=sourceIndices?.length??positions.length/3,source=i=>sourceIndices?sourceIndices[i]:i;
- for(let i=0;i<count;i+=3){const a=source(i)*3,b=source(i+1)*3,c=source(i+2)*3,x=Math.floor((positions[a]+positions[b]+positions[c])/192),z=Math.floor((positions[a+2]+positions[b+2]+positions[c+2])/192),key=x+','+z;if(!buckets.has(key))buckets.set(key,{x,z,indices:[]});buckets.get(key).indices.push(i);}
+ for(let i=0;i<count;i+=3){if(i%2304===0)yield;const a=source(i)*3,b=source(i+1)*3,c=source(i+2)*3,x=Math.floor((positions[a]+positions[b]+positions[c])/192),z=Math.floor((positions[a+2]+positions[b+2]+positions[c+2])/192),key=x+','+z;if(!buckets.has(key))buckets.set(key,{x,z,indices:[]});buckets.get(key).indices.push(i);}
  const packed={position:new Float32Array(positions.length),normal:new Float32Array(normals.length),color:new Float32Array(colors.length)},indices=new Uint32Array(count),remap=new Uint32Array(positions.length/3),ranges=[];let cursor=0,indexCursor=0;const point=new THREE.Vector3();
  for(const bucket of [...buckets.values()].sort((a,b)=>a.z-b.z||a.x-b.x)){
   const start=indexCursor,box=new THREE.Box3();
-  for(const i of bucket.indices)for(let k=0;k<3;k++){const input=source(i+k);let output=remap[input]-1;if(output<0){output=cursor/3;remap[input]=output+1;for(let j=0;j<3;j++){packed.position[cursor]=positions[input*3+j];packed.normal[cursor]=normals[input*3+j];packed.color[cursor]=colors[input*3+j];cursor++;}}indices[indexCursor++]=output;box.expandByPoint(point.set(packed.position[output*3],packed.position[output*3+1],packed.position[output*3+2]));}
+  let processed=0;for(const i of bucket.indices){if(processed++%768===0)yield;for(let k=0;k<3;k++){const input=source(i+k);let output=remap[input]-1;if(output<0){output=cursor/3;remap[input]=output+1;for(let j=0;j<3;j++){packed.position[cursor]=positions[input*3+j];packed.normal[cursor]=normals[input*3+j];packed.color[cursor]=colors[input*3+j];cursor++;}}indices[indexCursor++]=output;box.expandByPoint(point.set(packed.position[output*3],packed.position[output*3+1],packed.position[output*3+2]));}}
   ranges.push({start,count:indexCursor-start,sphere:box.getBoundingSphere(new THREE.Sphere())});
  }
  const geometry=new THREE.BufferGeometry();for(const [name,data]of Object.entries(packed))geometry.setAttribute(name,new THREE.BufferAttribute(data.subarray(0,cursor),3));geometry.setIndex(new THREE.BufferAttribute(indices,1));geometry.computeBoundingSphere();

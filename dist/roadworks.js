@@ -1,30 +1,30 @@
-import {finishBuild} from './build-scheduler.js?v=147';
-import {highwayEdges} from './highway-edges.js?v=147';
-import {highwayBarriers} from './highway-barriers.js?v=147';
-import {PedestrianSignals,signalHousing,signalPole} from './pedestrian-signals.js?v=147';
-import {pedestrianCrossings,rampStations,rampAmount} from './pedestrian-network.js?v=147';
-import {roundaboutIsland,addYieldSign} from './roundabout-details.js?v=147';
-import {planBridges,bridgeHeight} from './bridge-spans.js?v=147';
-import {planRoadGrades} from './road-grades.js?v=147';
-import {createRoadEarthworksSteps} from './road-earthworks.js?v=147';
-import {visualParcels} from './parcels.js?v=147';
-import {bridgeGeometry} from './bridge-geometry.js?v=147';
-import {approachMarkings,arrowPolygons} from './road-markings.js?v=147';
-import {roadFinishData,configureRoadFinish,ROAD_TEXTURE_REPEAT} from './road-finish.js?v=147';
-import {laneLayout,travelHalfWidth} from './road-lanes.js?v=147';
-import {roadGeometry,transitionWidth,junctionCorners,junctionCuts,clearRanges,clearSections,signalPlacements} from './road-junction-plan.js?v=147';
-import {lotAccess} from './lot-access.js?v=147';
-import {streetStations,atDistance,distanceSection,streetSurfaceSteps,pavementMaterial} from './street-geometry.js?v=147';
-import {signalPhase,junctionPolicy} from './junctions.js?v=147';
-import {addStopSign,stopSignMaterial} from './stop-sign.js?v=147';
-import {outsidePortals} from './traffic.js?v=147';
-import {batchStatic,batchStaticSteps} from './static-batch.js?v=147';
+import {finishBuild} from './build-scheduler.js?v=148';
+import {highwayEdges} from './highway-edges.js?v=148';
+import {highwayBarriers} from './highway-barriers.js?v=148';
+import {PedestrianSignals,signalHousing,signalPole} from './pedestrian-signals.js?v=148';
+import {pedestrianCrossings,rampStations,rampAmount} from './pedestrian-network.js?v=148';
+import {roundaboutIsland,addYieldSign} from './roundabout-details.js?v=148';
+import {planBridges,bridgeHeight} from './bridge-spans.js?v=148';
+import {planRoadGrades} from './road-grades.js?v=148';
+import {createRoadEarthworksSteps} from './road-earthworks.js?v=148';
+import {visualParcels} from './parcels.js?v=148';
+import {bridgeGeometry} from './bridge-geometry.js?v=148';
+import {approachMarkings,arrowPolygons} from './road-markings.js?v=148';
+import {roadFinishData,configureRoadFinish,ROAD_TEXTURE_REPEAT} from './road-finish.js?v=148';
+import {laneLayout,travelHalfWidth} from './road-lanes.js?v=148';
+import {roadGeometry,transitionWidth,junctionCorners,junctionCuts,clearRanges,clearSections,signalPlacements} from './road-junction-plan.js?v=148';
+import {lotAccess} from './lot-access.js?v=148';
+import {streetStations,atDistance,distanceSection,streetSurfaceSteps,pavementMaterial} from './street-geometry.js?v=148';
+import {signalPhase,junctionPolicy} from './junctions.js?v=148';
+import {addStopSign,stopSignMaterial} from './stop-sign.js?v=148';
+import {outsidePortals} from './traffic.js?v=148';
+import {batchStatic,batchStaticSteps} from './static-batch.js?v=148';
 import * as THREE from './vendor/three.module.js';
-import {floorHeight,groundHeight,wetness} from './landscape.js?v=147';
-import {unifyPavementSteps} from './road-pavement.js?v=147';
-import {RoadSurfaceIndex} from './road-surface-index.js?v=147';
-import {annotatePaintRibbon,fitPaintRibbon,createPaintMaterial,PAINT_MAX_EXPANSION} from './road-paint.js?v=147';
-import {ASPHALT_HEIGHT,JUNCTION_HEIGHT,SIDEWALK_HEIGHT,MARKING_HEIGHT,PAINT_CLEARANCE,kerbProfile,kerbCap} from './road-profile.js?v=147';
+import {floorHeight,groundHeight,wetness} from './landscape.js?v=148';
+import {unifyPavementSteps} from './road-pavement.js?v=148';
+import {RoadSurfaceIndex} from './road-surface-index.js?v=148';
+import {annotatePaintRibbon,fitPaintRibbon,createPaintMaterial,PAINT_MAX_EXPANSION} from './road-paint.js?v=148';
+import {ASPHALT_HEIGHT,JUNCTION_HEIGHT,SIDEWALK_HEIGHT,MARKING_HEIGHT,PAINT_CLEARANCE,kerbProfile,kerbCap} from './road-profile.js?v=148';
 export class Roadworks{
 constructor(v){this.v=v;this.group=new THREE.Group();v.scene.add(this.group);this.lamps=[];this.lampMaterial=new THREE.MeshStandardMaterial({color:'#e5e2ca',emissive:'#ffe2a0',emissiveIntensity:v.night?3:0,roughness:.3});this.walkMaterial=pavementMaterial();this.lightPoolMaterial=new THREE.MeshBasicMaterial({color:'#ffe0a0',transparent:true,opacity:.22,depthWrite:false,blending:THREE.AdditiveBlending});this.lightPoolMaterial.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 poolUV;').replace('#include <uv_vertex>','#include <uv_vertex>\npoolUV=uv;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 poolUV;').replace('#include <color_fragment>','#include <color_fragment>\ndiffuseColor.a*=pow(max(0.,1.-length(poolUV*2.-1.)),1.8);');};this.lightPoolMaterial.customProgramCacheKey=()=> 'street-light-pool-v1';this.signalGroup=new THREE.Group();v.scene.add(this.signalGroup);}
 clear(){this.earthworks?.dispose();for(const mesh of [...(this.earthworkSurfaces||[]),...(this.earthworkStructures||[])])mesh.geometry.dispose();this.earthworks=null;this.earthworkSurfaces=[];this.earthworkStructures=[];this.earthworkKey=null;this.earthworkInputKey=null;this.gradePlan=null;this.group.traverse(o=>{if(o.geometry&&o.geometry!==this.v.unitBox)o.geometry.dispose()});this.group.clear();for(const material of this.paintMaterials?.values()||[])material.dispose();this.paintMaterials?.clear();this.lamps=[];this.pendingLamps=[];this.finishingLamps=false;this.signalKey=null;this.bridgePlan=null;this.bridgeStats=null;this.pavementStats=null;this.surfaces=new RoadSurfaceIndex();this.markingMeshes=[];this.markingStats={before:0,after:0};}
@@ -159,15 +159,17 @@ syncEarthworks(w){return finishBuild(this.syncEarthworksSteps(w));}
  if(this.earthworks&&this.earthworkKey===key){this.earthworkInputKey=inputKey;return false;}
  this.earthworks?.dispose();this.earthworks=yield* createRoadEarthworksSteps({world:w,surfaces:this.earthworkSurfaces,structuralSurfaces:this.earthworkStructures,bridgePlan:this.bridgePlan,groundHeight,wetness,protectedParcels,regionCache:this.earthworkRegionCache});this.earthworkKey=JSON.stringify(relevant(this.earthworks))+revision;this.earthworkInputKey=inputKey;return true;
 }
-buildAccess(world,buildings){
+buildAccess(world,buildings){return finishBuild(this.buildAccessSteps(world,buildings));}
+*buildAccessSteps(world,buildings,{hidden=false,height=(w,x,z)=>Math.max(.2,this.v.landscape?.renderHeight?.(w,x,z)??groundHeight(w,x,z))}={}){
  if(!this.accessGroup){this.accessGroup=new THREE.Group();this.v.scene.add(this.accessGroup);}
+ this.accessGroup.visible=!hidden;
  this.accessGroup.traverse(o=>o.geometry?.dispose());this.accessGroup.clear();this.accessSurfaces=new RoadSurfaceIndex();this.accessRevision=(this.accessRevision||0)+1;
  for(const root of buildings.values()){
-  const plan=root.userData.plan;if(!plan||!root.userData.asset)continue;
-  const geometry=lotAccess(world,plan,root.position.y,CityEngine,(w,x,z)=>Math.max(.2,this.v.landscape?.renderHeight?.(w,x,z)??groundHeight(w,x,z)),(w,x,z)=>this.height(w,x,z),(x,z)=>this.surfaceHeight(x,z,'sidewalk'));if(!geometry)continue;
+  yield;const plan=root.userData.plan;if(!plan||!root.userData.asset)continue;
+  const geometry=lotAccess(world,plan,root.position.y,CityEngine,height,(w,x,z)=>this.height(w,x,z),(x,z)=>this.surfaceHeight(x,z,'sidewalk'));if(!geometry)continue;
   const mesh=new THREE.Mesh(geometry,this.walkMaterial);mesh.receiveShadow=true;this.accessGroup.add(mesh);this.accessSurfaces.add(geometry,'access');
  }
- this.accessStats=batchStatic(this.accessGroup,this.v.unitBox);
+ this.accessStats=yield* batchStaticSteps(this.accessGroup,this.v.unitBox);
 }
 outside(w,p,asphalt){const points=[];for(let d=0;d<=280;d+=4)points.push({x:p.x+p.dx*d,z:p.z+p.dz*d});const tile=w.tiles[p.id],source=CityEngine.ROADS[tile.roadType]||CityEngine.ROADS.street,spec=tile.pathIds?.length?source:{...source,width:tile.roadWidth===2?3.15:2.45,lanes:tile.roadWidth===2?4:2,median:false,shoulder:0,limitedAccess:false},stations=streetStations(points);this.ribbon(w,points,spec.width,0,asphalt,.08,spec);for(const lane of laneLayout(spec).dividers)this.dash(w,stations,lane.offset,lane.center?'#e4d9a2':'#e3e2d6',2.4,1.25,.105);if(spec.median)this.surface(w,points,[[-.16,.09],[-.13,.16],[.13,.16],[.16,.09]],this.v.mat('#bec0b5'));for(const side of [-1,1])this.line(w,points,.045,'#e3e2d6',side*(spec.limitedAccess?travelHalfWidth(spec):spec.width/2-.12));
  const x=p.x+p.dx*8+p.dz*2.8,z=p.z+p.dz*8-p.dx*2.8,y=this.height(w,x,z);this.v.box(this.group,x,y+2,z,.08,4,.08,'#747d79');

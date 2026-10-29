@@ -1,6 +1,6 @@
-import {finishBuild} from './build-scheduler.js?v=147';
-import {coverPlanSteps,coverRandom} from './ground-cover-plan.js?v=147';
-import {coverBatches} from './ground-cover-batches.js?v=147';
+import {finishBuild} from './build-scheduler.js?v=148';
+import {coverPlanSteps,coverRandom} from './ground-cover-plan.js?v=148';
+import {coverBatchSteps} from './ground-cover-batches.js?v=148';
 import * as THREE from './vendor/three.module.js';
 // Narrow, curved leaf ribbons replace the old solid triangular grass spikes.
 // Shared static buffers retain the bounded draw ranges and reflection handling.
@@ -23,5 +23,5 @@ export function* groundCoverSteps(view,world,height,wetness){
  // A soft upward component approximates light scattered through a thin leaf;
  // both faces receive the same sky fill without extra transparent passes.
  material.onBeforeCompile=shader=>{shader.fragmentShader=shader.fragmentShader.replace('#include <normal_fragment_maps>','#include <normal_fragment_maps>\nnormal=normalize(normal+normalize((viewMatrix*vec4(0.,1.,0.,0.)).xyz)*.8);');};material.customProgramCacheKey=()=> 'borough-grass-ribbons-122';
- const group=coverBatches(positions,normals,colors,material,indices);group.visible=view.detailEnabled!==false;group.userData.clumps=plan.clumps;return group;
+ let complete=false;try{const group=yield* coverBatchSteps(positions,normals,colors,material,indices);group.visible=view.detailEnabled!==false;group.userData.clumps=plan.clumps;complete=true;return group;}finally{if(!complete)material.dispose();}
 }
