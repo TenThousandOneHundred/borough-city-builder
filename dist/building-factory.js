@@ -1,12 +1,12 @@
-import {ModelLibrary} from './model-library.js?v=153';
-import {buildHouse} from './house-architecture.js?v=153';
-import {buildUrban} from './city-architecture.js?v=153';
+import {ModelLibrary} from './model-library.js?v=154';
+import {buildHouse} from './house-architecture.js?v=154';
+import {buildUrban} from './city-architecture.js?v=154';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import * as THREE from './vendor/three.module.js';
-import {MeshBuilder} from './mesh-builder.js?v=153';
-import {BuildingMaterials} from './building-materials.js?v=153';
-import {lotPlan} from './building-plan.js?v=153';
-import {floorHeight} from './landscape.js?v=153';
+import {MeshBuilder} from './mesh-builder.js?v=154';
+import {BuildingMaterials} from './building-materials.js?v=154';
+import {lotPlan} from './building-plan.js?v=154';
+import {floorHeight} from './landscape.js?v=154';
 
 const WHITE=new THREE.Color(1,1,1);
 export class BuildingFactory{

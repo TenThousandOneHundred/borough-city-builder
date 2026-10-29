@@ -1,6 +1,16 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 154 — Landscape library and four new maps
+
+New game now presents a compact landscape library, a selected-map preview, terrain and land-area details, and separate city-name and game-mode controls. Seven keyboard-selectable maps replace the three abstract CSS thumbnails. The layout adapts to narrow screens with a horizontal map gallery. All previews are small static WebP renders sampled from the same terrain and fixed map seeds used by the game; they add no rendering work during play.
+
+Four new playable landscapes join River Valley, Coastal Islands and Great Plains: **Lake District**, **Crescent Bay**, **Highland Pass**, and **River Delta**. Their shared shoreline and relief fields drive simulation water cells and rendered terrain. Every map retains a dry west-edge entrance and a usable starting neighborhood. The fields use a bounded cache; existing saved terrain remains unchanged. The map catalog now uses fixed seeds so the selected preview matches the new city's landscape.
+
+Nine map checks cover connected starting roads, utility-supported residential growth in all seven maps, independent saved worlds, reproducible terrain, distinct shorelines, and continuous finite heights. Existing engine, terrain, startup and historical-height checks pass. Browser QA verified lake and highland starts, manual save/home/reload/continue, keyboard selection, all preview images, and the 390px layout without horizontal dialog overflow. Five-minute autosave and progression remain available. The complete release suite runs before Pages deployment.
+
+To regenerate previews, run `node scripts/sample-map-previews.mjs`, then `python3 scripts/render-map-previews.py` with NumPy and Pillow installed. The intermediate sampled fields stay under ignored/local references; only the resulting WebP previews and map statistics ship.
+
 ## Edition 153 — Remove the automatic overview sidebar
 
 The City Overview sidebar has been removed from the game. Starting or continuing a city leaves the map clear. The city-name button opens milestones, the population counter opens residents and households, and the top-left layers button opens Information views. Traffic policy, outside-connection location, household statistics and utility capacity remain available in compact contextual views above the build dock. Trip counters, the generic advice card and the long mixed-purpose overview are gone.

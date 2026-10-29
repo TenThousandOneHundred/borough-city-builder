@@ -1,28 +1,29 @@
-import {finishBuild} from './build-scheduler.js?v=153';
-import './coastline.js?v=153';
-import './building-entities.js?v=153';
+import {finishBuild} from './build-scheduler.js?v=154';
+import './map-terrain.js?v=154';
+import './coastline.js?v=154';
+import './building-entities.js?v=154';
 const Buildings=globalThis.BoroughBuildings;
-import {supportsTree} from './tree-placement.js?v=153';
-import {terrainMeshes} from './terrain-mesh.js?v=153';
-import {inlandRelief} from './landforms.js?v=153';
-import {streetStations,atDistance} from './street-geometry.js?v=153';
-import {terrainOffset} from './terrain-edit.js?v=153';
-import {outsidePortals} from './traffic.js?v=153';
-import {ScannedRocks} from './scanned-rocks.js?v=153';
-import {groundCover} from './ground-cover.js?v=153';
-import {terrainField} from './terrain-field.js?v=153';
-import {reflectedWater} from './water.js?v=153';
-import {naturalTerrain} from './terrain-material.js?v=153';
+import {supportsTree} from './tree-placement.js?v=154';
+import {terrainMeshes} from './terrain-mesh.js?v=154';
+import {inlandRelief} from './landforms.js?v=154';
+import {streetStations,atDistance} from './street-geometry.js?v=154';
+import {terrainOffset} from './terrain-edit.js?v=154';
+import {outsidePortals} from './traffic.js?v=154';
+import {ScannedRocks} from './scanned-rocks.js?v=154';
+import {groundCover} from './ground-cover.js?v=154';
+import {terrainField} from './terrain-field.js?v=154';
+import {reflectedWater} from './water.js?v=154';
+import {naturalTerrain} from './terrain-material.js?v=154';
 import * as THREE from './vendor/three.module.js';
 export const TILE=4,SIZE=48,HALF=96;
 const landBase=new THREE.Color('#c8e0ad'),landLight=new THREE.Color('#d4dfb3'),shoreColor=new THREE.Color('#c3bda6'),slopeColor=new THREE.Color('#959a8d');
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),smooth=t=>t*t*(3-2*t);
 function hash(x,y,seed){let v=Math.imul(x,374761393)+Math.imul(y,668265263)+seed*31;v=Math.imul(v^(v>>>13),1274126177);return((v^(v>>>16))>>>0)/4294967295}
 function noise(x,y,seed){const a=Math.floor(x),b=Math.floor(y),u=smooth(x-a),v=smooth(y-b);return THREE.MathUtils.lerp(THREE.MathUtils.lerp(hash(a,b,seed),hash(a+1,b,seed),u),THREE.MathUtils.lerp(hash(a,b+1,seed),hash(a+1,b+1,seed),u),v)}
-function wetTile(w,x,y){if(x>=0&&y>=0&&x<SIZE&&y<SIZE)return w.tiles[y*SIZE+x].ground==='water'?1:0;if(w.terrain==='river')return Math.abs(x-(34+Math.sin(y/7+w.seed%9)*3))<2.3?1:0;if(w.terrain==='islands')return Math.sin(x/7)+Math.cos(y/8)+Math.sin((x+y)/9)>1.05?1:0;return 0}
+function wetTile(w,x,y){if(globalThis.BoroughMapTerrain.isNew(w.terrain))return globalThis.BoroughMapTerrain.distance(w.terrain,w.seed,(x+.5)*4-96,(y+.5)*4-96)<1.5?1:0;if(x>=0&&y>=0&&x<SIZE&&y<SIZE)return w.tiles[y*SIZE+x].ground==='water'?1:0;if(w.terrain==='river')return Math.abs(x-(34+Math.sin(y/7+w.seed%9)*3))<2.3?1:0;if(w.terrain==='islands')return Math.sin(x/7)+Math.cos(y/8)+Math.sin((x+y)/9)>1.05?1:0;return 0}
 const waterFields=new WeakMap();
 function field(w){if(waterFields.has(w))return waterFields.get(w);const f=new Float32Array(52*52),weights=[.18,.64,.18];for(let y=-2;y<50;y++)for(let x=-2;x<50;x++){let v=0;for(let j=-1;j<=1;j++)for(let i=-1;i<=1;i++)v+=wetTile(w,x+i,y+j)*weights[i+1]*weights[j+1];f[(y+2)*52+x+2]=v}waterFields.set(w,f);return f}
-function baseWetness(w,x,z){const gx=(x+HALF)/TILE-.5,gy=(z+HALF)/TILE-.5;if(w.terrain==='river'){const distance=Math.abs(gx-(34+Math.sin(gy/7+w.seed%9)*3));return smooth(clamp((3.35-distance)/2.1,0,1))}if(w.terrain==='islands'&&w.landformVersion===2)return 1-smooth(clamp((globalThis.BoroughCoastline.distance(w.seed,x,z)+3)/6,0,1));if(w.terrain==='islands'){const level=Math.sin(gx/7)+Math.cos(gy/8)+Math.sin((gx+gy)/9);return smooth(clamp((level-.72)/.65,0,1))}return 0}
+function baseWetness(w,x,z){if(globalThis.BoroughMapTerrain.isNew(w.terrain))return 1-smooth(clamp((globalThis.BoroughMapTerrain.distance(w.terrain,w.seed,x,z)+3)/6,0,1));const gx=(x+HALF)/TILE-.5,gy=(z+HALF)/TILE-.5;if(w.terrain==='river'){const distance=Math.abs(gx-(34+Math.sin(gy/7+w.seed%9)*3));return smooth(clamp((3.35-distance)/2.1,0,1))}if(w.terrain==='islands'&&w.landformVersion===2)return 1-smooth(clamp((globalThis.BoroughCoastline.distance(w.seed,x,z)+3)/6,0,1));if(w.terrain==='islands'){const level=Math.sin(gx/7)+Math.cos(gy/8)+Math.sin((gx+gy)/9);return smooth(clamp((level-.72)/.65,0,1))}return 0}
 export function wetness(w,x,z,height=groundHeight){const offset=terrainOffset(w,x,z);if(Math.abs(offset)<.0001)return baseWetness(w,x,z);return smooth(clamp((.65-height(w,x,z))/1.3,0,1));}
 // Scenic coastal hills taper across an inland apron. Their amplitude is zero
 // throughout the editable map, so this cannot lift existing buildings or roads.

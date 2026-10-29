@@ -1,6 +1,6 @@
-import {buildVehicle} from './vehicle-model.js?v=153';
+import {buildVehicle} from './vehicle-model.js?v=154';
 import * as THREE from './vendor/three.module.js';
-import {MeshBuilder} from './mesh-builder.js?v=153';
+import {MeshBuilder} from './mesh-builder.js?v=154';
 const WHITE=new THREE.Color(1,1,1);
 export class Vehicles{
  constructor(){this.materials=new Map();}
