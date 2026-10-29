@@ -259,7 +259,7 @@ def dwelling(name,w,d,floors,form='detached',roof='gable',tint=(.85,.88,.80),bri
  m.box(-w*.26,floors*2.85+3.1,-d*.26,.82,.14,.92,CONCRETE)
  return m
 
-def domestic_block(m,w,d,floors,x=0,z=0,tint=(.8,.84,.78),brick=False,siding=False,paired=False,attached=False):
+def domestic_block(m,w,d,floors,x=0,z=0,tint=(.8,.84,.78),brick=False,siding=False,paired=False,attached=False,windowWidth=None):
  h=floors*2.85;cladding=BRICK if brick else PAINT
  points=[(x-w/2,z-d/2),(x+w/2,z-d/2),(x+w/2,z+d/2),(x-w/2,z+d/2)]
  m.box(x,0,z,w if attached else w+.10,.16,d+.10,CONCRETE,(.8,.8,.75))
@@ -280,7 +280,7 @@ def domestic_block(m,w,d,floors,x=0,z=0,tint=(.8,.84,.78),brick=False,siding=Fal
    base=f*2.85
    for j in range(bays):
     door=front and f==0 and (j in [0,bays-1] if paired else j==bays//2)
-    centre=(j+.5)*bay;opening=1.0 if door else min(1.45,bay-.65);l=centre-opening/2;r=centre+opening/2;lo=base+(.08 if door else .86);hi=base+(2.2 if door else 2.28)
+    centre=(j+.5)*bay;opening=1.0 if door else min(windowWidth or 1.45,bay-.65);l=centre-opening/2;r=centre+opening/2;lo=base+(.08 if door else .86);hi=base+(2.2 if door else 2.28)
     panel(j*bay,l,base,base+2.85);panel(r,(j+1)*bay,base,base+2.85);panel(l,r,base,lo);panel(l,r,hi,base+2.85)
     m.quad(p(r,lo,-.12),p(l,lo,-.12),p(l,hi,-.12),p(r,hi,-.12),WOOD if door else OCCUPIED if (j+side+f)%4==0 else GLASS,(.75,.79,.79))
     for u in [l,r]:m.quad(p(u,lo,.035),p(u,lo,-.12),p(u,hi,-.12),p(u,hi,.035),CONCRETE,(.70,.72,.69))
@@ -428,6 +428,75 @@ def compact_suburban_home(name,gambrel=False):
 
 compact_suburban_home('compact-brick-dormer-home')
 compact_suburban_home('gambrel-garden-home',gambrel=True)
+
+# Long single-storey homes follow the shallow roofs, raised timber porches
+# and solar banks in the official residential-construction reference image.
+# Original geometry shares the existing finishes and authored distant topology.
+def modular_home(name,hipped=False):
+ w,d=(14.2,8.2) if hipped else (16.2,7.4);base=.42;eave=base+2.85;rise=1.30 if hipped else 1.12
+ tint=(.55,.43,.27) if hipped else (.24,.38,.47)
+ m=Model(name,'residential-low',1);m.houseForm='detached';m.roofForm='shallow-hip' if hipped else 'shallow-long-gable'
+ domestic_block(m,w,d,1,tint=tint,siding=True,windowWidth=1.06)
+ for part in m.parts.values():
+  for i in range(1,len(part['p']),3):part['p'][i]+=base
+ for front in m.streetFronts:front['position'][1]+=base
+ # A low, ventilated foundation supports the raised floor.
+ m.box(0,0,0,w-.10,base,d-.10,CONCRETE,(.72,.73,.69))
+ for side in [-1,1]:
+  for x in [-w*.36,0,w*.36]:m.box(x,.12,side*(d/2-.035),.55,.14,.025,RECESS)
+ # Ridge runs along the long frontage; explicit slopes retain metre-scale UVs.
+ W=w+.65;D=d+.60;hip=1.65 if hipped else 0
+ a=(-W/2,eave,D/2);b=(W/2,eave,D/2);c=(W/2,eave,-D/2);e=(-W/2,eave,-D/2)
+ left=(-W/2+hip,eave+rise,0);right=(W/2-hip,eave+rise,0)
+ def roof(q):m.quad(*q,ROOF,(.53,.57,.58),uvs=[(0,0),(math.dist(q[0],q[1])/2,0),(math.dist(q[0],q[1])/2,math.dist(q[1],q[2])/2),(0,math.dist(q[1],q[2])/2)])
+ roof([a,b,right,left]);roof([c,e,left,right])
+ if hipped:roof([e,a,left,e]);roof([b,c,right,b])
+ else:
+  for side in [-1,1]:
+   x=side*w/2;q=[(x,eave,d/2),(x,eave,-d/2),(x,eave+rise,0),(x,eave,d/2)]
+   m.quad(*(q if side>0 else q[::-1]),PAINT,tint)
+ # Thin eaves, rainwater pipes and a ridge cap define the silhouette.
+ for side in [-1,1]:
+  m.box(0,eave-.10,side*D/2,W,.15,.08,PAINT,(.74,.76,.73))
+  m.box(side*(W/2-.03),eave-.10,0,.08,.15,D,PAINT,(.74,.76,.73))
+  m.cylinder(side*(w/2-.15),base, d/2+.12,.035,eave-base,FRAME,6)
+ m.box(0,eave+rise-.015,0,W-hip*2,.055,.12,ROOF,(.63,.65,.64))
+ # Porch boards, an open railing with a gate at the actual door, and steps.
+ door=m.streetFronts[0]['position'][0];pw=8.0 if hipped else 11.4;back=d/2+.04;front=back+1.55;px=max(-w/2+pw/2+.2,min(w/2-pw/2-.2,door))
+ m.box(px,base-.12,(back+front)/2,pw,.12,front-back,WOOD,(.91,.84,.70))
+ m.detail=True
+ for k in range(1,9):m.box(px,base+.002,back+(front-back)*k/9,pw,.008,.016,FRAME,(.45,.43,.39))
+ m.detail=False
+ def rail(x0,x1,z):
+  if x1<=x0:return
+  for x in [x0,x1]:m.box(x,base,z,.07,1.0,.07,WOOD,(.83,.82,.73))
+  m.box((x0+x1)/2,base+.96,z,x1-x0,.06,.07,WOOD,(.83,.82,.73))
+  m.box((x0+x1)/2,base+.16,z,x1-x0,.045,.05,WOOD,(.83,.82,.73))
+  m.detail=True
+  for k in range(1,max(2,round((x1-x0)/.17))):
+   x=x0+(x1-x0)*k/max(2,round((x1-x0)/.17));m.box(x,base+.20,z,.027,.76,.027,WOOD,(.83,.82,.73))
+  m.detail=False
+ rail(px-pw/2,door-.7,front);rail(door+.7,px+pw/2,front)
+ for side in [-1,1]:
+  x=px+side*pw/2;m.box(x,base,(back+front)/2,.055,1.0,.055,WOOD)
+  m.box(x,base+.96,(back+front)/2,.065,.06,front-back,WOOD,(.83,.82,.73))
+ for k in range(3):m.box(door,0,front+.18+(2-k)*.26,1.32,(k+1)*base/3,.28,WOOD,(.86,.80,.68))
+ # Broad shelter is held by slender posts, without closing the open porch.
+ for x in [px-pw/2+.06,px+pw/2-.06]:m.box(x,base,front-.04,.09,2.36,.09,WOOD,(.85,.84,.78))
+ roof([(px-pw/2-.15,base+2.82,back-.08),(px-pw/2-.15,base+2.65,front+.14),(px+pw/2+.15,base+2.65,front+.14),(px+pw/2+.15,base+2.82,back-.08)])
+ # Solar modules sit above the front roof plane with fine frames and cell seams.
+ def roof_y(z):return eave+rise*(1-z/(D/2))
+ for x in [-4.6,-2.25,.1,2.45]:
+  z0,z1=.65,2.30;span=1.98
+  m.quad((x,roof_y(z1)+.065,z1),(x+span,roof_y(z1)+.065,z1),(x+span,roof_y(z0)+.065,z0),(x,roof_y(z0)+.065,z0),FRAME,(.31,.45,.62))
+  for xx in [x,x+span]:m.quad((xx-.025,roof_y(z1)+.075,z1),(xx+.025,roof_y(z1)+.075,z1),(xx+.025,roof_y(z0)+.075,z0),(xx-.025,roof_y(z0)+.075,z0),PAINT,(.64,.69,.71))
+  m.detail=True
+  for k in range(1,5):
+   z=z0+(z1-z0)*k/5;m.quad((x,roof_y(z+.012)+.076,z+.012),(x+span,roof_y(z+.012)+.076,z+.012),(x+span,roof_y(z)+.076,z),(x,roof_y(z)+.076,z),PAINT,(.48,.56,.60))
+  m.detail=False
+ m.cylinder(w*.35,eave+.35,-d*.24,.10,.58,FRAME,8)
+ m.box(w*.35,eave+.92,-d*.24,.34,.05,.34,FRAME)
+ m.finish()
 
 m=dwelling('gabled-garden-cottage',8.4,10.4,1,tint=(.72,.81,.80),siding=True);m.finish()
 m=dwelling('hipped-brick-bungalow',11,10,1,roof='hip',tint=(.90,.74,.60),brick=True);m.finish()
@@ -1092,6 +1161,9 @@ from industrial_models import build_industry
 build_industry(Model,dict(paint=PAINT,frame=FRAME,glass=GLASS,roof=ROOF,recess=RECESS,concrete=CONCRETE,brick=BRICK,wood=WOOD))
 
 # Each model has one primitive per material, with vertex colour variation.
+modular_home('long-porch-modular-home')
+modular_home('solar-hipped-ranch-home',hipped=True)
+
 doc={'asset':{'version':'2.0','generator':'Borough original modern architecture'},'extensionsUsed':['KHR_mesh_quantization'],'extensionsRequired':['KHR_mesh_quantization'],'scene':0,'scenes':[{'nodes':[]}],'nodes':[],'meshes':[],'materials':[{'name':name,'pbrMetallicRoughness':{'baseColorFactor':color,'metallicFactor':metal,'roughnessFactor':rough}} for name,color,metal,rough in materials],'buffers':[{'byteLength':0}],'bufferViews':[],'accessors':[]}
 binary=bytearray()
 doc['images']=[];doc['textures']=[];doc['samplers']=[{'magFilter':9729,'minFilter':9987,'wrapS':10497,'wrapT':10497}]

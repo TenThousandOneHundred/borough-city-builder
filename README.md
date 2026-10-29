@@ -1,6 +1,16 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 149 — Prepare road graphics before the visible swap
+
+Road replacement now warms the real drawing programs and vertex/index buffers in scheduled batches while the old city remains visible. Zero-count draws go to a private one-pixel target. The helper restores the active render target, cube face, mip level, shadow-update settings, XR setting and geometry draw ranges after every batch, including errors. It borrows geometry/materials, disposes its own temporary resources, and remains cancellable before the road swap. Road geometry, terrain, textures, vegetation density and independent traffic simulation are not simplified.
+
+In the same three-avenue, 48-row-house browser fixture, two warmed before/after comparisons reduced the longest frame gap from 71.7 to 36.7 ms and 48.0 to 34.8 ms. The latter conservative repeat completed in 2.49 versus 2.33 seconds, with the final swap changing from 20.4 to 17.1 ms. Cold measurements remained much worse (a 227.7 ms frame gap in the updated version), so this reduces repeated-placement hitches rather than eliminating every stall or guaranteeing FPS. Preparation CPU work and cold graphics resources still need further optimization.
+
+This release also finishes the previously prepared single-storey housing work: a long porch modular home and a solar hipped ranch, guided by the official [residential construction reference](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/zones-signature-buildings). Both have shallow roofs, recessed windows, raised open porches and steps; detached-home driveways are limited to a single-car width. They join natural low-density zoning selection. All 68 previous modern models and 89 previous distant models retain their frozen fingerprints. The two new near models total 4,692 triangles, and the compressed building downloads grow by 49,481 bytes. Overall visual parity with the reference remains incomplete.
+
+All 854 local checks passed, including graphics-state restoration, cancellation, borrowed-resource ownership, exact road/terrain geometry, natural housing selection, rotated lots and unchanged old building buffers. Normal game QA placed a connecting street for ₡400 in Residential Streets QA 147, verified manual save at 9:34:25 PM on October 28, then Save & Exit and full reload/Continue retained the road, 288 residents and 96 households. The final test-city save was 9:36:39 PM. Browser warnings/errors were empty. Five-minute autosave and multiple worlds remain unchanged.
+
 ## Edition 148 — Smoother road placement without reduced detail
 
 Driveway meshes and tree placement now prepare in small cancellable steps before the visible road changes. The final scene update reuses that work when its buildings and occupancy still match; it rebuilds safely if they changed while construction was pending. Grass triangle packing also yields within both its spatial partition and vertex-remapping loops. Shader preparation includes the staged driveway material. Leaving a world releases the hidden scenery without altering the visible roads or saved state.

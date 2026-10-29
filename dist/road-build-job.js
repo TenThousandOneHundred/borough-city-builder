@@ -1,10 +1,11 @@
-import {constructionGridSteps} from './construction-grid.js?v=148';
-import {groundCoverSteps} from './ground-cover.js?v=148';
-import {groundHeight,wetness} from './landscape.js?v=148';
+import {geometryUploadSteps} from './geometry-upload.js?v=149';
+import {constructionGridSteps} from './construction-grid.js?v=149';
+import {groundCoverSteps} from './ground-cover.js?v=149';
+import {groundHeight,wetness} from './landscape.js?v=149';
 import * as THREE from './vendor/three.module.js';
-import {changedRoadCells} from './road-frontage.js?v=148';
-import {Roadworks} from './roadworks.js?v=148';
-import {scheduleBuild} from './build-scheduler.js?v=148';
+import {changedRoadCells} from './road-frontage.js?v=149';
+import {Roadworks} from './roadworks.js?v=149';
+import {scheduleBuild} from './build-scheduler.js?v=149';
 
 // Build an invisible replacement. The visible city and its traffic remain live
 // until both road meshes and fitted terrain are ready for one synchronous swap.
@@ -51,6 +52,9 @@ export function prepareRoadRefresh(view,{schedule=scheduleBuild}={}){
     finally{view.renderer.setRenderTarget(target);}
     await ready;stats.programMs=performance.now()-programStart;
    }
+   const uploads=[];for(const group of [next.group,next.accessGroup,cover])group?.traverse(o=>{if(o.geometry)uploads.push(o);});
+   for(const {base,result}of terrain){uploads.push({geometry:result.replacement,material:base.mesh.material});if(result.walls)uploads.push({geometry:result.walls,material:view.landscape.retainingMaterial()});}
+   await schedule(geometryUploadSteps(view.renderer,uploads,view.scene),{cancelled,onSlice});
    if(cancelled()||changedRoadCells(world.tiles,layout).changed.length||JSON.stringify(world.roadPaths)!==pathsKey)throw new DOMException('Road preparation cancelled','AbortError');
    view.roadRefreshJob=null;next.world=world;next.group.visible=true;next.signalGroup.visible=true;view.roadworks=next;adopted=true;
    const swapStart=performance.now();if(next.asphalt===old.asphalt)old.asphalt=null;old.dispose();

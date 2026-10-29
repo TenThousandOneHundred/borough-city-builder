@@ -40,7 +40,7 @@ const subtract=(a,b)=>a.map((v,i)=>v-b[i]);
 test('industrial UV authoring preserves untouched geometry, UVs, materials, images and distant topology',()=>{
  // Compact immutable fingerprints of the Edition 127 assets. CI needs no
  // screenshot directory or copy of the 16 MB released GLB.
- const old=doc.nodes.filter(n=>n.extras.category!=='industrial');assert.equal(old.length,63);assert.equal(industrial.length,5);
+ const old=doc.nodes.filter(n=>n.extras.category!=='industrial'&&!['long-porch-modular-home','solar-hipped-ranch-home'].includes(n.name));assert.equal(old.length,63);assert.equal(industrial.length,5);
  const frozen=JSON.parse(fs.readFileSync(new URL('./fixtures/building-fingerprints-146.json',import.meta.url))),rebuilt=new Set(['raised-stoop-brick-terrace','dormer-roof-brick-terrace']);
  // Preserve the original aggregate proof, then compare every untouched model.
  assert.equal(sha(JSON.stringify(frozen.models)),'572fea76c6940935e8e7490f6349f8401e83612cba98f3af649c512f0bd4a3cb');
@@ -56,7 +56,7 @@ test('industrial UV authoring preserves untouched geometry, UVs, materials, imag
  for(const image of doc.images){h.update(image.mimeType);h.update(viewBytes(doc.bufferViews[image.bufferView]));}
  assert.equal(h.digest('hex'),'a425d3ae6a02ef131bf54276bf48b6ac4249864783d48fb522114ff05cac01bb');
  const manifest=JSON.parse(fs.readFileSync(new URL('../dist/assets/buildings/lod.json',import.meta.url))),data=fs.readFileSync(new URL('../dist/assets/buildings/lod.bin',import.meta.url)),actual={};
- for(const [name,parts]of Object.entries(manifest)){if(rebuilt.has(name))continue;const h=createHash('sha256');for(const p of parts){h.update(JSON.stringify({shared:p.sharedAttributes,indexCount:p.index.count,attributes:Object.keys(p.attributes||{})}));for(const a of [...Object.values(p.attributes||{}),p.index])h.update(data.subarray(a.offset,a.offset+a.count*4));}actual[name]=h.digest('hex');}
+ for(const [name,parts]of Object.entries(manifest)){if(rebuilt.has(name)||['long-porch-modular-home','solar-hipped-ranch-home'].includes(name))continue;const h=createHash('sha256');for(const p of parts){h.update(JSON.stringify({shared:p.sharedAttributes,indexCount:p.index.count,attributes:Object.keys(p.attributes||{})}));for(const a of [...Object.values(p.attributes||{}),p.index])h.update(data.subarray(a.offset,a.offset+a.count*4));}actual[name]=h.digest('hex');}
  assert.equal(Object.keys(actual).length,87);assert.deepEqual(actual,Object.fromEntries(Object.entries(frozen.lod).filter(([name])=>!rebuilt.has(name))));
 });
 

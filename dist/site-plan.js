@@ -1,4 +1,4 @@
-import {industrialSitePlan} from './industrial-site-plan.js?v=148';
+import {industrialSitePlan} from './industrial-site-plan.js?v=149';
 // Layout in the building's local coordinates. Features stay inside the owned
 // rotated envelope and outside the complete model bounds, including balconies.
 export function sitePlan(plan,footprint){
@@ -13,8 +13,9 @@ export function sitePlan(plan,footprint){
  const entrances=plan.entranceXs?.length?plan.entranceXs:[0];
  for(const entry of entrances){const x=Math.max(left+.18,Math.min(right-.18,entry));rect('walk',x-.18,frontStart,x+.18,front);}
  if(plan.low){
-  if(sideRight>.55)rect('drive',b.maxX+.1,Math.max(back,b.minZ),right-.08,front);
-  else if(sideLeft>.55)rect('drive',left+.08,Math.max(back,b.minZ),b.minX-.1,front);
+  // A single-car drive stays beside the house; spare side-yard width is lawn.
+  if(sideRight>.55)rect('drive',b.maxX+.1,Math.max(back,b.minZ),Math.min(right-.08,b.maxX+.76),front);
+  else if(sideLeft>.55)rect('drive',Math.max(left+.08,b.minX-.76),Math.max(back,b.minZ),b.minX-.1,front);
   const sample=salt=>{let h=((plan.seed||0)^salt)>>>0;h=Math.imul(h^(h>>>16),0x21f0aaad);return((h^(h>>>15))>>>0)/4294967296;};
   const divisions=(plan.rowDividers??(plan.rowEntrances||[]).slice(1).map((x,i)=>(plan.rowEntrances[i]+x)/2)).filter(x=>x>left&&x<right).sort((a,b)=>a-b),yards=[left,...divisions,right];
   // Private boundaries use complete shared fence panels or clipped hedges.
