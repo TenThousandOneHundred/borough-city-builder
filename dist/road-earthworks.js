@@ -370,18 +370,23 @@ function* buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePla
   // A common height field is insufficient when one polygon has an extra point
   // on its neighbour's edge. Insert every shared XZ vertex before triangulating
   // with an interior fan, retaining collinear boundary points in 3D as well.
-  const unique=new Map(),bins=new Map();
-  let vertexCheckpoint=0;for(const v of output){if(vertexCheckpoint++%128===0)yield;const k=v[0]+','+v[2];if(unique.has(k))continue;unique.set(k,v);const cell=Math.floor(v[0])+','+Math.floor(v[2]);if(!bins.has(cell))bins.set(cell,[]);bins.get(cell).push(v);}
-  const conformed=[],copy=v=>{const p=v.slice();p.nativeY=v.nativeY;p.changed=v.changed;return p;};
-  const edgePoints=(a,b)=>{const dx=b[0]-a[0],dz=b[2]-a[2],length2=dx*dx+dz*dz;if(length2<1e-14)return [];
-   const epsilon=Math.max(2e-6,Math.max(Math.abs(a[0]),Math.abs(a[2]),Math.abs(b[0]),Math.abs(b[2]))*2**-22),length=Math.sqrt(length2),x0=Math.floor(Math.min(a[0],b[0])-epsilon),x1=Math.floor(Math.max(a[0],b[0])+epsilon),z0=Math.floor(Math.min(a[2],b[2])-epsilon),z1=Math.floor(Math.max(a[2],b[2])+epsilon),candidates=[];
-   const add=v=>{const t=((v[0]-a[0])*dx+(v[2]-a[2])*dz)/length2;if(t<=1e-6||t>=1-1e-6||Math.abs(dx*(v[2]-a[2])-dz*(v[0]-a[0]))>epsilon*length)return;candidates.push({v,t});};
-   if((x1-x0+1)*(z1-z0+1)>4096)for(const v of unique.values())add(v);else for(let x=x0;x<=x1;x++)for(let z=z0;z<=z1;z++)for(const v of bins.get(x+','+z)||[])add(v);
-   candidates.sort((a,b)=>a.t-b.t);return candidates.map(({v,t})=>{const p=mix(a,b,t);p[0]=v[0];p[2]=v[2];p.nativeY=a.nativeY+(b.nativeY-a.nativeY)*t;p.changed=a.changed;return project(p);});
+  const unique=new Map(),bins=new Map(),edgeCell=.25;
+  let vertexCheckpoint=0;for(const v of output){if(vertexCheckpoint++%128===0)yield;const k=v[0]+','+v[2];if(unique.has(k))continue;const entry={v,order:unique.size};unique.set(k,entry);const x=Math.floor(v[0]/edgeCell),z=Math.floor(v[2]/edgeCell);let row=bins.get(x);if(!row)bins.set(x,row=new Map());let bucket=row.get(z);if(!bucket)row.set(z,bucket=[]);bucket.push(entry);}
+  // Scratch containers belong to this application and never escape a step.
+  const conformed=[],candidateScratch=[],emptyEdge=[],triangleScratch=[null,null,null],polygonScratch=[],copy=v=>{const p=v.slice();p.nativeY=v.nativeY;p.changed=v.changed;return p;};
+  const edgePoints=(a,b)=>{const dx=b[0]-a[0],dz=b[2]-a[2],length2=dx*dx+dz*dz;if(length2<1e-14)return emptyEdge;
+   const epsilon=Math.max(2e-6,Math.max(Math.abs(a[0]),Math.abs(a[2]),Math.abs(b[0]),Math.abs(b[2]))*2**-22),length=Math.sqrt(length2),x0=Math.floor(Math.min(a[0],b[0])-epsilon),x1=Math.floor(Math.max(a[0],b[0])+epsilon),z0=Math.floor(Math.min(a[2],b[2])-epsilon),z1=Math.floor(Math.max(a[2],b[2])+epsilon),candidates=candidateScratch;candidates.length=0;
+   const add=entry=>{const {v,order}=entry,t=((v[0]-a[0])*dx+(v[2]-a[2])*dz)/length2;if(t<=1e-6||t>=1-1e-6||Math.abs(dx*(v[2]-a[2])-dz*(v[0]-a[0]))>epsilon*length)return;candidates.push({v,t,order});};
+   const large=(x1-x0+1)*(z1-z0+1)>4096;
+   if(large)for(const entry of unique.values())add(entry);else{const sx0=Math.floor((Math.min(a[0],b[0])-epsilon)/edgeCell),sx1=Math.floor((Math.max(a[0],b[0])+epsilon)/edgeCell),sz0=Math.floor((Math.min(a[2],b[2])-epsilon)/edgeCell),sz1=Math.floor((Math.max(a[2],b[2])+epsilon)/edgeCell);for(let x=sx0;x<=sx1;x++){const row=bins.get(x);if(row)for(let z=sz0;z<=sz1;z++)for(const entry of row.get(z)||[])add(entry);}}
+   if(!candidates.length)return emptyEdge;
+   // Equal projected positions keep the original coarse-cell/insertion order.
+   candidates.sort((a,b)=>a.t-b.t||(large?0:Math.floor(a.v[0])-Math.floor(b.v[0])||Math.floor(a.v[2])-Math.floor(b.v[2]))||a.order-b.order);return candidates.map(({v,t})=>{const p=mix(a,b,t);p[0]=v[0];p[2]=v[2];p.nativeY=a.nativeY+(b.nativeY-a.nativeY)*t;p.changed=a.changed;return project(p);});
   };
-  for(let i=0;i<output.length;i+=3){if(i%48===0)yield;const triangle=output.slice(i,i+3),polygon=[];let split=false;
+  for(let i=0;i<output.length;i+=3){if(i%48===0)yield;const triangle=triangleScratch,polygon=polygonScratch;triangle[0]=output[i];triangle[1]=output[i+1];triangle[2]=output[i+2];polygon.length=0;let split=false;
    for(let edge=0;edge<3;edge++){const a=triangle[edge],b=triangle[(edge+1)%3],points=edgePoints(a,b);polygon.push(a,...points);split ||= points.length>0;}
-   if(!split){if(validTriangle(triangle))conformed.push(...triangle);continue;}
+   // emit() already validated these unchanged vertices.
+   if(!split){conformed.push(...triangle);continue;}
    const center=triangle[0].map((_,k)=>(triangle[0][k]+triangle[1][k]+triangle[2][k])/3);center.nativeY=(triangle[0].nativeY+triangle[1].nativeY+triangle[2].nativeY)/3;center.changed=triangle[0].changed;project(center);
    for(let j=0;j<polygon.length;j++){const child=[copy(center),copy(polygon[j]),copy(polygon[(j+1)%polygon.length])];if(!validTriangle(child))continue;normals(child);conformed.push(...child);}
   }
