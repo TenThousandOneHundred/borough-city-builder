@@ -1,6 +1,8 @@
-import {districtBuilding} from './districts.js?v=154';
+import './map-grid.js?v=155';
+const G=globalThis.BoroughGrid;
+import {districtBuilding} from './districts.js?v=155';
 import * as THREE from './vendor/three.module.js';
-import {floorHeight} from './landscape.js?v=154';
+import {floorHeight} from './landscape.js?v=155';
 export class Architecture{
 constructor(view){this.v=view;this.cache=new Map();this.roof=this.roofMaterial();this.roofs=new Map();this.ready=Promise.resolve();}
 // Window detail is authored locally; it does not depend on downloaded kits.
@@ -71,6 +73,9 @@ if(['residential','commercial','office'].includes(type)){q.traverse(o=>{if(o.isM
 // Face the entrance toward the adjacent street.
 
 if(form==='wellness')q.scale.set(.85,.7,.85);if(form==='hotel'){this.box(q,0,1.6,1.3,2.8,.16,.5,'#797364');for(let j=0;j<4;j++)this.box(q,-1.2+j*.8,.75,1.45,.04,1.5,.04,'#c5c3b1')}
-const ix=Math.floor((x+96)/4),iy=Math.floor((z+96)/4);let road=CityEngine.neighbors(iy*48+ix).find(i=>w.tiles[i].type==='road');if(road===undefined){let best=5;for(let yy=Math.max(0,iy-4);yy<=Math.min(47,iy+4);yy++)for(let xx=Math.max(0,ix-4);xx<=Math.min(47,ix+4);xx++){const d=Math.abs(xx-ix)+Math.abs(yy-iy);if(d<best&&w.tiles[yy*48+xx].type==='road'){best=d;road=yy*48+xx}}}if(road!==undefined){const rx=road%48,ry=Math.floor(road/48);if(rx<ix)q.rotation.y=-Math.PI/2;else if(rx>ix)q.rotation.y=Math.PI/2;else if(ry<iy)q.rotation.y=Math.PI;}g.position.set(x,base,z);return g;
+const ix=Math.floor((x+G.half)/4),iy=Math.floor((z+G.half)/4);let road=CityEngine.neighbors(iy*G.n+ix).find(i=>w.tiles[i].type==='road');if(road===undefined){let best=5;for(let yy=Math.max(0,iy-4);yy<=Math.min(G.last,iy+4);yy++)for(let xx=Math.max(0,ix-4);xx<=Math.min(G.last,ix+4);xx++){const d=Math.abs(xx-ix)+Math.abs(yy-iy);if(d<best&&w.tiles[yy*G.n+xx].type==='road'){best=d;road=yy*G.n+xx}}}if(road!==undefined){const rx=road%G.n,ry=Math.floor(road/G.n);if(rx<ix)q.rotation.y=-Math.PI/2;else if(rx>ix)q.rotation.y=Math.PI/2;else if(ry<iy)q.rotation.y=Math.PI;}g.position.set(x,base,z);return g;
 }
 }
+
+
+Architecture=G.bindClass(Architecture);

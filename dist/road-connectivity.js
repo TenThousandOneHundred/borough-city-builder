@@ -2,10 +2,11 @@
 // source identity is retained until a real intersection permits a transfer.
 (function(root){
 'use strict';
+const G=typeof module!=='undefined'?require('./map-grid.js'):root.BoroughGrid;
 const RoadTypes=typeof module!=='undefined'?require('./road-types.js'):root.BoroughRoadTypes;
 const cache=new WeakMap(),EPS=1e-7,BIN=2;
-const neighbors=i=>[i%48?i-1:-1,i%48<47?i+1:-1,i>=48?i-48:-1,i<2256?i+48:-1].filter(i=>i>=0);
-const point=i=>({x:i%48,y:Math.floor(i/48)}),distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+const neighbors=i=>[i%G.n?i-1:-1,i%G.n<G.last?i+1:-1,i>=G.n?i-G.n:-1,i<G.edgeRow?i+G.n:-1].filter(i=>i>=0);
+const point=i=>({x:i%G.n,y:Math.floor(i/G.n)}),distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const cross=(a,b)=>a.x*b.y-a.y*b.x;
 function project(p,a,b){const x=b.x-a.x,y=b.y-a.y,t=Math.max(0,Math.min(1,((p.x-a.x)*x+(p.y-a.y)*y)/(x*x+y*y||1)));return {x:a.x+x*t,y:a.y+y*t,t};}
 function signature(world){return JSON.stringify([world.roadPaths||[],world.tiles.map(t=>t.type==='road'?[t.roadType,t.roadWidth,t.legacyRoad,t.pathIds]:null)]);}
@@ -50,7 +51,7 @@ function build(world,engine){
  }
  // Explicit legacy tile-center endpoints remain junctions even when the
  // legacy quarter-turn rendering rounds its centerline away from that center.
- for(const record of records.values())if(!record.legacy)for(const p of [record.points[0],record.points.at(-1)])for(const key of byTile.get(Math.round(p.y)*48+Math.round(p.x))||[]){const target=states.get(key).record;if(target.legacy&&distance(p,target.points[0])<EPS)join(record,target,p);}
+ for(const record of records.values())if(!record.legacy)for(const p of [record.points[0],record.points.at(-1)])for(const key of byTile.get(Math.round(p.y)*G.n+Math.round(p.x))||[]){const target=states.get(key).record;if(target.legacy&&distance(p,target.points[0])<EPS)join(record,target,p);}
  // Match the renderer's forward-only endpoint extension inside existing pavement.
  for(const record of records.values())if(!record.legacy&&record.points.length>1)for(const end of [0,record.points.length-1]){
   const p=record.points[end],q=record.points[end?end-1:1],length=distance(p,q),dir={x:(p.x-q.x)/length,y:(p.y-q.y)/length};let best=Infinity,hit=null;
@@ -62,7 +63,7 @@ function build(world,engine){
  for(const record of records.values()){
   if(record.legacy){for(const [tile,key]of record.states)for(const next of neighbors(tile)){const target=(byTile.get(next)||[]).find(k=>states.get(k).record.legacy);if(!target)continue;undirected.get(key).add(target);undirected.get(target).add(key);if(!record.spec.oneway||next>tile)link(key,target);}continue;}
   const nodes=[...record.nodes].sort((a,b)=>a[0]-b[0]);for(let n=1;n<nodes.length;n++){
-   const [from,a]=nodes[n-1],[to,b]=nodes[n];let intact=true;for(let k=Math.ceil(from);k<=Math.floor(to);k++){const p=record.points[k],tile=Math.round(p.y)*48+Math.round(p.x);if(!record.states.has(tile)){intact=false;break;}}if(!intact)continue;
+   const [from,a]=nodes[n-1],[to,b]=nodes[n];let intact=true;for(let k=Math.ceil(from);k<=Math.floor(to);k++){const p=record.points[k],tile=Math.round(p.y)*G.n+Math.round(p.x);if(!record.states.has(tile)){intact=false;break;}}if(!intact)continue;
    link(a,b);if(!record.spec.oneway)link(b,a);else{undirected.get(a).add(b);undirected.get(b).add(a);}
   }
  }
@@ -102,13 +103,16 @@ function build(world,engine){
  function reverseTrace(cells){const result=[...cells].reverse();if(cells.sources)Object.defineProperties(result,{sources:{value:[...cells.sources].reverse()},positions:{value:[...cells.positions].reverse()},joins:{value:[...cells.joins].reverse()},network:{value:api}});return result;}
  function nearestSource(tile,p){let source,best=Infinity;for(const key of byTile.get(tile)||[]){const record=states.get(key).record;let error=Infinity;for(const s of record.segments)error=Math.min(error,distance(p,project(p,s.a,s.b)));if(error<best-EPS){best=error;source=record.pathId;}}return source;}
  let outside;
- function connected(){if(outside)return outside;const reached=new Set(),queue=[];for(const [tile,keys]of byTile)if(tile%48===0||tile%48===47||tile<48||tile>=2256)for(const key of keys){reached.add(key);queue.push(key);}for(let n=0;n<queue.length;n++)for(const next of undirected.get(queue[n]))if(!reached.has(next)){reached.add(next);queue.push(next);}
-  const tiles=new Set([...reached].flatMap(key=>[...states.get(key).tiles])),raster=new Set(),ordered=[];world.tiles.forEach((t,i)=>{if(t.type==='road'&&(i%48===0||i%48===47||i<48||i>=2256)){raster.add(i);ordered.push(i);}});for(let n=0;n<ordered.length;n++)for(const i of neighbors(ordered[n]))if(world.tiles[i].type==='road'&&!raster.has(i)){raster.add(i);ordered.push(i);}
+ function connected(){if(outside)return outside;const reached=new Set(),queue=[];for(const [tile,keys]of byTile)if(tile%G.n===0||tile%G.n===G.last||tile<G.n||tile>=G.edgeRow)for(const key of keys){reached.add(key);queue.push(key);}for(let n=0;n<queue.length;n++)for(const next of undirected.get(queue[n]))if(!reached.has(next)){reached.add(next);queue.push(next);}
+  const tiles=new Set([...reached].flatMap(key=>[...states.get(key).tiles])),raster=new Set(),ordered=[];world.tiles.forEach((t,i)=>{if(t.type==='road'&&(i%G.n===0||i%G.n===G.last||i<G.n||i>=G.edgeRow)){raster.add(i);ordered.push(i);}});for(let n=0;n<ordered.length;n++)for(const i of neighbors(ordered[n]))if(world.tiles[i].type==='road'&&!raster.has(i)){raster.add(i);ordered.push(i);}
   // Preserve existing economic-stat iteration order for unchanged networks.
   outside=new Set([...ordered.filter(i=>tiles.has(i)),...[...tiles].filter(i=>!raster.has(i))]);Object.defineProperty(outside,'hasSource',{value:(tile,pathId)=>selected(tile,pathId).some(key=>reached.has(key))});return outside;
  }
  const attachment=(tile,pathId=nearestSource(tile,point(tile)),p=point(tile))=>access(tile,pathId,p)[0]||null;
  const api={records,states,byTile,graph,reverseGraph,search,trace,reverseTrace,nearestSource,connected,validTrace,attachment};cache.set(world,{stamp,specs:engine.ROADS,sample:engine.sampleRoad,value:api});return api;
 }
+signature=G.bind(signature);
+build=G.bind(build);
+
 const api={build,connectedRoads:(world,engine)=>build(world,engine).connected()};root.BoroughRoadConnectivity=api;if(typeof module!=='undefined')module.exports=api;
 })(globalThis);

@@ -12,10 +12,10 @@ source=root/'references/map-preview-data'
 output=root/'dist/assets/maps'
 output.mkdir(parents=True,exist_ok=True)
 for metadata in sorted(source.glob('*.json')):
-    spec=json.loads(metadata.read_text());n=spec['size']
+    spec=json.loads(metadata.read_text());n=spec['size'];extent=spec.get('extent',192);half=extent/2
     data=np.fromfile(metadata.with_suffix('.bin'),dtype='<f4').reshape(n,n,2)
     h=data[:,:,0];wet=data[:,:,1];water=h<.18
-    dz,dx=np.gradient(h,192/(n-1))
+    dz,dx=np.gradient(h,extent/(n-1))
     normal=np.sqrt(dx*dx+dz*dz+1)
     light=np.clip((-.55*dx-.5*dz+.85)/normal,.15,1.2)
     rng=np.random.default_rng(spec['seed']);grain=rng.random((n,n))
@@ -30,7 +30,7 @@ for metadata in sorted(source.glob('*.json')):
     # Terrain casts a directional shadow on lower slopes and shorelines.
     shadow=np.zeros((n,n),bool)
     for distance in range(2,30,2):
-        blocker=np.roll(np.roll(h,distance,0),distance,1)-distance*192/(n-1)*.7
+        blocker=np.roll(np.roll(h,distance,0),distance,1)-distance*extent/(n-1)*.7
         blocked=blocker>h;blocked[:distance,:]=False;blocked[:,:distance]=False;shadow|=blocked
     base*=np.where(shadow,.76,1)[:,:,None]
     shallow=np.clip((h+1.6)/1.8,0,1)
@@ -40,14 +40,14 @@ for metadata in sorted(source.glob('*.json')):
     base=np.clip(base,0,255).astype('uint8')
     # The actual west-edge starter street, in the same world coordinates.
     surface=Image.fromarray(base);draw=ImageDraw.Draw(surface)
-    row=(2+96)/192*(n-1);end=(-18+96)/192*(n-1)
+    row=(2+half)/extent*(n-1);end=78/extent*(n-1)
     draw.line([(0,row),(end,row)],fill=(67,74,70),width=5)
     for x in range(1,int(end),9):draw.line([(x,row),(min(x+4,end),row)],fill=(207,210,189),width=1)
     colors=np.asarray(surface)
     width=n+44;height=306;canvas=Image.new('RGB',(width,height));pix=np.asarray(canvas).copy()
     for y in range(height):pix[y,:]=np.array([26,47,55])+(np.array([16,32,42])-np.array([26,47,55]))*y/height
     canvas=Image.fromarray(pix.astype('uint8'));draw=ImageDraw.Draw(canvas)
-    project=lambda x,z,height:(22+(x+96)/192*(n-1),48+(z+96)/192*(n-1)*.57-max(.18,height)*1.65)
+    project=lambda x,z,height:(22+(x+half)/extent*(n-1),48+(z+half)/extent*(n-1)*.57-max(.18,height)*1.65)
     # Painter-order surface strips preserve the real hills and water outline.
     ys=48+np.arange(n)[:,None]*.57-np.maximum(h,.18)*1.65
     for row in range(n-1):

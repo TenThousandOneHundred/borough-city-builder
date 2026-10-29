@@ -1,9 +1,11 @@
+import './map-grid.js?v=155';
+const G=globalThis.BoroughGrid;
 import * as THREE from './vendor/three.module.js';
 
 const MAX_STATIONS=384,MAX_GRID_PATHS=18,MAX_GRID_STATIONS=768,BLUE='#78d8ff',RED='#ff8c78';
 const GRID_COLORS={blue:new THREE.Color(BLUE),red:new THREE.Color(RED),asphalt:new THREE.Color('#42515e'),blocked:new THREE.Color('#744f49'),gravel:new THREE.Color('#655e50')};
 const LABEL_SIZE_STYLES=['font','letterSpacing','padding','borderWidth','maxWidth','width','whiteSpace'];
-const toWorld=p=>({x:(p.x+.5)*4-96,z:(p.y+.5)*4-96});
+const toWorld=p=>({x:(p.x+.5)*4-G.half,z:(p.y+.5)*4-G.half});
 const finitePoint=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y);
 const overlap=(a,b,gap=8)=>a.left<b.right+gap&&a.right>b.left-gap&&a.top<b.bottom+gap&&a.bottom>b.top-gap;
 const badgeBox=(p,size)=>({left:p.x-size.width/2,right:p.x+size.width/2,top:p.y-size.height,bottom:p.y});
@@ -354,3 +356,14 @@ export class RoadGuidePreview{
  clear(){this.group.visible=false;this.metrics=null;if(this.labelRoot)this.labelRoot.hidden=true;}
  dispose(){this.clear();this.group.removeFromParent();for(const batch of this.batches)batch.dispose();this.labelFonts?.removeEventListener?.('loadingdone',this.invalidateLabelSizes);this.labelFonts?.removeEventListener?.('loadingerror',this.invalidateLabelSizes);this.labelRoot?.remove();}
 }
+
+placeRoadGuideBadge=G.bind(placeRoadGuideBadge);
+material=G.bind(material);
+lineMaterial=G.bind(lineMaterial);
+pushPoint=G.bind(pushPoint);
+segment=G.bind(segment);
+quad=G.bind(quad);
+colorVertices=G.bind(colorVertices);
+between=G.bind(between);
+BufferBatch=G.bindClass(BufferBatch);
+RoadGuidePreview=G.bindClass(RoadGuidePreview);

@@ -1,6 +1,8 @@
-import './road-types.js?v=154';
-import {roundaboutCorners} from './roundabout-geometry.js?v=154';
-import {streetStations,atDistance,distanceSection} from './street-geometry.js?v=154';
+import './map-grid.js?v=155';
+const G=globalThis.BoroughGrid;
+import './road-types.js?v=155';
+import {roundaboutCorners} from './roundabout-geometry.js?v=155';
+import {streetStations,atDistance,distanceSection} from './street-geometry.js?v=155';
 const cross=(a,b)=>a.x*b.z-a.z*b.x;
 const point=(j,a,d,offset=0)=>({x:j.x+a.tx*d-a.tz*offset,z:j.z+a.tz*d+a.tx*offset});
 
@@ -18,9 +20,9 @@ export function roadGeometry(world,engine){
 // too, so a new curved street can join an existing saved starter road.
 export function roadDescriptors(world,engine){
  const descriptors=[];
- for(const path of world.roadPaths||[])descriptors.push({id:path.id,spec:engine.ROADS[path.type],stations:streetStations(engine.sampleRoad(path.controls).map(p=>({x:(p.x+.5)*4-96,z:(p.y+.5)*4-96})))});
+ for(const path of world.roadPaths||[])descriptors.push({id:path.id,spec:engine.ROADS[path.type],stations:streetStations(engine.sampleRoad(path.controls).map(p=>({x:(p.x+.5)*4-G.half,z:(p.y+.5)*4-G.half})))});
  const shapes=globalThis.BoroughRoadTypes.legacyShapes(world,engine.sampleRoad);
- const worldPoints=points=>points.map(p=>({x:(p.x+.5)*4-96,z:(p.y+.5)*4-96}));
+ const worldPoints=points=>points.map(p=>({x:(p.x+.5)*4-G.half,z:(p.y+.5)*4-G.half}));
  for(const [i,shape]of shapes){const t=world.tiles[i],spec={...engine.ROADS.street,width:t.roadWidth===2?3.15:2.45,lanes:t.roadWidth===2?4:2};
   for(const [k,points]of shape.arms.entries())descriptors.push({id:`grid/${i}/${k}`,legacy:true,spec,stations:streetStations(worldPoints(points))});
   if(shape.points.length)descriptors.push({id:`grid/${i}`,legacy:true,spec,stations:streetStations(worldPoints(shape.points))});
@@ -147,3 +149,6 @@ export function transitionWidth(road,tapers,distance){
  for(const taper of tapers||[]){const away=taper.end?total-distance:distance;if(away>=taper.length)continue;const t=Math.max(0,away/taper.length),blend=t*t*(3-2*t);width=Math.min(width,taper.width+(road.spec.width-taper.width)*blend);}
  return width;
 }
+
+roadGeometry=G.bind(roadGeometry);
+roadDescriptors=G.bind(roadDescriptors);

@@ -1,10 +1,12 @@
-import {roadGeometry,junctionCorners,junctionCuts,clearSections,transitionWidth} from './road-junction-plan.js?v=154';
-import {streetStations,atDistance} from './street-geometry.js?v=154';
+import './map-grid.js?v=155';
+const G=globalThis.BoroughGrid;
+import {roadGeometry,junctionCorners,junctionCuts,clearSections,transitionWidth} from './road-junction-plan.js?v=155';
+import {streetStations,atDistance} from './street-geometry.js?v=155';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function crossingPlan(j){if(j.arms.length<3)return [];return j.arms.filter(a=>a.spec.sidewalk).map(arm=>{const d=j.radius+.42,offset=arm.width/2+.22,center={x:j.x+arm.tx*d,z:j.z+arm.tz*d};return {junction:j,arm,center,halfWidth:arm.width/2+.38,halfDepth:.3,ends:[-1,1].map(side=>({x:center.x-arm.tz*offset*side,z:center.z+arm.tx*offset*side}))};});}
 export function pedestrianCrossings(world,geometry){
  const result=geometry.junctions.flatMap(crossingPlan);
- for(const index of new Set((world.transit?.lines||[]).flatMap(line=>line.stops))){const origin={x:(index%48+.5)*4-96,z:(Math.floor(index/48)+.5)*4-96};let best=null,bestDistance=2.5;
+ for(const index of new Set((world.transit?.lines||[]).flatMap(line=>line.stops))){const origin={x:(index%G.n+.5)*4-G.half,z:(Math.floor(index/G.n)+.5)*4-G.half};let best=null,bestDistance=2.5;
   for(const road of geometry.roads){if(!road.spec.sidewalk)continue;for(let i=1;i<road.stations.length;i++){const a=road.stations[i-1],b=road.stations[i],dx=b.x-a.x,dz=b.z-a.z,length=Math.hypot(dx,dz),t=Math.max(0,Math.min(1,((origin.x-a.x)*dx+(origin.z-a.z)*dz)/(length*length||1))),center={x:a.x+dx*t,z:a.z+dz*t},d=distance(origin,center);if(d<bestDistance){bestDistance=d;const p=atDistance(road.stations,a.distance+t*length),width=transitionWidth(road,geometry.tapers.get(road.id),p.distance);best={center,arm:{tx:p.tx,tz:p.tz,width,spec:road.spec},halfWidth:width/2+.38,halfDepth:.3,stop:index,ends:[-1,1].map(side=>({x:center.x-p.tz*(width/2+.22)*side,z:center.z+p.tx*(width/2+.22)*side}))};}}}
   if(best&&!geometry.junctions.some(j=>distance(best.center,j)<j.radius+1.8)&&!result.some(c=>distance(c.center,best.center)<1))result.push(best);
  }return result;
@@ -44,3 +46,6 @@ export function rampStations(source,crossings,width){const stations=source[0]?.n
  return [...distances].sort((a,b)=>a-b).map(d=>atDistance(stations,d));
 }
 export function rampAmount(crossings,p){let drop=0;for(const c of crossings){const dx=p.x-c.center.x,dz=p.z-c.center.z,along=Math.abs(dx*c.arm.tx+dz*c.arm.tz),lateral=Math.abs(-dx*c.arm.tz+dz*c.arm.tx);if(lateral<c.arm.width/2-.1||lateral>c.arm.width/2+.5)continue;drop=Math.max(drop,1-Math.max(0,Math.min(1,(along-.3)/.24)));}return drop;}
+
+pedestrianCrossings=G.bind(pedestrianCrossings);
+pedestrianNetwork=G.bind(pedestrianNetwork);

@@ -1,25 +1,27 @@
-import {pedestrianNetwork} from './pedestrian-network.js?v=154';
-import './building-entities.js?v=154';
+import './map-grid.js?v=155';
+const G=globalThis.BoroughGrid;
+import {pedestrianNetwork} from './pedestrian-network.js?v=155';
+import './building-entities.js?v=155';
 const Buildings=globalThis.BoroughBuildings;
-import {roadPoint} from './traffic.js?v=154';
-import {visualParcels} from './parcels.js?v=154';
-import {WalkingSearch} from './walking-search.js?v=154';
+import {roadPoint} from './traffic.js?v=155';
+import {visualParcels} from './parcels.js?v=155';
+import {WalkingSearch} from './walking-search.js?v=155';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
-const cell=p=>Math.floor((p.z+96)/4)*48+Math.floor((p.x+96)/4);
+const cell=p=>Math.floor((p.z+G.half)/4)*G.n+Math.floor((p.x+G.half)/4);
 export function sidewalkPosition(traffic,i){const p=traffic.positions.get(i)||roadPoint(i),neighbors=traffic.graph.get(i)||[],q=neighbors.map(j=>traffic.positions.get(j)||roadPoint(j)).find(q=>distance(p,q)>.01);if(!q)return p;let dx=q.x-p.x,dz=q.z-p.z;if(dx<0||Math.abs(dx)<.001&&dz<0){dx=-dx;dz=-dz;}const length=Math.hypot(dx,dz)||1,width=traffic.engine.ROADS[traffic.world.tiles[i].roadType]?.width||2.45,offset=width/2+.22;return {x:p.x-dz/length*offset,z:p.z+dx/length*offset};}
 export class Walking {
  constructor(world,traffic){this.world=world;this.traffic=traffic;this.active=new Map();this.version=0;this.rebuild();}
  clearLine(a,b,ignore=new Set(),roadAccess=false){
   let escape=roadAccess==='escape'&&this.network?.blocked(a);
-  const steps=Math.max(1,Math.ceil(distance(a,b)/.35));for(let k=0;k<=steps;k++){const p={x:a.x+(b.x-a.x)*k/steps,z:a.z+(b.z-a.z)*k/steps};if(Math.abs(p.x)>=96||Math.abs(p.z)>=96)return false;if(this.roundabouts?.some(j=>distance(p,j)<j.roundabout.outer+.02))return false;const inRoad=this.network?.blocked(p);if(roadAccess!=='network'&&inRoad&&!escape)return false;if(!inRoad)escape=false;const i=cell(p),t=this.world.tiles[i];for(const parcel of this.parcelBins?.get(i)||[])if(!ignore.has(parcel.id)&&Buildings.contains(parcel.frame,p))return false;if(ignore.has(i))continue;if(!t||t.construction)return false;if(t.type==='road'){if(this.traffic.engine.ROADS[t.roadType||'street']?.sidewalk===false)return false;}else if(t.ground==='water'||t.type&&t.type!=='path')return false;}return true;
+  const steps=Math.max(1,Math.ceil(distance(a,b)/.35));for(let k=0;k<=steps;k++){const p={x:a.x+(b.x-a.x)*k/steps,z:a.z+(b.z-a.z)*k/steps};if(Math.abs(p.x)>=G.half||Math.abs(p.z)>=G.half)return false;if(this.roundabouts?.some(j=>distance(p,j)<j.roundabout.outer+.02))return false;const inRoad=this.network?.blocked(p);if(roadAccess!=='network'&&inRoad&&!escape)return false;if(!inRoad)escape=false;const i=cell(p),t=this.world.tiles[i];for(const parcel of this.parcelBins?.get(i)||[])if(!ignore.has(parcel.id)&&Buildings.contains(parcel.frame,p))return false;if(ignore.has(i))continue;if(!t||t.construction)return false;if(t.type==='road'){if(this.traffic.engine.ROADS[t.roadType||'street']?.sidewalk===false)return false;}else if(t.ground==='water'||t.type&&t.type!=='path')return false;}return true;
  }
  rebuild(){this.roundabouts=(this.traffic.roadJunctions||[]).filter(j=>j.roundabout);this.developmentRevision=this.world.development?.revision||0;this.version++;this.traffic.crossings?.rebuild();this.network=pedestrianNetwork(this.world,this.traffic.engine);this.nodes=[];this.bins=new Map();this.cache=new Map();this.parcels=visualParcels(this.world);this.parcelBins=new Map();
-  for(const p of Object.values(this.world.development?.parcels||{}))if(p.occupant){const f=p.frame,c=Math.abs(Math.cos(f.angle)),s=Math.abs(Math.sin(f.angle)),x=(f.width*c+f.depth*s)/2,z=(f.width*s+f.depth*c)/2;for(let yy=Math.max(0,Math.floor((f.cz-z+96)/4));yy<=Math.min(47,Math.floor((f.cz+z+96)/4));yy++)for(let xx=Math.max(0,Math.floor((f.cx-x+96)/4));xx<=Math.min(47,Math.floor((f.cx+x+96)/4));xx++){const i=yy*48+xx;if(!this.parcelBins.has(i))this.parcelBins.set(i,[]);this.parcelBins.get(i).push(p);}}
+  for(const p of Object.values(this.world.development?.parcels||{}))if(p.occupant){const f=p.frame,c=Math.abs(Math.cos(f.angle)),s=Math.abs(Math.sin(f.angle)),x=(f.width*c+f.depth*s)/2,z=(f.width*s+f.depth*c)/2;for(let yy=Math.max(0,Math.floor((f.cz-z+G.half)/4));yy<=Math.min(G.last,Math.floor((f.cz+z+G.half)/4));yy++)for(let xx=Math.max(0,Math.floor((f.cx-x+G.half)/4));xx<=Math.min(G.last,Math.floor((f.cx+x+G.half)/4));xx++){const i=yy*G.n+xx;if(!this.parcelBins.has(i))this.parcelBins.set(i,[]);this.parcelBins.get(i).push(p);}}
   const locations=new Map();
   const add=(p,kind)=>{const location=kind+':'+p.x.toFixed(5)+':'+p.z.toFixed(5);if(locations.has(location))return locations.get(location);const id=this.nodes.length,node={...p,id,kind,links:new Map()};this.nodes.push(node);locations.set(location,node);const key=Math.floor(p.x/3)+':'+Math.floor(p.z/3);if(!this.bins.has(key))this.bins.set(key,[]);this.bins.get(key).push(node);return node;};
   const link=(a,b,roadAccess=false)=>{if(a===b||a.links.has(b.id)||!this.clearLine(a,b,new Set(),roadAccess))return;const cost=distance(a,b);a.links.set(b.id,cost);b.links.set(a.id,cost);};
   const networkNodes=this.network.nodes.map(n=>add(n,n.kind));for(const edge of this.network.edges)link(networkNodes[edge.a],networkNodes[edge.b],'network');
-  for(const path of this.world.walkPaths||[]){let previous;for(const p of this.traffic.engine.sampleRoad(path.controls)){const node=add({x:(p.x+.5)*4-96,z:(p.y+.5)*4-96},'path');if(previous)link(previous,node,'network');previous=node;}}
+  for(const path of this.world.walkPaths||[]){let previous;for(const p of this.traffic.engine.sampleRoad(path.controls)){const node=add({x:(p.x+.5)*4-G.half,z:(p.y+.5)*4-G.half},'path');if(previous)link(previous,node,'network');previous=node;}}
   for(const node of this.nodes)if(node.kind==='path')for(const other of this.near(node,3)){const radius=other.kind==='street'?2.8:.65;if(other.id!==node.id&&distance(node,other)<=radius)link(node,other,'escape');}
  }
  near(p,radius){const out=[];for(let x=Math.floor((p.x-radius)/3);x<=Math.floor((p.x+radius)/3);x++)for(let z=Math.floor((p.z-radius)/3);z<=Math.floor((p.z+radius)/3);z++)for(const node of this.bins.get(x+':'+z)||[])if(distance(node,p)<=radius)out.push(node);return out;}
@@ -42,3 +44,5 @@ export class Walking {
  }
  }
 }
+
+Walking=G.bindClass(Walking);

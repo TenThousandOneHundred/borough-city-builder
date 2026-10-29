@@ -1,10 +1,10 @@
-import {waterHeightTexture,writeWaterHeights} from './water-depth.js?v=154';
+import {waterHeightTexture,writeWaterHeights} from './water-depth.js?v=155';
 import * as THREE from './vendor/three.module.js';
-import {waterRippleTexture} from './water-ripples.js?v=154';
+import {waterRippleTexture} from './water-ripples.js?v=155';
 import {Reflector} from './vendor/Reflector.js';
 export function reflectedWater(view,ground,far){
  const nearHeight=waterHeightTexture(ground),farHeight=waterHeightTexture(far),ripples=waterRippleTexture();
- const shader={name:'Borough river',uniforms:{...THREE.UniformsLib.fog,ripples:{value:ripples},color:{value:new THREE.Color('#153646')},shallowColor:{value:new THREE.Color('#577568')},nearHeight:{value:nearHeight},farHeight:{value:farHeight},heightSizes:{value:new THREE.Vector2(nearHeight.image.width,farHeight.image.width)},tDiffuse:{value:null},textureMatrix:{value:new THREE.Matrix4()},time:{value:0},night:{value:0},reflectionEnabled:{value:1}},vertexShader:`
+ const shader={name:'Borough river',uniforms:{...THREE.UniformsLib.fog,ripples:{value:ripples},color:{value:new THREE.Color('#153646')},shallowColor:{value:new THREE.Color('#577568')},nearHeight:{value:nearHeight},farHeight:{value:farHeight},nearExtent:{value:ground.parameters?.width/2||96},heightSizes:{value:new THREE.Vector2(nearHeight.image.width,farHeight.image.width)},tDiffuse:{value:null},textureMatrix:{value:new THREE.Matrix4()},time:{value:0},night:{value:0},reflectionEnabled:{value:1}},vertexShader:`
  #include <fog_pars_vertex>
  uniform mat4 textureMatrix;varying vec4 projected;varying vec3 world;varying vec3 eye;
  void main(){projected=textureMatrix*vec4(position,1.);world=(modelMatrix*vec4(position,1.)).xyz;eye=cameraPosition-world;vec4 mvPosition=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*mvPosition;
@@ -12,9 +12,9 @@ export function reflectedWater(view,ground,far){
  }
  `,fragmentShader:`
  #include <fog_pars_fragment>
- uniform sampler2D tDiffuse,nearHeight,farHeight,ripples;uniform vec3 color,shallowColor;uniform vec2 heightSizes;uniform float time,night,reflectionEnabled;varying vec4 projected;varying vec3 world;varying vec3 eye;
+ uniform sampler2D tDiffuse,nearHeight,farHeight,ripples;uniform vec3 color,shallowColor;uniform vec2 heightSizes;uniform float time,night,reflectionEnabled,nearExtent;varying vec4 projected;varying vec3 world;varying vec3 eye;
  float bedHeight(vec2 p){
-  bool near=abs(p.x)<=96.&&abs(p.y)<=96.;float size=near?heightSizes.x:heightSizes.y,extent=near?96.:550.;
+  bool near=abs(p.x)<=nearExtent&&abs(p.y)<=nearExtent;float size=near?heightSizes.x:heightSizes.y,extent=near?nearExtent:550.;
   vec2 uv=clamp((p/(extent*2.)+.5)*(size-1.)/size+.5/size,vec2(.5/size),vec2(1.-.5/size));
   vec2 encodedHeight=near?texture2D(nearHeight,uv).rg:texture2D(farHeight,uv).rg;
   return dot(encodedHeight,vec2(255.,255./256.))-64.;

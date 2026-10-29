@@ -1,4 +1,6 @@
-import {floorHeight} from './landscape.js?v=154';
+import './map-grid.js?v=155';
+const G=globalThis.BoroughGrid;
+import {floorHeight} from './landscape.js?v=155';
 import * as THREE from './vendor/three.module.js';
 // Gameplay pedestrians mirror saved simulation agents. Only the menu uses ambient walkers.
 export class StreetLife{
@@ -9,7 +11,7 @@ export class StreetLife{
    const neighbors=CityEngine.neighbors(i),roads=neighbors.filter(j=>world.tiles[j].type==='road');
    if(roads.length!==2||roads[0]+roads[1]!==2*i||!neighbors.some(j=>world.tiles[j].type&&world.tiles[j].type!=='road'))continue;
    const horizontal=Math.abs(roads[0]-i)===1;
-   this.people.push({x:(i%48+.5)*4-96,z:(Math.floor(i/48)+.5)*4-96,horizontal,side:i%2?1:-1,phase:i*.717});
+   this.people.push({x:(i%G.n+.5)*4-G.half,z:(Math.floor(i/G.n)+.5)*4-G.half,horizontal,side:i%2?1:-1,phase:i*.717});
   }
   const count=this.v.menu?this.people.length:1024;
   const defs=[new THREE.CapsuleGeometry(.036,.105,3,5),new THREE.SphereGeometry(.033,7,5),new THREE.CylinderGeometry(.018,.016,.13,5),new THREE.CylinderGeometry(.018,.016,.13,5)];
@@ -25,7 +27,7 @@ export class StreetLife{
   if(camera){camera.updateMatrixWorld();const key=camera.matrixWorld.elements.join(',')+camera.projectionMatrix.elements.join(',');if(key!==this.lastCamera){this.lastCamera=key;this.projection.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);this.frustum.setFromProjectionMatrix(this.projection);}}
   let count=0;const time=this.world.citizens?.time||0,dirty=this.parts.map(()=>({first:Infinity,last:0}));this.lastMatrixWrites=0;this.lastHeightSamples=0;
   const draw=(r,state)=>{if(count>=1024)return;const x=state.x,z=state.z;if(camera&&(x-camera.position.x)**2+(z-camera.position.z)**2>110*110)return;
-   const i=Math.floor((z+96)/4)*48+Math.floor((x+96)/4),road=this.world.tiles[i]?.type==='road';
+   const i=Math.floor((z+G.half)/4)*G.n+Math.floor((x+G.half)/4),road=this.world.tiles[i]?.type==='road';
    const revision=this.world.elevationRevision||0,roadRevision=v.roadworks.heightRevision,accessRevision=v.roadworks.accessRevision,ground=this.world.tiles[i]?.ground,previous=this.heights.get(state);let y;if(previous&&previous.x===x&&previous.z===z&&previous.road===road&&previous.ground===ground&&previous.revision===revision&&previous.roadRevision===roadRevision&&previous.accessRevision===accessRevision)y=previous.y;else{y=v.roadworks.walkingHeight?.(this.world,x,z)??(road?v.roadworks.height(this.world,x,z)+.08:floorHeight(this.world,x,z)+.08);this.heights.set(state,{x,z,road,ground,revision,roadRevision,accessRevision,y});this.lastHeightSamples++;}
    this.sphere.center.set(x,y+.2,z);if(camera&&!this.frustum.intersectsSphere(this.sphere))return;
    const heading=state.heading||0,walking=state.phase!=='wait'&&r.activity!=='Waiting for walking access',swing=walking?Math.sin(time*8+r.id)*.3:0;
@@ -38,3 +40,6 @@ export class StreetLife{
  }
 
 }
+
+
+StreetLife=G.bindClass(StreetLife);

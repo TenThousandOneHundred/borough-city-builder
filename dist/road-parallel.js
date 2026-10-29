@@ -1,11 +1,13 @@
+import './map-grid.js?v=155';
+const G=globalThis.BoroughGrid;
 // Parallel centerlines in tile coordinates. Width includes sidewalks; one tile
 // is 20 displayed metres. Quadratic offsets are fitted, never translated.
-import './road-curves.js?v=154';
+import './road-curves.js?v=155';
 const RoadCurves=globalThis.BoroughRoadCurves;
 const EPS=1e-8,ERROR=.01,MAX_SEGMENTS=32,MAX_SAMPLES=768,MAX_WORK=4096;
 const point=p=>({x:p.x,y:p.y});
 const finite=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y);
-const inside=p=>finite(p)&&p.x>=0&&p.y>=0&&p.x<=47&&p.y<=47;
+const inside=p=>finite(p)&&p.x>=0&&p.y>=0&&p.x<=G.last&&p.y<=G.last;
 const add=(a,b,s=1)=>({x:a.x+b.x*s,y:a.y+b.y*s});
 const sub=(a,b)=>({x:a.x-b.x,y:a.y-b.y});
 const dot=(a,b)=>a.x*b.x+a.y*b.y;
@@ -113,3 +115,6 @@ export function buildParallelRoads(world,plan,type,E,{zoneSides}={}){
  if(!plan?.ok)return {ok:false,reason:plan?.reason||'Choose both parallel roads.',cost:0,costComplete:false,plan};
  return {...E.buildRoadBatch(world,plan.paths,type,{zoneSides}),plan};
 }
+
+quoteParallelRoads=G.bind(quoteParallelRoads);
+buildParallelRoads=G.bind(buildParallelRoads);

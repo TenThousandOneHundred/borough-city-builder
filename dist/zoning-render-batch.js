@@ -1,3 +1,5 @@
+import './map-grid.js?v=155';
+const G=globalThis.BoroughGrid;
 import * as THREE from './vendor/three.module.js';
 
 // Write terrain-following cells straight into their final colour batches.
@@ -9,7 +11,7 @@ export class ZonePlaneBatch{
   let value=this.colors.get(color);if(!value){value=new THREE.Color(color);this.colors.set(color,value);}
   const key=value.getHex()+':'+opacity;let batch=this.batches.get(key);
   if(!batch){batch={color:value,opacity,cells:[]};this.batches.set(key,batch);}
-  batch.cells.push({cx:frame?.cx??((x+.5)*4-96),cz:frame?.cz??((y+.5)*4-96),width:(frame?.width||4)-.18,depth:(frame?.depth||4)-.18,angle:frame?.angle||0});
+  batch.cells.push({cx:frame?.cx??((x+.5)*4-G.half),cz:frame?.cz??((y+.5)*4-G.half),width:(frame?.width||4)-.18,depth:(frame?.depth||4)-.18,angle:frame?.angle||0});
  }
  finish(group){
   for(const {color,opacity,cells}of this.batches.values()){
@@ -28,3 +30,6 @@ export class ZonePlaneBatch{
   }
  }
 }
+
+
+ZonePlaneBatch=G.bindClass(ZonePlaneBatch);

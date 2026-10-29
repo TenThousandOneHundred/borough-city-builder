@@ -1,6 +1,16 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 155 — Larger maps and merit-funded land expansion
+
+New game offers **Large** maps with a 72 × 72 construction grid, 2.25 times the area of the original 48 × 48 maps. Every landscape has a preview generated from its selected size. Building and road scale remain unchanged. Large maps are divided into nine 480 × 480 metre districts; Standard maps have four. New progression cities begin with one owned district and a west-edge road connection. Sandbox starts with all land available. Existing saved cities retain their original dimensions and unrestricted land.
+
+The **Land & merits** control opens a terrain overview showing owned, adjacent and locked districts. Milestones award 2, 2, 3, 3, 4 and 4 merits; a neighboring district costs two. Awards use a saved receipt and are never repeated after population loss or reload. Purchases save immediately, restoring ownership and the balance if saving fails. Boundaries appear in the 3D city. Road footprints and curves, widening, footpaths, facilities, roadside zoning and terrain tools enforce ownership; purchasing land makes its roadside cells available without discarding cached geometry.
+
+Coordinate helpers now respect each world's dimensions, including suspended road-building steps, terrain meshes, water depth, traffic, walking, transit and saved indices. Terrain detail and building models retain their previous scale and quality. The land overview is static and boundary lines are rebuilt on ownership changes or finished terrain edits; neither adds per-frame map sampling. Old and large cities can coexist in the same save store.
+
+Validation includes natural residential growth on all seven Large landscapes, roads/traffic/zoning/sculpting beyond the previous boundary, rejection of construction on unowned land, duplicate-merit protection, mixed-size save/reload, and interleaved geometry jobs. Browser QA imported a naturally grown 86-resident city, observed 114 residents and its first two merits, purchased district B2, and verified two owned districts with zero merits after reload/continue. The land dialog also fits a 390px viewport. The complete existing suite and new expansion tests run before Pages deployment.
+
 ## Edition 154 — Landscape library and four new maps
 
 New game now presents a compact landscape library, a selected-map preview, terrain and land-area details, and separate city-name and game-mode controls. Seven keyboard-selectable maps replace the three abstract CSS thumbnails. The layout adapts to narrow screens with a horizontal map gallery. All previews are small static WebP renders sampled from the same terrain and fixed map seeds used by the game; they add no rendering work during play.

@@ -1,17 +1,19 @@
-import './progression.js?v=154';
-import './roundabout-state.js?v=154';
-import {moveToRoute} from './route-progress.js?v=154';
-import './building-entities.js?v=154';
+import './map-grid.js?v=155';
+const G=globalThis.BoroughGrid;
+import './progression.js?v=155';
+import './roundabout-state.js?v=155';
+import {moveToRoute} from './route-progress.js?v=155';
+import './building-entities.js?v=155';
 const Buildings=globalThis.BoroughBuildings;
-import {Walking,sidewalkPosition} from './walking.js?v=154';
-import {roadPoint} from './traffic.js?v=154';
+import {Walking,sidewalkPosition} from './walking.js?v=155';
+import {roadPoint} from './traffic.js?v=155';
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const nearby=(engine,i)=>engine.neighbors(i);
 // Attach each numeric stop to one physical road for the complete loop. Runtime
 // pins survive rebuilds and saves. Old numeric-only lines remain untouched on
 // read and acquire saved pins on their first road edit.
 const lineAttachments=new WeakMap();
-const worldPoint=p=>({x:(p.x+.5)*4-96,z:(p.y+.5)*4-96});
+const worldPoint=p=>({x:(p.x+.5)*4-G.half,z:(p.y+.5)*4-G.half});
 function attachStop(traffic,stop,previous){
  let source=previous?.pathId;if(previous&&source===null&&!traffic.graph.hasSource(stop,null))source=Buildings.frontageSource(traffic.world,{roadIndex:stop,...worldPoint(previous.point)});
  if(source===false)return null;const access=traffic.network.attachment(stop,source,previous?.point);if(!access)return null;
@@ -29,7 +31,7 @@ export function transitLeg(traffic,from,to,fromDepot=false,fromAttachment=fromDe
 }
 export function planBusLine(world,traffic,stops,pinned,originalDepot){
  if(!Array.isArray(stops)||stops.length<2||stops.length>12||new Set(stops).size!==stops.length||stops.some(i=>!Number.isInteger(i)||!traffic.graph.has(i)))return {ok:false,reason:'Choose 2–12 different road stops.'};
- if(stops.some(i=>globalThis.BoroughRoundabouts.blocked(world,{cx:(i%48+.5)*4-96,cz:(Math.floor(i/48)+.5)*4-96,width:.01,depth:.01},3.05)))return {ok:false,reason:'Place bus stops beyond the roundabout approaches.'};
+ if(stops.some(i=>globalThis.BoroughRoundabouts.blocked(world,{cx:(i%G.n+.5)*4-G.half,cz:(Math.floor(i/G.n)+.5)*4-G.half,width:.01,depth:.01},3.05)))return {ok:false,reason:'Place bus stops beyond the roundabout approaches.'};
  const attachments=stops.map((s,i)=>attachStop(traffic,s,pinned?.[i]));if(attachments.some(a=>!a))return {ok:false,reason:'A stop’s road has been removed. Restore its road to resume service.'};
  const legs=stops.map((s,i)=>transitLeg(traffic,s,stops[(i+1)%stops.length],false,attachments[i],attachments[(i+1)%stops.length]));if(legs.some(l=>!l))return {ok:false,attachments,reason:'Every stop must connect to the next on its own road, including the return to the first stop.'};
  let depot=-1,entry=null;for(let i=0;i<world.tiles.length;i++)if((originalDepot===undefined||i===originalDepot)&&world.tiles[i].type==='bus'&&world.tiles[i].level){const route=transitLeg(traffic,i,stops[0],true,null,attachments[0]);if(route){depot=i;entry=route;break;}}
@@ -83,3 +85,7 @@ export class Transit{
  }
  get summary(){this.syncPassengers();const people=[...this.passengers.values()];return {lines:this.entries.size,buses:[...this.entries.values()].filter(e=>!e.reason).length,waiting:people.filter(r=>r.transit?.phase==='wait').length,riding:people.filter(r=>r.transit?.phase==='ride').length,completed:(this.world.transit?.lines||[]).reduce((n,l)=>n+l.completed,0)};}
 }
+
+planBusLine=G.bind(planBusLine);
+createBusLine=G.bind(createBusLine);
+Transit=G.bindClass(Transit);

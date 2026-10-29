@@ -1,10 +1,12 @@
+import './map-grid.js?v=155';
+const G=globalThis.BoroughGrid;
 // Three controls define an orthogonal grid in tile coordinates (20 m/tile).
 // The third control contributes only depth along the first edge's normal.
 const EPS=1e-7, LIMIT=47, BIN=4, HARD_BLOCK_LIMIT=32;
 const point=p=>({x:p.x,y:p.y});
 const finite=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y);
-const inside=p=>finite(p)&&p.x>=-EPS&&p.y>=-EPS&&p.x<=LIMIT+EPS&&p.y<=LIMIT+EPS;
-const bounded=p=>({x:Math.max(0,Math.min(LIMIT,p.x)),y:Math.max(0,Math.min(LIMIT,p.y))});
+const inside=p=>finite(p)&&p.x>=-EPS&&p.y>=-EPS&&p.x<=G.last+EPS&&p.y<=G.last+EPS;
+const bounded=p=>({x:Math.max(0,Math.min(G.last,p.x)),y:Math.max(0,Math.min(G.last,p.y))});
 const distance=(a,b)=>Math.hypot(b.x-a.x,b.y-a.y);
 const interpolate=(a,u,t)=>({x:a.x+u.x*t,y:a.y+u.y*t});
 
@@ -57,7 +59,7 @@ function geometry(world,E){
   if(distance(a,b)<EPS)return;
   const spec=E.ROADS[type]||E.ROADS.street,width=legacyWidth??spec.width/4;widest=Math.max(widest,width);
   // Legacy one-way traffic follows increasing tile indices (east/south).
-  if(!authored&&spec.oneway&&b.y*48+b.x<a.y*48+a.x)[a,b]=[b,a];
+  if(!authored&&spec.oneway&&b.y*G.n+b.x<a.y*G.n+a.x)[a,b]=[b,a];
   const segment={a:point(a),b:point(b),width,oneway:!!spec.oneway,authored};
   for(let y=Math.floor(Math.min(a.y,b.y)/BIN);y<=Math.floor(Math.max(a.y,b.y)/BIN);y++)for(let x=Math.floor(Math.min(a.x,b.x)/BIN);x<=Math.floor(Math.max(a.x,b.x)/BIN);x++){
    const key=x+','+y;if(!bins.has(key))bins.set(key,[]);bins.get(key).push(segment);
@@ -69,8 +71,8 @@ function geometry(world,E){
  }
  for(let i=0;i<world.tiles.length;i++){
   const tile=world.tiles[i];if(tile.type!=='road'||tile.pathIds?.length&&!tile.legacyRoad)continue;
-  const x=i%48,y=Math.floor(i/48),dirs=[],legacyWidth=!tile.roadType&&tile.roadWidth===2?3.15/4:undefined;
-  for(const [dx,dy]of [[-1,0],[1,0],[0,-1],[0,1]])if(x+dx>=0&&x+dx<48&&y+dy>=0&&y+dy<48&&world.tiles[(y+dy)*48+x+dx].type==='road')dirs.push({x:dx,y:dy});
+  const x=i%G.n,y=Math.floor(i/G.n),dirs=[],legacyWidth=!tile.roadType&&tile.roadWidth===2?3.15/4:undefined;
+  for(const [dx,dy]of [[-1,0],[1,0],[0,-1],[0,1]])if(x+dx>=0&&x+dx<G.n&&y+dy>=0&&y+dy<G.n&&world.tiles[(y+dy)*G.n+x+dx].type==='road')dirs.push({x:dx,y:dy});
   if(dirs.length===2&&dirs[0].x*dirs[1].x+dirs[0].y*dirs[1].y===0){
    const a={x:x+dirs[0].x*.5,y:y+dirs[0].y*.5},b={x:x+dirs[1].x*.5,y:y+dirs[1].y*.5};let previous=a;
    for(let n=1;n<=12;n++){const t=n/12,s=1-t,p={x:s*s*a.x+2*s*t*x+t*t*b.x,y:s*s*a.y+2*s*t*y+t*t*b.y};add(previous,p,tile.roadType,false,legacyWidth);previous=p;}
@@ -163,3 +165,8 @@ export function buildRoadGrid(world,plan,type,E,options={}){
  }
  return {...quote,roads};
 }
+
+geometry=G.bind(geometry);
+scratchWorld=G.bind(scratchWorld);
+quoteRoadGrid=G.bind(quoteRoadGrid);
+buildRoadGrid=G.bind(buildRoadGrid);

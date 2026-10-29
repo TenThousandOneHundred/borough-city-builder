@@ -1,5 +1,6 @@
 (function(root){
 'use strict';
+const G=typeof module!=='undefined'?require('./map-grid.js'):root.BoroughGrid;
 const RoadTypes=typeof module!=='undefined'?require('./road-types.js'):root.BoroughRoadTypes;
 const RoadCurves=typeof module!=='undefined'?require('./road-curves.js'):root.BoroughRoadCurves;
 const Roundabouts=typeof module!=='undefined'?require('./roundabout-state.js'):root.BoroughRoundabouts;
@@ -14,7 +15,7 @@ function sameTiles(tiles,previous){
  }return true;
 }
 function tileSnapshot(tiles){return {grounds:tiles.map(t=>t.ground),roads:tiles.map(t=>t.type==='road'?{type:t.roadType,width:t.roadWidth,legacy:t.legacyRoad,zoneSides:t.zoneSides,paths:t.pathIds?.slice()||[]}:null)};}
-const indexAt=(x,z)=>{const a=Math.floor((x+96)/4),b=Math.floor((z+96)/4);return a<0||b<0||a>=48||b>=48?-1:b*48+a;};
+const indexAt=(x,z)=>{const a=Math.floor((x+G.half)/4),b=Math.floor((z+G.half)/4);return a<0||b<0||a>=G.n||b>=G.n?-1:b*G.n+a;};
 function corners(p,width=p.width||CELL,depth=p.depth||CELL){const c=Math.cos(p.angle),s=Math.sin(p.angle);return [[-1,-1],[1,-1],[1,1],[-1,1]].map(([x,z])=>({x:p.cx+x*width/2*c+z*depth/2*s,z:p.cz-x*width/2*s+z*depth/2*c}));}
 function overlaps(a,b){const ac=Math.cos(a.angle),as=Math.sin(a.angle),bc=Math.cos(b.angle),bs=Math.sin(b.angle),dx=b.cx-a.cx,dz=b.cz-a.cz;for(const [x,z]of [[ac,-as],[as,ac],[bc,-bs],[bs,bc]]){const ar=Math.abs(x*ac-z*as)*(a.width||4)/2+Math.abs(x*as+z*ac)*(a.depth||4)/2,br=Math.abs(x*bc-z*bs)*(b.width||4)/2+Math.abs(x*bs+z*bc)*(b.depth||4)/2;if(Math.abs(dx*x+dz*z)>=ar+br-.02)return false;}return true;}
 // Private collision records live only during a layout rebuild. Keep calculated
@@ -46,7 +47,7 @@ function layout(w,roads,options={}){
  }
 
  for(const path of w.roadPaths||[]){const curved=path.controls.length>2,points=[];let length=0;
-  for(const q of RoadCurves.sample(path.controls,8)){const p={x:(q.x+.5)*4-96,z:(q.y+.5)*4-96};if(points.length)length+=Math.hypot(p.x-points.at(-1).x,p.z-points.at(-1).z);p.distance=length;points.push(p);}
+  for(const q of RoadCurves.sample(path.controls,8)){const p={x:(q.x+.5)*4-G.half,z:(q.y+.5)*4-G.half};if(points.length)length+=Math.hypot(p.x-points.at(-1).x,p.z-points.at(-1).z);p.distance=length;points.push(p);}
   for(let k=1;k<points.length;k++)roadRectangle(points[k-1],points[k],roads[path.type]?.width||2.45);if(RoadTypes.isLimitedAccess(path.type))continue;
   const columns=Math.floor(length/cellSize),blockOffsets=new Map();for(let col=0;col<columns;col++){const section=independent?Math.floor(col/6)*6:col,count=independent?Math.min(6,columns-section):1,d=(section+count/2)*cellSize;let k=1;while(k<points.length-1&&points[k].distance<d)k++;const a=points[k-1],b=points[k],f=(d-a.distance)/(b.distance-a.distance||1),vx=b.x-a.x,vz=b.z-a.z,l=Math.hypot(vx,vz)||1,along=(col-section+.5-count/2)*cellSize;
    // Fine cells share a tangent within short blocks. Rotating every inner-curve
@@ -63,7 +64,7 @@ function layout(w,roads,options={}){
    }
    sources.push({zoneSides:path.zoneSides,x:a.x+vx*f+vx/l*along,z:a.z+vz*f+vz/l*along,tx:vx/l,tz:vz/l,col,source:path.id,roadIndex:path.tiles[Math.min(path.tiles.length-1,Math.floor(col/Math.max(1,columns)*path.tiles.length))],offset,sideOffsets:blockOffsets.get(section)});}
  }
- for(let i=0;i<w.tiles.length;i++){const t=w.tiles[i];if(t.type!=='road'||t.pathIds?.length&&!t.legacyRoad)continue;const x=i%48,y=Math.floor(i/48),near=RoadTypes.legacyNeighbors(w,i),horizontal=near.some(n=>Math.floor(n/48)===y),vertical=near.some(n=>n%48===x);const cx=(x+.5)*4-96,cz=(y+.5)*4-96,roadWidth=roads[t.roadType]?.width||(t.roadWidth===2?3.15:2.45);if(horizontal||!vertical)roadRectangle({x:cx-2,z:cz},{x:cx+2,z:cz},roadWidth);if(vertical)roadRectangle({x:cx,z:cz-2},{x:cx,z:cz+2},roadWidth);if(horizontal&&vertical||RoadTypes.isLimitedAccess(t.roadType))continue;
+ for(let i=0;i<w.tiles.length;i++){const t=w.tiles[i];if(t.type!=='road'||t.pathIds?.length&&!t.legacyRoad)continue;const x=i%G.n,y=Math.floor(i/G.n),near=RoadTypes.legacyNeighbors(w,i),horizontal=near.some(n=>Math.floor(n/G.n)===y),vertical=near.some(n=>n%G.n===x);const cx=(x+.5)*4-G.half,cz=(y+.5)*4-G.half,roadWidth=roads[t.roadType]?.width||(t.roadWidth===2?3.15:2.45);if(horizontal||!vertical)roadRectangle({x:cx-2,z:cz},{x:cx+2,z:cz},roadWidth);if(vertical)roadRectangle({x:cx,z:cz-2},{x:cx,z:cz+2},roadWidth);if(horizontal&&vertical||RoadTypes.isLimitedAccess(t.roadType))continue;
   const source={zoneSides:t.zoneSides,x:cx,z:cz,tx:vertical?0:1,tz:vertical?1:0,col:vertical?y:x,source:vertical?'legacy-v-'+x:'legacy-h-'+y,roadIndex:i,offset:Math.max(independent?0:2,roadWidth/2+.45)};
   if(!independent)sources.push(source);else{const along=vertical?cz:cx;for(let col=Math.ceil((along-2)/cellSize-.5);(col+.5)*cellSize<along+2-1e-8;col++)sources.push({...source,col,...(vertical?{z:(col+.5)*cellSize}:{x:(col+.5)*cellSize})});}
  }
@@ -76,7 +77,7 @@ function layout(w,roads,options={}){
  variants.set(variant,{paths,tiles:tileSnapshot(w.tiles),cells});cache.set(w,variants);return cells;
 }
 function hit(cells,x,z){for(const p of cells.values()){const dx=x-p.cx,dz=z-p.cz,c=Math.cos(p.angle),s=Math.sin(p.angle);if(Math.abs(dx*c-dz*s)<=(p.width||4)/2&&Math.abs(dx*s+dz*c)<=(p.depth||4)/2)return p;}return null;}
-function selection(cells,a,b){const pa=cells.get(a.y*48+a.x),pb=cells.get(b.y*48+b.x);if(pa&&pb&&pa.source===pb.source&&pa.side===pb.side)return [...cells.values()].filter(p=>p.source===pa.source&&p.side===pa.side&&p.col>=Math.min(pa.col,pb.col)&&p.col<=Math.max(pa.col,pb.col)&&p.row>=Math.min(pa.row,pb.row)&&p.row<=Math.max(pa.row,pb.row)).map(p=>({x:p.index%48,y:Math.floor(p.index/48)}));return [...cells.values()].filter(p=>p.index%48>=Math.min(a.x,b.x)&&p.index%48<=Math.max(a.x,b.x)&&Math.floor(p.index/48)>=Math.min(a.y,b.y)&&Math.floor(p.index/48)<=Math.max(a.y,b.y)).map(p=>({x:p.index%48,y:Math.floor(p.index/48)}));}
+function selection(cells,a,b){const pa=cells.get(a.y*G.n+a.x),pb=cells.get(b.y*G.n+b.x);if(pa&&pb&&pa.source===pb.source&&pa.side===pb.side)return [...cells.values()].filter(p=>p.source===pa.source&&p.side===pa.side&&p.col>=Math.min(pa.col,pb.col)&&p.col<=Math.max(pa.col,pb.col)&&p.row>=Math.min(pa.row,pb.row)&&p.row<=Math.max(pa.row,pb.row)).map(p=>({x:p.index%G.n,y:Math.floor(p.index/G.n)}));return [...cells.values()].filter(p=>p.index%G.n>=Math.min(a.x,b.x)&&p.index%G.n<=Math.max(a.x,b.x)&&Math.floor(p.index/G.n)>=Math.min(a.y,b.y)&&Math.floor(p.index/G.n)<=Math.max(a.y,b.y)).map(p=>({x:p.index%G.n,y:Math.floor(p.index/G.n)}));}
 function lot(w,cells,index,shapes){const start=cells.get(index);if(!start||start.row!==0)return null;const byCoordinate=new Map([...cells.values()].filter(p=>p.source===start.source&&p.side===start.side).map(p=>[p.col+','+p.row,p]));
  for(const [width,depth]of shapes){const chosen=[];for(let y=0;y<depth;y++)for(let x=0;x<width;x++){const p=byCoordinate.get((start.col+x)+','+(start.row+y));if(p)chosen.push(p);}if(chosen.length!==width*depth)continue;if(!chosen.every(p=>{const t=w.tiles[p.index];return !t.type&&!t.construction&&t.zoneOwner===undefined&&t.zone===w.tiles[index].zone&&Math.abs(Math.sin(p.angle-start.angle))<.09;}))continue;
   const cx=chosen.reduce((n,p)=>n+p.cx,0)/chosen.length,cz=chosen.reduce((n,p)=>n+p.cz,0)/chosen.length,p={cx,cz,angle:start.angle,width:width*4-.12,depth:depth*4-.12};
@@ -85,5 +86,8 @@ function lot(w,cells,index,shapes){const start=cells.get(index);if(!start||start
   return {owner:index,members:chosen.map(q=>q.index),width,depth,oriented:{cx,cz,angle:start.angle,width:p.width,depth:p.depth,frontage:start.frontage}};
  }return null;
 }
+layout=G.bind(layout);
+lot=G.bind(lot);
+
 const api={layout,corners,overlaps,hit,selection,lot};if(typeof module!=='undefined')module.exports=api;else root.BoroughZoning=api;
 })(globalThis);

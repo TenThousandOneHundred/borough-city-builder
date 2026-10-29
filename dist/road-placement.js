@@ -1,3 +1,5 @@
+import './map-grid.js?v=155';
+const G=globalThis.BoroughGrid;
 // Construction coordinates are tile coordinates: one tile is 20 metres.
 // The index is a snapshot of network geometry. Recreate it after road edits.
 const EPS=1e-10, BIN=2, STEP=.4, TURN=Math.PI/4, ANGLE_WINDOW=Math.PI/24;
@@ -31,7 +33,7 @@ function clipped(a,b,max){
 }
 
 export function createRoadSnapIndex(world,engine){
- const size=engine.SIZE||48,max=size-1,index={world,max,nodes:[],segments:[],nodeBins:new Map(),segmentBins:new Map()};
+ const size=engine.SIZE||G.n,max=size-1,index={world,max,nodes:[],segments:[],nodeBins:new Map(),segmentBins:new Map()};
  function node(p,tangent,rank,key,label){if(finite(p)&&inside(p,max))index.nodes.push({p:point(p),tangent,rank,key,label});}
  function segment(a,b,rank,key,label){
   if(!finite(a)||!finite(b))return;const ends=clipped(a,b,max);if(!ends)return;[a,b]=ends;
@@ -126,3 +128,5 @@ export function measureRoad(points,height){
  if(height&&points.length>1){const first=points[0],last=points.at(-1),rise=height(last.x,last.y)-height(first.x,first.y);if(Number.isFinite(rise)){result.riseMeters=rise*5;result.gradePercent=lengthTiles>EPS?rise/(lengthTiles*4)*100:0;}}
  return result;
 }
+
+createRoadSnapIndex=G.bind(createRoadSnapIndex);

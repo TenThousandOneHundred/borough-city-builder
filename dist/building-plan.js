@@ -1,5 +1,7 @@
+import './map-grid.js?v=155';
+const G=globalThis.BoroughGrid;
 // Pure, deterministic lot planning. One world unit represents roughly five metres.
-import './road-curves.js?v=154';
+import './road-curves.js?v=155';
 const RoadCurves=globalThis.BoroughRoadCurves;
 const pathIndices=new WeakMap(),pathSamples=new WeakMap();
 function roadsById(world){
@@ -10,20 +12,20 @@ function roadsById(world){
 }
 function segments(path){
  if(pathSamples.has(path))return pathSamples.get(path);
- const points=RoadCurves.sample(path.controls).map(p=>({x:(p.x+.5)*4-96,z:(p.y+.5)*4-96}));
+ const points=RoadCurves.sample(path.controls).map(p=>({x:(p.x+.5)*4-G.half,z:(p.y+.5)*4-G.half}));
  pathSamples.set(path,points);return points;
 }
 export function lotPlan(world,index,parcel){
  const tile=parcel?.definition||world.tiles[index],width=parcel?.width||1,depth=parcel?.depth||1;
- let cx=(index%48+.5)*4-96+(width-1)*2,cz=(Math.floor(index/48)+.5)*4-96+(depth-1)*2;
+ let cx=(index%G.n+.5)*4-G.half+(width-1)*2,cz=(Math.floor(index/G.n)+.5)*4-G.half+(depth-1)*2;
  let seed=(Math.imul((parcel?.entitySeed??index)+17,73856093)^Math.imul(world.seed,19349663))>>>0;
  const next=()=>{seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;return(seed>>>0)/4294967296;};
  const variation=next(),style=Math.floor(next()*6),tone=Math.floor(next()*5);
  let nearest=null,distance=Infinity;const nearbyPaths=new Set();
- const gx=index%48,gy=Math.floor(index/48);
- for(let y=Math.max(0,gy-4);y<=Math.min(47,gy+depth+3);y++)for(let x=Math.max(0,gx-4);x<=Math.min(47,gx+width+3);x++){
-  const road=world.tiles[y*48+x];if(road.type!=='road')continue;for(const id of road.pathIds||[])nearbyPaths.add(id);if(road.pathIds?.length&&!road.legacyRoad)continue;const dx=(x+.5)*4-96-cx,dz=(y+.5)*4-96-cz,d=dx*dx+dz*dz;
-  if(d<distance){distance=d;nearest={dx,dz,roadIndex:y*48+x};}
+ const gx=index%G.n,gy=Math.floor(index/G.n);
+ for(let y=Math.max(0,gy-4);y<=Math.min(G.last,gy+depth+3);y++)for(let x=Math.max(0,gx-4);x<=Math.min(G.last,gx+width+3);x++){
+  const road=world.tiles[y*G.n+x];if(road.type!=='road')continue;for(const id of road.pathIds||[])nearbyPaths.add(id);if(road.pathIds?.length&&!road.legacyRoad)continue;const dx=(x+.5)*4-G.half-cx,dz=(y+.5)*4-G.half-cz,d=dx*dx+dz*dz;
+  if(d<distance){distance=d;nearest={dx,dz,roadIndex:y*G.n+x};}
  }
  let angle=!nearest?0:Math.abs(nearest.dx)>Math.abs(nearest.dz)?(nearest.dx<0?-Math.PI/2:Math.PI/2):nearest.dz<0?Math.PI:0;
  const paths=roadsById(world);let frontage=nearest?{roadIndex:nearest.roadIndex,x:cx+nearest.dx,z:cz+nearest.dz}:null;
@@ -52,3 +54,6 @@ export function lotPlan(world,index,parcel){
  else{const large=width*depth>1;floors=type==='office'?(large?8:5)+Math.floor(variation*16):(large?5:3)+Math.floor(variation*10);}
  return{entityId:parcel?.entityId,facility:!!parcel?.facility,oriented:!!parcel?.oriented,ownedCells:parcel?.oriented&&!parcel.entityId?parcel.members:undefined,index,type,density,low,style,tone,variation,floors,angle,frontage,cx,cz,lotWidth,lotDepth,parcelWidth:parcel?.entityId?lotWidth:width*4,parcelDepth:parcel?.entityId?lotDepth:depth*4,seed:seed>>>0,level:tile.level};
 }
+
+roadsById=G.bind(roadsById);
+lotPlan=G.bind(lotPlan);

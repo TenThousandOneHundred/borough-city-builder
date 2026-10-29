@@ -1,4 +1,6 @@
-import './building-entities.js?v=154';
+import './map-grid.js?v=155';
+const G=globalThis.BoroughGrid;
+import './building-entities.js?v=155';
 const Buildings=globalThis.BoroughBuildings;
 // Saved household members and daily routines, connected to the live road agents.
 export class Residents {
@@ -23,3 +25,6 @@ Object.assign(a,{previousX:undefined,previousZ:undefined,speed:0,stopTime:0,stop
  name(r){return ['Avery','Jordan','Sam','Taylor','Riley','Alex','Morgan','Casey'][r.id%8]+' '+['Chen','Patel','Wilson','Garcia','Kim','Brown','Singh','Martin'][Math.floor(r.id/8)%8]+' #'+r.id;}
  get summary(){const residents=this.state.residents;return{population:residents.length,households:new Set(residents.map(r=>r.household)).size,employed:residents.filter(r=>r.work!==null).length,travelling:this.agents.size+residents.filter(r=>r.transit||r.walk).length,working:residents.filter(r=>r.activity==='Working').length,shopping:residents.filter(r=>r.activity==='Shopping').length};}
 }
+
+
+Residents=G.bindClass(Residents);

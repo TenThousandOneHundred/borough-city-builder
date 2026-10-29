@@ -1,6 +1,7 @@
 // Join zoning frontages across separately drawn sections of the same street.
 (function(root){
 'use strict';
+const G=typeof module!=='undefined'?require('./map-grid.js'):root.BoroughGrid;
 const RoadTypes=typeof module!=='undefined'?require('./road-types.js'):root.BoroughRoadTypes;
 const cache=new WeakMap();
 function streetGraph(world,layout){
@@ -21,7 +22,7 @@ function streetGraph(world,layout){
  for(const source of sources){
   const match=/^legacy-([hv])-(\d+)$/.exec(source);if(!match)continue;
   const vertical=match[1]==='v',fixed=Number(match[2]),coords=[];
-  for(let n=0;n<48;n++){const t=world.tiles[vertical?n*48+fixed:fixed*48+n];if(t.type==='road'&&(!t.pathIds?.length||t.legacyRoad)&&!RoadTypes.isLimitedAccess(t.roadType))coords.push(n);}
+  for(let n=0;n<G.n;n++){const t=world.tiles[vertical?n*G.n+fixed:fixed*G.n+n];if(t.type==='road'&&(!t.pathIds?.length||t.legacyRoad)&&!RoadTypes.isLimitedAccess(t.roadType))coords.push(n);}
   if(coords.length>1)add(source,[coords[0],coords.at(-1)].map(n=>vertical?{x:fixed,y:n}:{x:n,y:fixed}));
  }
  for(const pair of ends.values())for(const p of pair){
@@ -54,5 +55,8 @@ function corridor(world,layout,first){
  }
  graph.corridors.set(key,result);return result;
 }
+streetGraph=G.bind(streetGraph);
+corridor=G.bind(corridor);
+
 const api={corridor};if(typeof module!=='undefined')module.exports=api;else root.BoroughStreets=api;
 })(globalThis);

@@ -1,6 +1,7 @@
 // Versioned independent roadside cells and multi-cell parcel ownership.
 (function(root){
 'use strict';
+const G=typeof module!=='undefined'?require('./map-grid.js'):root.BoroughGrid;
 const Z=typeof module!=='undefined'?require('./zoning-layout.js'):root.BoroughZoning;
 const CELL=1.6,MAX_SIDE=6;
 const zones=new Set(['residential_low','residential_row','residential_medium','residential_mixed','residential_lowrent','residential_high','commercial_low','commercial_high','industrial','office_low','office']);
@@ -45,9 +46,9 @@ function release(state,id){const parcel=state.parcels[id];if(!parcel)return fals
 function terrainOccupancy(state){
  const result=new Map();
  for(const parcel of Object.values(state.parcels)){
-  const points=Z.corners(parcel.frame),loX=Math.max(0,Math.floor((Math.min(...points.map(p=>p.x))+96)/4)),hiX=Math.min(47,Math.floor((Math.max(...points.map(p=>p.x))+96)/4)),loZ=Math.max(0,Math.floor((Math.min(...points.map(p=>p.z))+96)/4)),hiZ=Math.min(47,Math.floor((Math.max(...points.map(p=>p.z))+96)/4));
-  for(let z=loZ;z<=hiZ;z++)for(let x=loX;x<=hiX;x++)if(Z.overlaps(parcel.frame,{cx:(x+.5)*4-96,cz:(z+.5)*4-96,angle:0,width:4,depth:4})){
-   const index=z*48+x;if(!result.has(index))result.set(index,new Set());result.get(index).add(parcel.id);
+  const points=Z.corners(parcel.frame),loX=Math.max(0,Math.floor((Math.min(...points.map(p=>p.x))+G.half)/4)),hiX=Math.min(G.last,Math.floor((Math.max(...points.map(p=>p.x))+G.half)/4)),loZ=Math.max(0,Math.floor((Math.min(...points.map(p=>p.z))+G.half)/4)),hiZ=Math.min(G.last,Math.floor((Math.max(...points.map(p=>p.z))+G.half)/4));
+  for(let z=loZ;z<=hiZ;z++)for(let x=loX;x<=hiX;x++)if(Z.overlaps(parcel.frame,{cx:(x+.5)*4-G.half,cz:(z+.5)*4-G.half,angle:0,width:4,depth:4})){
+   const index=z*G.n+x;if(!result.has(index))result.set(index,new Set());result.get(index).add(parcel.id);
   }
  }
  return result;
@@ -65,8 +66,8 @@ function valid(state){
   if(!p||p.id!==id||!/^parcel-[1-9]\d*$/.test(id)||Number(id.slice(7))>=state.nextParcel||!zones.has(p.zone)||![p.width,p.depth].every(n=>Number.isInteger(n)&&n>0&&n<=MAX_SIDE)||!Array.isArray(p.cells)||p.cells.length!==p.width*p.depth||p.cells.length<2||new Set(p.cells).size!==p.cells.length)return false;
   if(!p.cells.every(cell=>state.cells[cell]?.owner===id&&state.cells[cell].zone===p.zone))return false;
   const f=p.frame;
-  if(!f||!['cx','cz','angle','width','depth'].every(k=>Number.isFinite(f[k]))||Math.abs(f.cx)>96||Math.abs(f.cz)>96||Math.abs(f.width-(p.width*CELL-.04))>1e-8||Math.abs(f.depth-(p.depth*CELL-.04))>1e-8||Z.corners(f).some(v=>Math.abs(v.x)>96.001||Math.abs(v.z)>96.001))return false;
-  if(!f.frontage||![f.frontage.x,f.frontage.z].every(Number.isFinite)||Math.abs(f.frontage.x)>100||Math.abs(f.frontage.z)>100||!Number.isInteger(f.frontage.roadIndex)||f.frontage.roadIndex<0||f.frontage.roadIndex>=2304)return false;
+  if(!f||!['cx','cz','angle','width','depth'].every(k=>Number.isFinite(f[k]))||Math.abs(f.cx)>G.half||Math.abs(f.cz)>G.half||Math.abs(f.width-(p.width*CELL-.04))>1e-8||Math.abs(f.depth-(p.depth*CELL-.04))>1e-8||Z.corners(f).some(v=>Math.abs(v.x)>G.halfTolerance||Math.abs(v.z)>G.halfTolerance))return false;
+  if(!f.frontage||![f.frontage.x,f.frontage.z].every(Number.isFinite)||Math.abs(f.frontage.x)>G.halfPlus4||Math.abs(f.frontage.z)>G.halfPlus4||!Number.isInteger(f.frontage.roadIndex)||f.frontage.roadIndex<0||f.frontage.roadIndex>=G.count)return false;
  }
  const bins=new Map();
  for(const parcel of parcels){
@@ -76,5 +77,7 @@ function valid(state){
  }
  return true;
 }
+grid=G.bind(grid);
+
 const api={create,grid,paint,proposal,reserve,release,terrainOccupancy,valid};if(typeof module!=='undefined')module.exports=api;else root.BoroughFineZones=api;
 })(globalThis);

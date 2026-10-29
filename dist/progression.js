@@ -28,7 +28,7 @@ function advance(w,population){
  if(!active(w)||!Number.isFinite(population))return [];
  const p=w.progression;p.peak=Math.max(p.peak,Math.floor(population));
  const level=levelAt(p.peak),earned=MILESTONES.slice(p.level+1,level+1);
- p.level=level;w.money+=earned.reduce((sum,m)=>sum+m.reward,0);return earned;
+ p.level=level;w.money+=earned.reduce((sum,m)=>sum+m.reward,0);root.BoroughLand?.award(w);return earned;
 }
 function requirement(tool,options={}){
  if(options.zone)return ZONES[options.zone]??0;
