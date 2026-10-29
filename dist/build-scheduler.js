@@ -19,8 +19,9 @@ function nextTask(){
 }
 // The synchronous path and interactive path execute the same geometry steps.
 export function finishBuild(steps){let next;do{next=steps.next();}while(!next.done);return next.value;}
-export async function scheduleBuild(steps,{budgetMs=8,now=()=>performance.now(),yieldTask=nextTask,cancelled=()=>false,onSlice=()=>{}}={}){
+export async function scheduleBuild(steps,{budgetMs=8,now=()=>performance.now(),yieldTask=nextTask,yieldBefore=false,cancelled=()=>false,onSlice=()=>{}}={}){
  try{
+  if(yieldBefore)await yieldTask();
   while(true){
    if(cancelled())throw new DOMException('Road preparation cancelled','AbortError');
    const start=now();let next;

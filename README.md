@@ -1,6 +1,18 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 150 — Reduce uninterrupted road preparation work
+
+Terrain fitting now uses a finer spatial lookup inside each construction cell, retaining the exact original partition order while skipping distant polygons. Finished terrain buffers are packed in cancellable batches instead of one uninterrupted allocation/copy step. Each preparation phase yields before starting, and the final visible swap gets its own frame opportunity. These changes retain the existing road, terrain, building and vegetation geometry. A larger per-triangle cache was tested and rejected because it slowed the browser despite reducing calculations.
+
+All 862 local checks passed, including frozen terrain-buffer comparisons, road edits, cancellation, save/continue, and source ownership. A focused lookup fixture reduced a native triangle's candidates from 512 to 8 without losing any overlapping partition. In a separate CPU terrain fixture, four warmed runs had median fitting times of 368.4 ms before and 329.6 ms after the spatial lookup. This is a bounded CPU result, not an FPS claim. The full browser comparison became inconclusive under severe system memory pressure (about 20 GB of swap); some samples became much slower, so no claim is made that road-placement lag is eliminated. Further profiling of large cities and the final traffic/scene swap remains necessary.
+
+Normal game QA placed a ₡300 connected street in Residential Streets QA 147, manually saved at 1:08:57 PM on October 29, used Save & Exit, and reloaded/continued with the street, 288 residents and 96 households intact. The new junction was retained. Browser warnings/errors were empty. Five-minute autosave, multiple worlds and offscreen simulation remain enabled.
+
+The previously prepared vehicle rebuild is included: distinct sedan, SUV and cargo-van forms with tapered bodies, crowned roofs, inset glass, curved wheel openings, circular rims and thin lamps. The official [traffic reference](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/traffic-ai) guided the comparison; window, body and lighting fidelity still differ and full visual parity remains unachieved. Sedans/SUVs use 730 triangles and vans 718. Shared prototypes and per-instance paint reduce a 192-vehicle fleet from 24 material draws to 15, while its triangle count rises from 88,272 to 139,872. Movement no longer reuploads unchanged paint colors; bus geometry and simulation behavior remain unchanged. This workload comparison does not establish a frame-rate improvement.
+
+This release includes an immediate road optimization in response to the reported lag; continue the scheduled optimization cadence after three visual/feature updates.
+
 ## Edition 149 — Prepare road graphics before the visible swap
 
 Road replacement now warms the real drawing programs and vertex/index buffers in scheduled batches while the old city remains visible. Zero-count draws go to a private one-pixel target. The helper restores the active render target, cube face, mip level, shadow-update settings, XR setting and geometry draw ranges after every batch, including errors. It borrows geometry/materials, disposes its own temporary resources, and remains cancellable before the road swap. Road geometry, terrain, textures, vegetation density and independent traffic simulation are not simplified.

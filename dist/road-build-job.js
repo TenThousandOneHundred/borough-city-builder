@@ -1,11 +1,11 @@
-import {geometryUploadSteps} from './geometry-upload.js?v=149';
-import {constructionGridSteps} from './construction-grid.js?v=149';
-import {groundCoverSteps} from './ground-cover.js?v=149';
-import {groundHeight,wetness} from './landscape.js?v=149';
+import {geometryUploadSteps} from './geometry-upload.js?v=150';
+import {constructionGridSteps} from './construction-grid.js?v=150';
+import {groundCoverSteps} from './ground-cover.js?v=150';
+import {groundHeight,wetness} from './landscape.js?v=150';
 import * as THREE from './vendor/three.module.js';
-import {changedRoadCells} from './road-frontage.js?v=149';
-import {Roadworks} from './roadworks.js?v=149';
-import {scheduleBuild} from './build-scheduler.js?v=149';
+import {changedRoadCells} from './road-frontage.js?v=150';
+import {Roadworks} from './roadworks.js?v=150';
+import {scheduleBuild} from './build-scheduler.js?v=150';
 
 // Build an invisible replacement. The visible city and its traffic remain live
 // until both road meshes and fitted terrain are ready for one synchronous swap.
@@ -22,6 +22,9 @@ export function prepareRoadRefresh(view,{schedule=scheduleBuild}={}){
  const job={force:false,promise:null};view.roadRefreshJob=job;view.onRoadBuildStatus?.(true);
  const cancelled=()=>view.roadRefreshJob!==job||view.world!==world||(world.roadEditRevision||0)!==revision||view.landscape.terrainBases!==bases;
  const onSlice=ms=>{stats.slices++;stats.maxSliceMs=Math.max(stats.maxSliceMs,ms);};
+ // Separate short phases too: otherwise their last and first slices stack
+ // in one frame even though each phase individually respects its budget.
+ const sliceOptions={cancelled,onSlice,yieldBefore:true};
  const layout=changedRoadCells(snapshot.tiles).keys,pathsKey=JSON.stringify(snapshot.roadPaths);
  // Only reuse scenery when occupancy and tree inputs still match the snapshot.
  const treeKey=w=>[w.elevationRevision,w.development?.revision,w.tiles.map(t=>[t.type,t.zone,t.tree,t.ground].join('/')).join(';'),JSON.stringify(w.development?.parcels)].join('|');
@@ -29,19 +32,19 @@ export function prepareRoadRefresh(view,{schedule=scheduleBuild}={}){
  let adopted=false,cover=null,grid=null,treePlan=null;
  job.promise=(async()=>{
   try{
-   await schedule(next.buildSteps(snapshot),{cancelled,onSlice});
+   await schedule(next.buildSteps(snapshot),sliceOptions);
    const plan=next.earthworks,height=(w,x,z)=>{const y=plan?.sample(x,z);return Number.isFinite(y)?y:groundHeight(w,x,z);};plan?.beginApplication();
    for(const base of bases){
     // Borrow immutable terrain attributes, with original indices and colors.
     // No clone of the entire landscape or live GPU buffer is required.
     const source=base.mesh.geometry,geometry=new THREE.BufferGeometry();geometry.attributes={...source.attributes};geometry.setIndex(new THREE.BufferAttribute(base.indices,1));geometry.setDrawRange(base.drawRange.start,base.drawRange.count);
     if(base.mesh===view.landscape.ground&&view.landscape.baseColors)geometry.setAttribute('color',new THREE.BufferAttribute(view.landscape.baseColors,source.attributes.color.itemSize));
-    if(plan){const result=plan.applyToGeometrySteps?await schedule(plan.applyToGeometrySteps(geometry),{cancelled,onSlice}):plan.applyToGeometry(geometry);terrain.push({base,result});}
+    if(plan){const result=plan.applyToGeometrySteps?await schedule(plan.applyToGeometrySteps(geometry),sliceOptions):plan.applyToGeometry(geometry);terrain.push({base,result});}
    }
-   if(view.landscape.cover||view.landscape.developmentPending){const wet=(w,x,z)=>plan?.excluded(x,z)?1:wetness(w,x,z,height);cover=await schedule(groundCoverSteps(view,snapshot,height,wet),{cancelled,onSlice});}
-   if(view.landscape.treePlanSteps)treePlan=await schedule(view.landscape.treePlanSteps(snapshot,{roads:next,earthworks:!!plan,height,excluded:(x,z)=>!!plan?.excluded(x,z)}),{cancelled,onSlice});
-   await schedule(next.buildAccessSteps(snapshot,new Map([...buildingInputs].map(([id,input])=>[id,input.root])),{hidden:true,height:(w,x,z)=>Math.max(.2,height(w,x,z))}),{cancelled,onSlice});
-   grid=await schedule(constructionGridSteps((x,z)=>Math.max(.2,height(snapshot,x,z))),{cancelled,onSlice});
+   if(view.landscape.cover||view.landscape.developmentPending){const wet=(w,x,z)=>plan?.excluded(x,z)?1:wetness(w,x,z,height);cover=await schedule(groundCoverSteps(view,snapshot,height,wet),sliceOptions);}
+   if(view.landscape.treePlanSteps)treePlan=await schedule(view.landscape.treePlanSteps(snapshot,{roads:next,earthworks:!!plan,height,excluded:(x,z)=>!!plan?.excluded(x,z)}),sliceOptions);
+   await schedule(next.buildAccessSteps(snapshot,new Map([...buildingInputs].map(([id,input])=>[id,input.root])),{hidden:true,height:(w,x,z)=>Math.max(.2,height(w,x,z))}),sliceOptions);
+   grid=await schedule(constructionGridSteps((x,z)=>Math.max(.2,height(snapshot,x,z))),sliceOptions);
    // Retain the live materials until replacement programs have acquired their
    // references. Disposing them first evicts otherwise reusable GPU programs.
    // Compile with the same render target, lighting and fog as the city pass.
@@ -54,7 +57,8 @@ export function prepareRoadRefresh(view,{schedule=scheduleBuild}={}){
    }
    const uploads=[];for(const group of [next.group,next.accessGroup,cover])group?.traverse(o=>{if(o.geometry)uploads.push(o);});
    for(const {base,result}of terrain){uploads.push({geometry:result.replacement,material:base.mesh.material});if(result.walls)uploads.push({geometry:result.walls,material:view.landscape.retainingMaterial()});}
-   await schedule(geometryUploadSteps(view.renderer,uploads,view.scene),{cancelled,onSlice});
+   await schedule(geometryUploadSteps(view.renderer,uploads,view.scene),sliceOptions);
+   await schedule((function*(){})(),sliceOptions);
    if(cancelled()||changedRoadCells(world.tiles,layout).changed.length||JSON.stringify(world.roadPaths)!==pathsKey)throw new DOMException('Road preparation cancelled','AbortError');
    view.roadRefreshJob=null;next.world=world;next.group.visible=true;next.signalGroup.visible=true;view.roadworks=next;adopted=true;
    const swapStart=performance.now();if(next.asphalt===old.asphalt)old.asphalt=null;old.dispose();

@@ -105,3 +105,12 @@ test('visible construction waits for animation frames while hidden construction 
   globalThis.document.visibilityState='hidden';assert.equal(await scheduleBuild(steps(),{now:()=>time}),'ready');assert.equal(frames,4,'hidden worlds do not depend on animation frames');
  }finally{for(const [key,value]of Object.entries(saved)){if(value===undefined)delete globalThis[key];else globalThis[key]=value;}}
 });
+
+test('new preparation phases yield before work and honor cancellation at that boundary',async()=>{
+ let work=0,frames=0,time=0;
+ function* phase(){work++;time+=2;yield;return work;}
+ const options={yieldBefore:true,now:()=>time,yieldTask:async()=>{frames++;assert.equal(work,frames-1);}};
+ assert.equal(await scheduleBuild(phase(),options),1);
+ assert.equal(await scheduleBuild(phase(),options),2);assert.equal(frames,2);
+ let cancel=false;await assert.rejects(scheduleBuild(phase(),{yieldBefore:true,cancelled:()=>cancel,yieldTask:async()=>{cancel=true;}}),{name:'AbortError'});assert.equal(work,2);
+});

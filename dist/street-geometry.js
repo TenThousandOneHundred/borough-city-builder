@@ -1,6 +1,6 @@
 // Arc-length street geometry. Density of input samples must not change pavement
 // texture scale, dash lengths, lamp spacing, or the width around a bend.
-import {finishBuild} from './build-scheduler.js?v=149';
+import {finishBuild} from './build-scheduler.js?v=150';
 import * as THREE from './vendor/three.module.js';
 export function streetStations(points){
  const clean=[];for(const p of points){if(!Number.isFinite(p.x)||!Number.isFinite(p.z))continue;const last=clean.at(-1);if(!last||Math.hypot(p.x-last.x,p.z-last.z)>1e-6)clean.push({x:p.x,z:p.z});}

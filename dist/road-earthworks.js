@@ -1,4 +1,5 @@
-import {finishBuild} from './build-scheduler.js?v=149';
+import {TerrainPartitionIndex} from './terrain-partition-index.js?v=150';
+import {finishBuild} from './build-scheduler.js?v=150';
 import * as THREE from './vendor/three.module.js';
 import clipping from './vendor/polygon-clipping.umd.min.js';
 
@@ -126,10 +127,14 @@ function segmentDistanceSquared(a,b,c,d){
  const distance=(p,a,b)=>{const dx=b[0]-a[0],dz=b[2]-a[2],length=dx*dx+dz*dz,t=length?Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[2]-a[2])*dz)/length)):0;return (p[0]-a[0]-dx*t)**2+(p[2]-a[2]-dz*t)**2;};
  return Math.min(distance(a,c,d),distance(b,c,d),distance(c,a,b),distance(d,a,b));
 }
-function geometryFrom(vertices,layout){
- const geometry=new THREE.BufferGeometry(),positions=new Float32Array(vertices.length*3);for(let i=0;i<vertices.length;i++){const v=vertices[i];positions[i*3]=v[0];positions[i*3+1]=v[1];positions[i*3+2]=v[2];}geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));
- for(const {name,offset,size}of layout){const values=new Float32Array(vertices.length*size);for(let i=0;i<vertices.length;i++)for(let k=0;k<size;k++)values[i*size+k]=vertices[i][offset+k];geometry.setAttribute(name,new THREE.BufferAttribute(values,size));}
- if(!geometry.attributes.normal)geometry.computeVertexNormals();geometry.computeBoundingSphere();return geometry;
+function geometryFrom(vertices,layout){return finishBuild(geometryFromSteps(vertices,layout));}
+function* geometryFromSteps(vertices,layout){
+ const geometry=new THREE.BufferGeometry();let complete=false;
+ try{
+  const positions=new Float32Array(vertices.length*3);for(let i=0;i<vertices.length;i++){if(i%1024===0)yield;const v=vertices[i];positions[i*3]=v[0];positions[i*3+1]=v[1];positions[i*3+2]=v[2];}geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));
+  for(const {name,offset,size}of layout){const values=new Float32Array(vertices.length*size);for(let i=0;i<vertices.length;i++){if(i%1024===0)yield;for(let k=0;k<size;k++)values[i*size+k]=vertices[i][offset+k];}geometry.setAttribute(name,new THREE.BufferAttribute(values,size));}
+  yield;if(!geometry.attributes.normal)geometry.computeVertexNormals();yield;geometry.computeBoundingSphere();complete=true;return geometry;
+ }finally{if(!complete)geometry.dispose();}
 }
 
 /** Build-local derived terrain. Natural height data and source mesh buffers are
@@ -354,7 +359,7 @@ function* buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePla
      // through a growing list of outside fragments, and booleans run once
      // per construction cell rather than three times per terrain triangle.
      const region=regionByCell.get(x+','+z);
-     if(region){for(const t of region.triangles){const clipped=intersectTriangle(original,t);if(clipped){fragments.push({p:clipped,kind:t.kind});changed ||= t.kind!=='outside';}}}
+     if(region){region.triangleIndex ||= new TerrainPartitionIndex(region.triangles);for(const t of region.triangleIndex.query(b)){const clipped=intersectTriangle(original,t);if(clipped){fragments.push({p:clipped,kind:t.kind});changed ||= t.kind!=='outside';}}}
      else{let p=original;for(const [axis,limit,sign]of [[0,x*CELL,1],[0,(x+1)*CELL,-1],[2,z*CELL,1],[2,(z+1)*CELL,-1]]){if(p.length<3)break;const next=[];let a=p.at(-1),da=(a[axis]-limit)*sign;for(const q of p){const dq=(q[axis]-limit)*sign;if(da*dq<0)next.push(mix(a,q,da/(da-dq)));if(dq>=0)next.push(q);a=q;da=dq;}p=next;}if(p.length>=3&&area(p)>EPS)fragments.push({p,kind:'outside'});}
     }
     if(changed)for(const {p,kind}of fragments){if(kind==='core')removedCoreArea+=area(p);else emit(p,kind==='shoulder'?{kind}:null);}
@@ -425,7 +430,8 @@ function* buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePla
    quad(s,r,uv(rr,ub+thickness,r[4]),uv(ss,ub+thickness,s[4]),!fill);
   }
   stats.applications++;stats.replacementTriangles+=conformed.length/3;stats.wallTriangles+=walls.length/3;stats.removedCoreArea+=removedCoreArea;
-  const replacement=geometryFrom(conformed,layout),wallGeometry=walls.length?geometryFrom(walls,[{name:'uv',offset:3,size:2}]):null;
+  const replacement=yield* geometryFromSteps(conformed,layout);let wallGeometry,complete=false;
+  try{wallGeometry=walls.length?yield* geometryFromSteps(walls,[{name:'uv',offset:3,size:2}]):null;complete=true;}finally{if(!complete)replacement.dispose();}
   return {indices:kept===keep.length?keep:keep.slice(0,kept),replacement,walls:wallGeometry,removedCoreArea,stats:{...stats}};
  }
  return {surfaceSnapshot,structuralSnapshot,beginApplication,applyToGeometry,applyToGeometrySteps,sample,contains,excluded:contains,mayAffectProtectedParcel,stats,cacheStats,

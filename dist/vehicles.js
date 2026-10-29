@@ -1,22 +1,26 @@
+import {buildVehicle} from './vehicle-model.js?v=150';
 import * as THREE from './vendor/three.module.js';
-import {MeshBuilder} from './mesh-builder.js?v=149';
+import {MeshBuilder} from './mesh-builder.js?v=150';
+const WHITE=new THREE.Color(1,1,1);
 export class Vehicles{
  constructor(){this.materials=new Map();}
- rebuildFleet(cars,group){for(const mesh of this.fleet||[]){group.remove(mesh);mesh.dispose();mesh.geometry.dispose()}this.fleet=[];this.transforms=new WeakMap();this.revisions=new WeakMap();this.visibleCars=new Set();const batches=new Map();cars.forEach((car,i)=>{group.remove(car.mesh);car.mesh.updateMatrix();for(const part of car.mesh.children){part.updateMatrix();const key=(car.mesh.userData.vehicleKind||String(i%8===0))+':'+part.material.uuid;if(!batches.has(key))batches.set(key,{geometry:part.geometry,material:part.material,parts:[]});batches.get(key).parts.push({car,local:part.matrix.clone()});}});for(const {geometry,material,parts}of batches.values()){const mesh=new THREE.InstancedMesh(geometry.clone(),material,parts.length);mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);mesh.castShadow=true;mesh.frustumCulled=false;mesh.userData.parts=parts;mesh.userData.packedCars=[];mesh.userData.packedVersions=[];group.add(mesh);this.fleet.push(mesh)}this.updateFleet(cars);}
+ rebuildFleet(cars,group){for(const mesh of this.fleet||[]){group.remove(mesh);mesh.dispose();mesh.geometry.dispose()}this.fleet=[];this.transforms=new WeakMap();this.revisions=new WeakMap();this.visibleCars=new Set();const batches=new Map();cars.forEach((car,i)=>{group.remove(car.mesh);car.mesh.updateMatrix();for(const part of car.mesh.children){part.updateMatrix();const material=part.userData.fleetMaterial||part.material,key=(car.mesh.userData.vehicleKind||String(i%8===0))+':'+material.uuid;if(!batches.has(key))batches.set(key,{geometry:part.geometry,material,parts:[]});batches.get(key).parts.push({car,local:part.matrix.clone(),color:part.userData.instanceColor?.clone()});}});for(const {geometry,material,parts}of batches.values()){const mesh=new THREE.InstancedMesh(geometry.clone(),material,parts.length);mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);mesh.castShadow=true;mesh.frustumCulled=false;mesh.userData.parts=parts;mesh.userData.packedCars=[];mesh.userData.packedVersions=[];group.add(mesh);this.fleet.push(mesh)}this.updateFleet(cars);}
  updateFleet(cars,camera){if(!this.fleet)return;this.matrix ||= new THREE.Matrix4();this.transforms ||= new WeakMap();this.revisions ||= new WeakMap();this.changed ||= new Set();this.visibleCars ||= new Set();this.nextVisible ||= new Set();this.changed.clear();this.nextVisible.clear();
  if(camera){this.frustum ||= new THREE.Frustum();this.viewProjection ||= new THREE.Matrix4();this.bounds ||= new THREE.Sphere(new THREE.Vector3(),3);camera.updateMatrixWorld();this.viewProjection.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);this.frustum.setFromProjectionMatrix(this.viewProjection);}
  let layoutChanged=false;
  for(const car of cars){car.mesh.updateMatrix();const previous=this.transforms.get(car);if(!previous||!previous.equals(car.mesh.matrix)){this.changed.add(car);this.revisions.set(car,(this.revisions.get(car)||0)+1);if(previous)previous.copy(car.mesh.matrix);else this.transforms.set(car,car.mesh.matrix.clone());}
  const visible=!camera||(car.mesh.scale.x!==0&&this.frustum.intersectsSphere(this.bounds.set(car.mesh.position,3)));if(visible)this.nextVisible.add(car);if(visible!==this.visibleCars.has(car))layoutChanged=true;}
  const old=this.visibleCars;this.visibleCars=this.nextVisible;this.nextVisible=old;if(!layoutChanged&&!this.changed.size)return;
- for(const mesh of this.fleet){let first=Infinity,last=-1,count=0;const packed=mesh.userData.packedCars,versions=mesh.userData.packedVersions;
-  for(const {car,local}of mesh.userData.parts){if(!this.visibleCars.has(car))continue;if(packed[count]!==car||versions[count]!==this.revisions.get(car)){mesh.setMatrixAt(count,this.matrix.multiplyMatrices(car.mesh.matrix,local));packed[count]=car;versions[count]=this.revisions.get(car);first=Math.min(first,count*16);last=(count+1)*16;}count++;}
+ for(const mesh of this.fleet){let first=Infinity,last=-1,colorFirst=Infinity,colorLast=-1,count=0;const packed=mesh.userData.packedCars,versions=mesh.userData.packedVersions;
+  for(const {car,local,color}of mesh.userData.parts){if(!this.visibleCars.has(car))continue;if(packed[count]!==car||versions[count]!==this.revisions.get(car)){mesh.setMatrixAt(count,this.matrix.multiplyMatrices(car.mesh.matrix,local));if(packed[count]!==car&&(color||mesh.instanceColor)){mesh.setColorAt(count,color||WHITE);colorFirst=Math.min(colorFirst,count*3);colorLast=(count+1)*3;}packed[count]=car;versions[count]=this.revisions.get(car);first=Math.min(first,count*16);last=(count+1)*16;}count++;}
   mesh.count=count;mesh.visible=count>0;
   if(last>=0){
    // Keep pending writes until WebGL consumes them, including frames in which
    // a batch was hidden. A bounded range avoids uploading unused capacity.
    const attribute=mesh.instanceMatrix;for(const range of attribute.updateRanges){first=Math.min(first,range.start);last=Math.max(last,range.start+range.count);}
    attribute.clearUpdateRanges();attribute.addUpdateRange(first,last-first);attribute.needsUpdate=true;
+  }
+  if(colorLast>=0){const colors=mesh.instanceColor;for(const range of colors.updateRanges){colorFirst=Math.min(colorFirst,range.start);colorLast=Math.max(colorLast,range.start+range.count);}colors.clearUpdateRanges();colors.addUpdateRange(colorFirst,colorLast-colorFirst);colors.needsUpdate=true;
   }
  }}
  mat(name,color,metalness=0,roughness=.7){if(!this.materials.has(name))this.materials.set(name,new THREE.MeshStandardMaterial({color,metalness,roughness}));return this.materials.get(name);}
@@ -27,28 +31,15 @@ export class Vehicles{
  b.box(0,.62,-.48,.31,.08,.38,trim);const result=b.finish();result.userData.vehicleKind='bus';result.traverse(o=>o.castShadow=true);return result;
  }
 
- create(seed){const b=new MeshBuilder(),palette=['#bbc3c4','#4c6472','#893e35','#e0dfd3','#536665','#343b43','#a69678'],body=this.mat('car'+seed%7,palette[seed%7],.4,.3),glass=this.mat('glass','#283f4c',.55,.2),tire=this.mat('tire','#242b2d'),chrome=this.mat('chrome','#9ba8ad',.7,.28),head=this.mat('head','#dfdfc9'),tail=this.mat('tail','#9a2821');
- const van=seed%8===0;
- const sections=van?[[-.55,.23,.18],[-.46,.43,.215],[.18,.43,.215],[.36,.26,.21],[.5,.21,.18]]:[[-.46,.18,.17],[-.31,.215,.215],[-.17,.315,.19],[.13,.315,.19],[.29,.21,.215],[.46,.17,.18]];
- const ring=([z,h,w])=>[[-w,.085,z],[w,.085,z],[w,h,z],[-w,h,z]];
- for(let i=0;i<sections.length-1;i++){const a=ring(sections[i]),c=ring(sections[i+1]);for(let k=0;k<4;k++){const j=(k+1)%4;b.quad(a[k],a[j],c[j],c[k],body);}}
- const back=ring(sections[0]),front=ring(sections.at(-1));b.quad(back[3],back[2],back[1],back[0],body);b.quad(front[0],front[1],front[2],front[3],body);
- if(van){b.quad([.185,.425,.182],[-.185,.425,.182],[-.185,.27,.354],[.185,.27,.354],glass);for(const s of [-1,1])b.box(s*.216,.335,.06,.008,.14,.25,glass);}
- else{
-  b.quad([.174,.312,.135],[-.174,.312,.135],[-.195,.217,.282],[.195,.217,.282],glass);
-  b.quad([-.174,.312,-.174],[.174,.312,-.174],[.195,.218,-.301],[-.195,.218,-.301],glass);
-  for(const s of [-1,1]){b.box(s*.195,.268,-.015,.01,.071,.247,glass);b.box(s*.203,.265,-.019,.015,.08,.015,body);}
- }
- for(const s of [-1,1]){
-  b.box(s*.12,.165,sections.at(-1)[0]+.003,.1,.042,.017,head);b.box(s*.12,.163,sections[0][0]-.003,.09,.04,.015,tail);
-  b.box(s*.233,.245,.10,.057,.028,.049,body);
-  for(const z of [-.29,.29]){
-   const x=s*.216,r=.082;
-   for(let j=0;j<14;j++){const a=j/14*Math.PI*2,c=(j+1)/14*Math.PI*2,p=[.087+Math.cos(a)*r,z+Math.sin(a)*r],q=[.087+Math.cos(c)*r,z+Math.sin(c)*r];b.quad([x-.028,p[0],p[1]],[x+.028,p[0],p[1]],[x+.028,q[0],q[1]],[x-.028,q[0],q[1]],tire);const xx=x+s*.03;b.quad([xx,.087,z],[xx,p[0],p[1]],[xx,q[0],q[1]],[xx,.087,z],s>0?tire:tire);}
-   b.box(x+s*.031,.087,z,.012,.073,.073,chrome);
-  }
- }
- b.box(0,.12,sections.at(-1)[0]+.005,.16,.05,.016,tire);b.box(0,.13,sections.at(-1)[0]+.017,.083,.026,.007,head);
- const result=b.finish();result.traverse(o=>o.castShadow=true);return result;
+ create(seed){
+  const kind=seed%8===0?'van':seed%5===0?'suv':'sedan',palette=['#c0c6c5','#456a88','#a33e32','#e4e0d4','#426d57','#30353b','#b6aa85','#b7a32c','#d2d4d4','#644b54','#6d858f','#496247'];
+  this.prototypes ||= new Map();
+  const body=this.mat('vehicle-body','#ffffff',.48,.28),glass=this.mat('vehicle-glass','#243943',.5,.18),rubber=this.mat('vehicle-rubber','#202528',.02,.8),alloy=this.mat('vehicle-alloy','#7f898b',.8,.25),lamps=this.mat('vehicle-lenses','#ffffff',.2,.3);
+  for(const [name,material]of Object.entries({body,glass,rubber,alloy,lamps}))material.name='vehicle-'+name;
+  lamps.vertexColors=true;
+  if(!this.prototypes.has(kind))this.prototypes.set(kind,buildVehicle(kind,{body,glass,rubber,alloy,lamps}));
+  const root=this.prototypes.get(kind).clone(true),paint=this.mat('vehicle-paint-'+seed%palette.length,palette[seed%palette.length],.48,.28);
+  for(const mesh of root.children)if(mesh.userData.vehiclePaint){mesh.material=paint;mesh.userData.fleetMaterial=body;mesh.userData.instanceColor=paint.color;}
+  return root;
  }
 }
