@@ -43,3 +43,10 @@ test('profile edges share exact terrain samples without changing curb vertices o
  let calls=0,yields=0,next;const steps=streetSurfaceSteps(stations,profile,(x,z)=>{calls++;return height(x,z);});do{next=steps.next();if(!next.done)yields++;}while(!next.done);
  try{for(const name of ['position','normal','uv'])assert.deepEqual(next.value.attributes[name].array,expected.attributes[name].array);assert.deepEqual(next.value.index.array,expected.index.array);assert.equal(calls,stations.length*4);assert.ok(yields>=20,'long curb strips yield within each profile edge');}finally{next.value.dispose();expected.dispose();}
 });
+
+test('outside connections yield between individual lane markings during interactive road rebuilding',async()=>{
+ const {outsidePortals}=await import('../dist/traffic.js');const oldDocument=globalThis.document;globalThis.document={createElement:()=>({getContext:()=>({fillRect(){},strokeRect(){},fillText(){}})})};
+ const w=E.createWorld('Outside pacing','plains',431),v=harness(w),r=new Roadworks(v);r.world=w;r.building=true;let paints=0,checkpoints=0;const paint=r.paint.bind(r);r.paint=(...args)=>{paints++;return paint(...args);};
+ try{const portal=outsidePortals(w)[0];assert.ok(portal);const steps=r.outsideSteps(w,portal,v.mat('#55585b'));let next;do{const before=paints;next=steps.next();assert.ok(paints-before<=1,'one construction step must not paint the entire regional road');checkpoints++;}while(!next.done);assert.ok(paints>100);assert.ok(checkpoints>100);}
+ finally{r.dispose();v.cleanup();globalThis.document=oldDocument;}
+});
