@@ -91,7 +91,7 @@ test('outside connections keep legacy lanes after an overlapping highway is remo
   const width=tile.roadWidth===2?3.15:2.45,legacy={width,lanes:tile.roadWidth===2?4:2,oneway:!!E.ROADS[type].oneway},dividers=[],edges=[],surfaces=[],rendered=[],meshes=[];
   const view={v:{mat:color=>color,box:()=>{}},group:{add:mesh=>meshes.push(mesh)},height:()=>0,
    ribbon:(_w,_p,actualWidth,_offset,_material,_height,spec)=>rendered.push({width:actualWidth,spec}),
-   dash:(_w,_s,offset)=>dividers.push(offset),line:(_w,_p,_width,_color,offset)=>edges.push(offset),surface:(...args)=>surfaces.push(args)};
+   outsideSteps:Roadworks.prototype.outsideSteps,dashSteps:function*(_w,_s,offset){dividers.push(offset);},line:(_w,_p,_width,_color,offset)=>edges.push(offset),surface:(...args)=>surfaces.push(args)};
   Roadworks.prototype.outside.call(view,w,{id:24*48,x:-94,z:2,dx:-1,dz:0},{});
   assert.equal(rendered[0].width,width);assert.equal(rendered[0].spec.shoulder,0);assert.equal(rendered[0].spec.limitedAccess,false);
   assert.deepEqual(dividers,original(legacy).dividers.map(d=>d.offset));assert.deepEqual(edges,[-(width/2-.12),width/2-.12]);assert.equal(surfaces.length,0);

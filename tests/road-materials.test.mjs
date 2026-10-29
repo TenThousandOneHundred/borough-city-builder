@@ -155,7 +155,7 @@ test('roads refresh for each successful source map and reuse the finish once all
  for(const order of [[1,2,0],[0,1,2]]){
   const land=landscape(),requests=[],baseMaterial=land.material;
   land.material=function(...args){requests.push(args);return baseMaterial.apply(this,args);};
-  const roads=new Roadworks(roadView(land)),world=E.createWorld('Road surface cache','plains',4);roads.outside=()=>{};
+  const roads=new Roadworks(roadView(land)),world=E.createWorld('Road surface cache','plains',4);roads.outsideSteps=function*(){};
   roads.build(world);let previous=roads.asphalt;assert.equal(previous.map,null);assert.equal(previous.normalMap,null);
   const fallbackColor=previous.color.toArray();let texturedColor=null,colorTransitions=0;
   assert.ok(fallbackColor.every(channel=>channel>0&&channel<.2),'missing photographs use restrained gray asphalt, not white');

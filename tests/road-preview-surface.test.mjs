@@ -14,7 +14,7 @@ function fixture(){
  Object.assign(view,{world,scene:new T.Scene(),unitBox:new T.BoxGeometry(),materials:new Map(),night:false,previewGroup:new T.Group(),menu:false,
   landscape:{assets:{},material:()=>new T.MeshStandardMaterial()}});
  view.running=false;view.scene.add(view.previewGroup);
- const roads=new Roadworks(view);view.roadworks=roads;roads.outside=()=>{};
+ const roads=new Roadworks(view);view.roadworks=roads;roads.outsideSteps=function*(){};
  roads.height=(_world,x,z)=>2+.01*x+.02*z;roads.build(world);
  const path=world.roadPaths[0],target={kind:'path',source:path.id,tiles:path.tiles,controls:path.controls};
  const points=E.sampleRoad(path.controls),probes=points.filter((_,i)=>i>0&&i<points.length-1&&i%5===0).map(p=>({x:(p.x+.5)*4-96,z:(p.y+.5)*4-96}));

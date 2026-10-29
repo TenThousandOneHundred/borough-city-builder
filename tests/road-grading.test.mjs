@@ -106,7 +106,7 @@ test('real bridge profiles preserve terrain clearance and distinguish constraine
 
 test('whole bridge plans fit final asphalt planes while retaining their soffits and exposed railings',()=>{
  for(const terrain of ['islands','river']){
-  const {world}=fixture(terrain),r=new Roadworks(view());r.outside=()=>{};let pavement;
+  const {world}=fixture(terrain),r=new Roadworks(view());r.outsideSteps=function*(){};let pavement;
   r.buildBridges=function(w){pavement=this.group.children.filter(m=>m.userData.roadSurface==='asphalt').map(m=>m.geometry.clone());Roadworks.prototype.buildBridges.call(this,w);};
   const saved=JSON.stringify(world);r.build(world);assert.equal(JSON.stringify(world),saved);
   const args=[r.bridgePlan,(x,z)=>r.height(world,x,z),(x,z)=>groundHeight(world,x,z),r.junctionPlan.junctions];

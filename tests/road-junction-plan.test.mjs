@@ -68,12 +68,12 @@ test('branches ending inside pavement meet its centerline without snapping unrel
 test('demolishing a crossing rebuilds uninterrupted pavement without retaining junction cuts',()=>{
  const w=E.createWorld('Road edits','plains',42);w.money=1e6;for(const t of w.tiles)Object.assign(t,{type:null,level:0});
  E.buildRoadPath(w,[{x:5,y:24},{x:40,y:24}],'boulevard');const side=E.buildRoadPath(w,[{x:24,y:10},{x:24,y:38}],'street');
- const v=view();v.landscape={assets:{},material:()=>v.mat('#555555')};v.box=function(group,x,y,z,sx,sy,sz,color){const m=new THREE.Mesh(this.unitBox,this.mat(color));m.position.set(x,y,z);m.scale.set(sx,sy,sz);group.add(m);return m;};const r=new Roadworks(v);r.outside=()=>{};
+ const v=view();v.landscape={assets:{},material:()=>v.mat('#555555')};v.box=function(group,x,y,z,sx,sy,sz,color){const m=new THREE.Mesh(this.unitBox,this.mat(color));m.position.set(x,y,z);m.scale.set(sx,sy,sz);group.add(m);return m;};const r=new Roadworks(v);r.outsideSteps=function*(){};
  const before=JSON.stringify(w);r.build(w);assert.equal(r.junctionPlan.junctions.length,1);assert.equal(JSON.stringify(w),before);assert.ok(r.batchStats.after<r.batchStats.before);
  E.removeRoadPath(w,side.path.id);r.build(w);assert.equal(r.junctionPlan.junctions.length,0);assert.deepEqual(junctionCuts(r.roadDescriptors[0].stations,r.junctionPlan.junctions),[]);
 });
 test('junction rendering and rebuilds cannot pause or alter the independent vehicle simulation',async()=>{
- const {simulation}=await import('./traffic-scale-fixture.mjs'),a=simulation(128),b=simulation(128),v=view();v.landscape={assets:{},material:()=>v.mat('#555555')};v.box=function(group,x,y,z,sx,sy,sz,color){const m=new THREE.Mesh(this.unitBox,this.mat(color));m.position.set(x,y,z);m.scale.set(sx,sy,sz);group.add(m);return m;};const r=new Roadworks(v);r.outside=()=>{};
+ const {simulation}=await import('./traffic-scale-fixture.mjs'),a=simulation(128),b=simulation(128),v=view();v.landscape={assets:{},material:()=>v.mat('#555555')};v.box=function(group,x,y,z,sx,sy,sz,color){const m=new THREE.Mesh(this.unitBox,this.mat(color));m.position.set(x,y,z);m.scale.set(sx,sy,sz);group.add(m);return m;};const r=new Roadworks(v);r.outsideSteps=function*(){};
  const world=JSON.stringify(a.world);for(let n=0;n<600;n++){if(n%200===0)r.build(a.world);a.step(.05);b.step(.05);}
  const state=t=>t.agents.map(p=>[p.active,p.x,p.z,p.segment,p.distance,p.speed,p.waitReason]);assert.deepEqual(state(a),state(b));assert.equal(a.time,b.time);assert.ok(a.time>29);assert.equal(JSON.stringify(a.world),world);
 });
@@ -95,7 +95,7 @@ test('outside connections preserve authored road width, dividers and median',asy
   const w=E.createWorld('Outside lanes','plains',42),v=view();v.box=()=>{};
   const r=new Roadworks(v),widths=[],dividers=[],edges=[],medians=[];
   r.height=()=>0;r.ribbon=(_w,_p,width)=>widths.push(width);
-  r.dash=(_w,_s,offset)=>dividers.push(offset);r.line=(_w,_p,_width,_color,offset)=>edges.push(offset);r.surface=(...args)=>medians.push(args);
+  r.dashSteps=function*(_w,_s,offset){dividers.push(offset);};r.line=(_w,_p,_width,_color,offset)=>edges.push(offset);r.surface=(...args)=>medians.push(args);
   Object.assign(w.tiles[24],{roadType:type,pathIds:['test']});
   r.outside(w,{id:24,x:2,z:-94,dx:0,dz:-1},v.mat('#555555'));
   const spec=E.ROADS[type];assert.deepEqual(widths,[spec.width]);

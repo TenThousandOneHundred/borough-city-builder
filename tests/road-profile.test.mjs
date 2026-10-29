@@ -75,7 +75,7 @@ test('rendered corner endpoints join both sidewalk widths without changing junct
 
 test('paint hugs actual triangulated asphalt across curves, junctions and uneven slopes with bounded refinement',()=>{
  const w=city();E.buildRoadPath(w,[{x:10,y:24},{x:22,y:18},{x:36,y:24}],'avenue');E.buildRoadPath(w,[{x:24,y:10},{x:24,y:35}],'street');
- const plan=roadGeometry(w,E),network=pedestrianNetwork(w,E),saved=JSON.stringify(w),routing=JSON.stringify(network.edges),r=new Roadworks(view());r.outside=()=>{};
+ const plan=roadGeometry(w,E),network=pedestrianNetwork(w,E),saved=JSON.stringify(w),routing=JSON.stringify(network.edges),r=new Roadworks(view());r.outsideSteps=function*(){};
  r.height=(_w,x,z)=>3+.03*x+.02*z+.015*Math.sin(x*1.5)*Math.cos(z);r.build(w);
  assert.equal(roadGeometry(w,E),plan);assert.equal(pedestrianNetwork(w,E),network);assert.equal(JSON.stringify(network.edges),routing);assert.equal(JSON.stringify(w),saved);
  assert.ok(r.markingStats.after>r.markingStats.before,'fixture exercises crossing more than one asphalt plane');
@@ -96,7 +96,7 @@ test('paint clears sharp crests on real river and island bridge terrain without 
  for(const terrain of ['river','islands']){
   const w=E.createWorld('Review markings',terrain,23);for(const t of w.tiles)Object.assign(t,{type:null,level:0,construction:undefined});w.roadPaths=[];w.money=1e8;
   E.buildRoadPath(w,[{x:10,y:24},{x:22,y:18},{x:40,y:24}],'avenue');E.buildRoadPath(w,[{x:32,y:10},{x:32,y:35}],'street');
-  const r=new Roadworks(view()),saved=JSON.stringify(w);r.outside=()=>{};r.build(w);assert.equal(JSON.stringify(w),saved);
+  const r=new Roadworks(view()),saved=JSON.stringify(w);r.outsideSteps=function*(){};r.build(w);assert.equal(JSON.stringify(w),saved);
   assert.ok(r.markingStats.after<r.markingStats.before*3,'deep refinement stays local on '+terrain);
   let smallest=Infinity,largest=-Infinity;
   for(const mesh of markingMeshes(r)){
@@ -119,7 +119,7 @@ test('pathological paint refinement has a fixed triangle budget and cannot expan
 });
 
 test('on-map starter streets gain no paint triangles and cached pedestrians use actual road and access heights',()=>{
- const w=E.createWorld('Normal road profile','plains',8),r=new Roadworks(view());r.outside=()=>{};r.build(w);assert.equal(r.markingStats.after,r.markingStats.before);
+ const w=E.createWorld('Normal road profile','plains',8),r=new Roadworks(view());r.outsideSteps=function*(){};r.build(w);assert.equal(r.markingStats.after,r.markingStats.before);
  const state={x:-20,z:2+E.ROADS.street.width/2+.22,heading:0,phase:'wait'},resident={id:1,activity:'Waiting for bus',transit:state};w.citizens={time:0};
  let calls=0;const sample=r.walkingHeight.bind(r);r.walkingHeight=(...args)=>{calls++;return sample(...args);};
  const v={...r.v,world:w,roadworks:r,menu:false,transit:{walking:{active:new Map()},passengers:new Map([[1,resident]])}},life=new StreetLife(v),saved=JSON.stringify(resident);life.build(w);
@@ -136,7 +136,7 @@ test('adding and removing bus-stop ramps refreshes adjacent access paving and ca
  for(let x=10;x<=40;x++)Object.assign(w.tiles[24*48+x],{type:'road',roadType:'street',roadWidth:1});
  const home=23*48+24;Object.assign(w.tiles[home],{type:'office',level:1});
  const v=view(),r=new Roadworks(v),plan=lotPlan(w,home),root=new T.Group(),buildings=new Map([[home,root]]);
- root.position.y=floorHeight(w,plan.cx,plan.cz)+.04;root.userData={asset:true,plan};r.outside=()=>{};r.syncSignals=()=>{};
+ root.position.y=floorHeight(w,plan.cx,plan.cz)+.04;root.userData={asset:true,plan};r.outsideSteps=function*(){};r.syncSignals=()=>{};
  r.build(w);r.buildAccess(w,buildings);const revision=r.accessRevision,oldIndex=r.accessSurfaces,before=r.accessSurfaces.sample(2,.38);assert.notEqual(before,null);
  const resident={id:1,activity:'Waiting for bus',transit:{x:2,z:.38,heading:0,phase:'wait'}};w.citizens={time:0};
  Object.assign(v,{world:w,roadworks:r,traffic:new Traffic(w,E),buildings,renderer:{shadowMap:{}},disposeGroup:g=>g.clear(),menu:false,transit:{walking:{active:new Map()},passengers:new Map([[1,resident]])}});
@@ -155,7 +155,7 @@ test('adding and removing bus-stop ramps refreshes adjacent access paving and ca
 
 test('vehicles follow the finished junction triangles and invalidate only their render height cache',()=>{
  const w=city();E.buildRoadPath(w,[{x:10,y:24},{x:36,y:24}],'avenue');E.buildRoadPath(w,[{x:24,y:10},{x:24,y:35}],'street');
- const r=new Roadworks(view());r.outside=()=>{};r.height=(_w,x,z)=>3+.005*x*x+.003*z*z;r.build(w);
+ const r=new Roadworks(view());r.outsideSteps=function*(){};r.height=(_w,x,z)=>3+.005*x*x+.003*z*z;r.build(w);
  const j=r.junctionPlan.junctions[0],x=j.x+.137,z=j.z+.219;let rendered=null,owners=0;
  // Read the final batched mesh directly, independently of the query index.
  for(const mesh of r.group.children){if(mesh.material!==r.asphalt)continue;const p=mesh.geometry.attributes.position;
