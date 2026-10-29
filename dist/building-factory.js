@@ -1,13 +1,14 @@
-import {ModelLibrary} from './model-library.js?v=145';
-import {buildHouse} from './house-architecture.js?v=145';
-import {buildUrban} from './city-architecture.js?v=145';
+import {ModelLibrary} from './model-library.js?v=146';
+import {buildHouse} from './house-architecture.js?v=146';
+import {buildUrban} from './city-architecture.js?v=146';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import * as THREE from './vendor/three.module.js';
-import {MeshBuilder} from './mesh-builder.js?v=145';
-import {BuildingMaterials} from './building-materials.js?v=145';
-import {lotPlan} from './building-plan.js?v=145';
-import {floorHeight} from './landscape.js?v=145';
+import {MeshBuilder} from './mesh-builder.js?v=146';
+import {BuildingMaterials} from './building-materials.js?v=146';
+import {lotPlan} from './building-plan.js?v=146';
+import {floorHeight} from './landscape.js?v=146';
 
+const WHITE=new THREE.Color(1,1,1);
 export class BuildingFactory{
  constructor(view){this.view=view;this.library=view.renderer?new ModelLibrary(view):null;this.ready=this.library?.ready||Promise.resolve();this.materials=new BuildingMaterials(view);this.batchRoot=new THREE.Group();view.scene.add(this.batchRoot);}
  detailGeometryBounds(geometry){
@@ -34,7 +35,7 @@ export class BuildingFactory{
    if(!o.isMesh)return;
    if(root.userData.asset&&o.userData.sharedAsset){
     const detailBounds=o.userData.siteRange?this.detailGeometryBounds(o.geometry).clone().applyMatrix4(o.matrixWorld).getBoundingSphere(new THREE.Sphere()):null;
-    entry.instances.push({key:o.geometry.uuid+':'+o.material.uuid,geometry:o.geometry,material:o.material,transform:{matrix:o.matrixWorld.clone(),sphere,detailBounds,renderRange:o.userData.siteRange,rangeOrigin:o.userData.siteRange?new THREE.Vector3().setFromMatrixPosition(o.matrixWorld):null}});
+    entry.instances.push({key:o.geometry.uuid+':'+o.material.uuid,geometry:o.geometry,material:o.material,transform:{matrix:o.matrixWorld.clone(),color:o.userData.instanceColor?.clone?.()||null,sphere,detailBounds,renderRange:o.userData.siteRange,rangeOrigin:o.userData.siteRange?new THREE.Vector3().setFromMatrixPosition(o.matrixWorld):null}});
    }else entry.statics.push({material:o.material,geometry:o.geometry.clone().applyMatrix4(o.matrixWorld)});
   });
   if(immutable)this.renderCache.set(root,entry);
@@ -46,9 +47,16 @@ export class BuildingFactory{
   const capacity=Math.max(4,2**Math.ceil(Math.log2(count))),mesh=new THREE.InstancedMesh(geometry,material,capacity);
   mesh.count=0;mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);mesh.userData.sharedAsset=true;mesh.castShadow=mesh.receiveShadow=true;mesh.frustumCulled=false;this.batchRoot.add(mesh);return mesh;
  }
+ setInstance(mesh,index,transform){
+  mesh.setMatrixAt(index,transform.matrix);
+  if(transform.color||mesh.instanceColor)mesh.setColorAt(index,transform.color||WHITE);
+ }
  uploadRange(mesh,first,last){
   if(last<=first)return;
-  const attribute=mesh.instanceMatrix;
+  this.uploadAttribute(mesh.instanceMatrix,first,last);
+  if(mesh.instanceColor)this.uploadAttribute(mesh.instanceColor,first/16*3,last/16*3);
+ }
+ uploadAttribute(attribute,first,last){
   // Reflection and main-view rendering may not consume every batch each frame.
   // Preserve pending writes while bounding uploads to populated dirty slots.
   for(const range of attribute.updateRanges){first=Math.min(first,range.start);last=Math.max(last,range.start+range.count);}
@@ -83,13 +91,13 @@ export class BuildingFactory{
    const casters=transforms.filter(t=>!t.renderRange||t.renderRange[0]===0),shadow=this.instanceMesh(previous?.shadow,geometry.userData.shadowLod||geometry,material,casters.length);
    shadow.userData.shadowCaster=true;shadow.receiveShadow=false;shadow.count=0;
    let first=Infinity,last=0;const slots=previous?.shadow===shadow?previous.shadowSlots:[];
-   casters.forEach((transform,i)=>{if(slots[i]!==transform){shadow.setMatrixAt(i,transform.matrix);slots[i]=transform;first=Math.min(first,i*16);last=(i+1)*16;}});
+   casters.forEach((transform,i)=>{if(slots[i]!==transform){this.setInstance(shadow,i,transform);slots[i]=transform;first=Math.min(first,i*16);last=(i+1)*16;}});
    this.uploadRange(shadow,first,last);shadow.userData.casterCount=casters.length;
    shadow.onBeforeShadow=()=>{shadow.count=shadow.userData.casterCount;};shadow.onAfterShadow=()=>{shadow.count=0;};
    const batch={near,far,shadow,shadowSlots:slots,transforms,nearSlots:near===previous?.near?previous.nearSlots:[],farSlots:far&&far===previous?.far?previous.farSlots:[]};
    this.batchByKey.set(key,batch);this.instanceBatches.push(batch);
    // Tests and static exporters without a camera receive the complete near set.
-   if(!this.view.camera){transforms.forEach(({matrix},i)=>near.setMatrixAt(i,matrix));near.count=transforms.length;this.uploadRange(near,0,transforms.length*16);if(far)far.count=0;}
+   if(!this.view.camera){transforms.forEach((transform,i)=>this.setInstance(near,i,transform));near.count=transforms.length;this.uploadRange(near,0,transforms.length*16);if(far)far.count=0;}
   }
   for(const [material,batch]of this.staticByMaterial)if(!statics.has(material)){this.batchRoot.remove(batch.mesh);batch.mesh.geometry.dispose();this.staticByMaterial.delete(material);}
   for(const [material,parts]of statics){
@@ -123,7 +131,7 @@ export class BuildingFactory{
       if(this.view.reflectionsEnabled===false||this.view.detailEnabled===false||!frustum.intersectsSphere(reflectionBounds)){this.detailCulled++;continue;}
      }
     }const distant=far&&state===2,mesh=distant?far:near,slots=distant?batch.farSlots:batch.nearSlots,index=distant?farCount++:nearCount++;
-    if(slots[index]!==transform){mesh.setMatrixAt(index,matrix);slots[index]=transform;if(distant){farFirst=Math.min(farFirst,index*16);farLast=(index+1)*16;}else{nearFirst=Math.min(nearFirst,index*16);nearLast=(index+1)*16;}}
+    if(slots[index]!==transform){this.setInstance(mesh,index,transform);slots[index]=transform;if(distant){farFirst=Math.min(farFirst,index*16);farLast=(index+1)*16;}else{nearFirst=Math.min(nearFirst,index*16);nearLast=(index+1)*16;}}
    }
    near.count=nearCount;this.uploadRange(near,nearFirst,nearLast);
    if(far){far.count=farCount;this.uploadRange(far,farFirst,farLast);}

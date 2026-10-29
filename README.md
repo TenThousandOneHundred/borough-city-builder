@@ -1,6 +1,18 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 146 — Individual row-house finishes
+
+Row houses now use eight deterministic combinations of muted masonry, slate/brown roofs, painted trim and doors. Each individual home in a repeated row receives its own combination. The official [residential style reference](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/zones-signature-buildings) guided the quieter brick palette and varied joinery. The existing recessed windows, roof silhouettes, brick/normal textures, baked weathering and room lighting are retained. This narrows the palette/repetition difference; the reference still has richer facade detail, street planting, lighting and surroundings, so overall visual equivalence remains unachieved.
+
+Colors travel with each instance through camera culling, near/far detail changes and demolition/reordering. Uncolored replacements reset reused slots, and unchanged instances avoid repeat color uploads. All row houses share one separately configured brick material, keeping other building categories unchanged. Model geometry, textures and compressed bundles are byte-for-byte unchanged, and no extra building draw batches are introduced.
+
+In a paired 24-lot browser scene with the same world and close camera, the warmed before/after samples both rendered 70 calls and 1,441,171 triangles. Median frame intervals were 18.6 ms for both; the 95th-percentile intervals were 20.8 ms before and 21.1 ms after. Earlier warm-up samples included a shadow refresh and are not used for this comparison. These are bounded scene observations, not a universal FPS guarantee. The road construction scheduling and shader preparation improvements from 145 remain intact.
+
+The 839-check local run passed 838 checks and exposed the expected shared-material budget assertion. After updating the budget for the single shared residential brick finish and asserting its isolation from other categories, all 44 model-library tests passed. All six new finish tests passed, including natural zoning growth, save/reload identity, unchanged authored buffers, batching, culling, relocation and slot reuse. Syntax checks passed for 107 root modules, and all five compressed bundles verified. Day/night browser views showed intact window lighting without console errors.
+
+Local game QA verified manual save at 8:05:47 PM on October 28, Save & Exit at 8:06:16 PM, and the saved city retained after full reload. Five-minute autosave remains unchanged and was not retimed. This is feature update two after optimization 144; the broader visual and simulation goal remains active.
+
 ## Edition 145 — Road placement frame pacing and clean starter-road joins
 
 Visible construction now yields to animation frames instead of continuously queueing short tasks. Hidden construction uses tasks, with a timeout fallback if a pending frame becomes hidden. Curb profiles reuse identical terrain samples and yield within long strips, retaining all vertices, normals and texture coordinates. Replacement road and grass shader programs are prepared with the city render target, lighting and fog while the old materials still exist, avoiding premature program eviction during the swap. Building assets, texture resolution, vegetation density and offscreen simulation remain unchanged.

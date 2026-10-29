@@ -1,4 +1,4 @@
-import {finishBuild} from './build-scheduler.js?v=145';
+import {finishBuild} from './build-scheduler.js?v=146';
 import * as THREE from './vendor/three.module.js';
 import clipping from './vendor/polygon-clipping.umd.min.js';
 

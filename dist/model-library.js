@@ -1,15 +1,16 @@
-import {IndustrialSurfaces,configureIndustrialPaint} from './industrial-surfaces.js?v=145';
-import {lotMaterials} from './lot-surfaces.js?v=145';
-import {bakeRoofFinish} from './roof-finishes.js?v=145';
-import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=145';
-import {loadBinary} from './asset-transfer.js?v=145';
-import {SiteDetails} from './site-details.js?v=145';
-import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=145';
+import {applyResidentialFinish,configureResidentialBrick} from './residential-finishes.js?v=146';
+import {IndustrialSurfaces,configureIndustrialPaint} from './industrial-surfaces.js?v=146';
+import {lotMaterials} from './lot-surfaces.js?v=146';
+import {bakeRoofFinish} from './roof-finishes.js?v=146';
+import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=146';
+import {loadBinary} from './asset-transfer.js?v=146';
+import {SiteDetails} from './site-details.js?v=146';
+import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=146';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {lotPlan} from './building-plan.js?v=145';
-import {floorHeight} from './landscape.js?v=145';
+import {lotPlan} from './building-plan.js?v=146';
+import {floorHeight} from './landscape.js?v=146';
 const IDENTITY=new THREE.Matrix4();
 const civicDefaults={hospital:'clinic',school:'elementary',police:'police',fire:'fire'};
 // Complete textured assets are loaded once, batched per material, and instanced.
@@ -34,13 +35,14 @@ export class ModelLibrary {
      source.traverse(o=>{if(!o.isMesh)return;let geometry=o.geometry.clone();if(!o.matrixWorld.equals(IDENTITY))geometry.applyMatrix4(o.matrixWorld);if(!geometry.index)geometry.setIndex(Array.from({length:geometry.attributes.position.count},(_,i)=>i));for(const attr of Object.keys(geometry.attributes))if(!['position','normal','uv','color'].includes(attr))geometry.deleteAttribute(attr);
       const modern=source.userData.family==='modern',tinted=!modern&&/plaster|brick|trim/.test(o.material.name)&&!source.name.includes('brick')&&!source.name.includes('loft');
       let tone=0;for(const char of source.name)tone=(tone+char.charCodeAt(0))%5;
-      this.modernMaterials ||= new Map();this.industrialMaterials ||= new Map();this.importedMaterials ||= new Map();
+      this.residentialMaterials ||= new Map();this.modernMaterials ||= new Map();this.industrialMaterials ||= new Map();this.importedMaterials ||= new Map();
       // Keep the existing per-building palette, but reuse identical glass,
       // frames, roofs and matching wall finishes across imported models.
       const industrialPaint=modern&&source.name.startsWith('industrial-')&&o.material.name==='modern-painted';
-      let materialCache=industrialPaint?this.industrialMaterials:this.modernMaterials,key=o.material;
+      const residentialBrick=modern&&source.userData.houseForm==='terrace'&&o.material.name==='modern-brick';
+      let materialCache=residentialBrick?this.residentialMaterials:industrialPaint?this.industrialMaterials:this.modernMaterials,key=o.material;
       if(!modern){if(!this.importedMaterials.has(o.material))this.importedMaterials.set(o.material,new Map());materialCache=this.importedMaterials.get(o.material);key=tinted?tone:'original';}
-      let material=materialCache.get(key);if(!material){material=o.material.clone();materialCache.set(key,material);if(industrialPaint)configureIndustrialPaint(material,this.surfaces?.textures||this.view.industrialSurfaces);
+      let material=materialCache.get(key);if(!material){material=o.material.clone();materialCache.set(key,material);if(residentialBrick)configureResidentialBrick(material);if(industrialPaint)configureIndustrialPaint(material,this.surfaces?.textures||this.view.industrialSurfaces);
        if(tinted){
         const palette=['#beb8a4','#c9c7ba','#9babad','#c0b39b','#c6bfb0'];material.color.set(palette[tone]);
         material.onBeforeCompile=shader=>{shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`#ifdef USE_MAP
@@ -112,6 +114,7 @@ export class ModelLibrary {
   if(p.type==='industrial'){p.industrialForm=asset.name;p.loadingBays=asset.streetFronts.filter(f=>f.kind==='loading').map(f=>({x:(f.position[0]+asset.origin.x)*scale,z:(f.position[2]+asset.origin.z)*scale+setback,width:f.width*scale,raised:!!f.raised}));}
   if(!p.facility){const fronts=asset.streetFronts.filter(f=>f.kind==='entrance'&&f.normal[1]>.9),frontZ=Math.max(...fronts.map(f=>f.position[2]));p.entranceXs=centers.flatMap(x=>fronts.filter(f=>f.position[2]>=frontZ-.5).map(f=>x+(f.position[0]+asset.origin.x)*scale));if(row){p.rowEntrances=[...p.entranceXs].sort((a,b)=>a-b);p.rowDividers=centers.slice(1).map((x,i)=>(centers[i]+x)/2);}}
   model.scale.setScalar(scale);root.add(model);for(const x of centers.slice(1)){const home=model.clone(true);home.position.x=x;root.add(home);}root.rotation.y=p.angle;
+  if(asset.houseForm==='terrace')root.children.forEach((home,i)=>applyResidentialFinish(home,p.seed,i));
   const lawn=['residential','office'].includes(p.type)||p.type==='commercial'&&p.density==='low',surface=lawn?'grass':category==='industrial'?'asphalt':'paving';this.lotMaterials ||= lotMaterials(this.view.landscape);
   const lotMaterial=this.lotMaterials[surface];
   const lot=new THREE.Mesh(this.lotGeometry,lotMaterial);lot.rotation.y=p.oriented?0:-p.angle;lot.scale.set((p.oriented?W:p.parcelWidth)-.12,1,(p.oriented?D:p.parcelDepth)-.12);lot.position.y=-.025;lot.receiveShadow=true;lot.userData.sharedAsset=true;root.add(lot);
