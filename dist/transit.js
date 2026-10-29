@@ -1,9 +1,10 @@
-import './roundabout-state.js?v=151.1';
-import {moveToRoute} from './route-progress.js?v=151.1';
-import './building-entities.js?v=151.1';
+import './progression.js?v=152';
+import './roundabout-state.js?v=152';
+import {moveToRoute} from './route-progress.js?v=152';
+import './building-entities.js?v=152';
 const Buildings=globalThis.BoroughBuildings;
-import {Walking,sidewalkPosition} from './walking.js?v=151.1';
-import {roadPoint} from './traffic.js?v=151.1';
+import {Walking,sidewalkPosition} from './walking.js?v=152';
+import {roadPoint} from './traffic.js?v=152';
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const nearby=(engine,i)=>engine.neighbors(i);
 // Attach each numeric stop to one physical road for the complete loop. Runtime
@@ -35,6 +36,7 @@ export function planBusLine(world,traffic,stops,pinned,originalDepot){
  if(!entry)return {ok:false,attachments,reason:'Build a bus depot with road access to the first stop.'};return {ok:true,attachments,legs,entry,depot,cost:500+stops.length*100};
 }
 export function createBusLine(world,traffic,stops){
+ const permission=globalThis.BoroughProgression.access(world,'busline');if(!permission.ok)return permission;
  if((world.transit?.lines.length||0)>=8)return {ok:false,reason:'This city can operate up to 8 bus lines.'};const plan=planBusLine(world,traffic,stops);if(!plan.ok)return plan;if(world.money<plan.cost)return {ok:false,reason:'Not enough funds for the bus and stops.'};
  world.transit ||= {version:1,nextId:1,lines:[]};const id=world.transit.nextId++;const line={id,name:'Line '+id,stops:[...stops],stopAttachments:structuredClone(plan.attachments),depot:plan.depot,boardings:0,completed:0,vehicle:{leg:-1,phase:'moving',dwell:0,segment:0,distance:0,...roadPoint(plan.depot),heading:0}};world.transit.lines.push(line);lineAttachments.set(line,plan.attachments);world.money-=plan.cost;return {ok:true,line,cost:plan.cost};
 }

@@ -1,4 +1,4 @@
-import {finishBuild} from './build-scheduler.js?v=151.1';
+import {finishBuild} from './build-scheduler.js?v=152';
 import * as THREE from './vendor/three.module.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 // Preserve every vertex/material; combine only static meshes with matching render state.

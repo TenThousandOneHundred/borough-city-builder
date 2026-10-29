@@ -1,6 +1,16 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 152 — City progression and build dock
+
+New cities default to population-based progression, with an optional Sandbox mode. Seven stages run from Founding Village to Great City (0, 100, 300, 650, 1,200, 2,000 and 3,500 residents). The starting set includes local roads, detached housing, shops, industry, power and water. Later milestones unlock denser housing, wider roads, highways, advanced utilities and city services, with one-time grants from ₡5,000 to ₡35,000. The milestone screen lists every unlock and its population requirement; locked construction cards remain visible and explain their requirement.
+
+Earned milestones use each world's saved peak population and never relock when population falls. Rewards are applied once in the economic tick and their receipt survives save, autosave, export/import and continue. Road construction, replacement, facilities, zoning and bus-line creation check the same rules before changing the city. Existing saves retain their unrestricted access; City milestones offers an explicit option to enable progression, preserving all built assets and marking past milestones reached without retroactive grants. Internal world creation without a mode retains its historical unrestricted behavior; the New game screen explicitly defaults to progression.
+
+The build toolbar is now a compact dark dock with consistent icons, category labels, clearer selection/focus, and lock indicators. It keeps static backgrounds rather than a live backdrop blur. Construction cards display legible lock requirements, and the milestone dialog adapts to narrower screens. Rendering detail, simulation speed, offscreen traffic and the five-minute autosave interval are unchanged.
+
+Validation: 870 checks passed before the final road-replacement preview safeguard; 31 focused progression, replacement and road-input checks then passed. Browser QA created a progression city, verified unavailable housing stays locked after save/home/reload, and imported a naturally grown 96-resident test city. The next simulated day reached 100 residents, awarded its ₡5,000 grant, and made row houses selectable while apartments remained locked. The release workflow runs the complete suite before publishing.
+
 ## Edition 151 — Retain prepared road scenery buffers
 
 Road graphics preparation now uploads the actual instance buffers that the new scene will display. Previously it cloned repeated scenery, uploaded the clone's instance attributes, then disposed those attributes; the final city draw still had to upload the real instances. Shared base geometry no longer causes distinct instance batches to be skipped. Preparation temporarily borrows meshes without changing their parent, suppresses their draw callbacks, and restores visibility, shadow, culling and renderer state even if interrupted. The long outside-connection markings also yield between individual stripes instead of being built in a single uninterrupted step. Road geometry, buildings, terrain, textures and vegetation detail are unchanged.

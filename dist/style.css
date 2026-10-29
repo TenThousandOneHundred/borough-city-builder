@@ -42,3 +42,58 @@
 #roadGridControls{display:flex;align-items:center;gap:6px;font-size:11px;color:#d7e8ee}#roadGridControls[hidden]{display:none}#roadGridSize{padding:6px;background:#183746;color:#e2f2f5;border:1px solid #7596a8;border-radius:4px;font-size:11px}
 
 #roadParallelToggle,#roadParallelControls,#roadParallelControls label{display:flex;align-items:center;gap:6px;font-size:11px;color:#d7e8ee}#roadParallelControls{gap:12px}#roadParallelToggle[hidden],#roadParallelControls[hidden],#roadParallelReverseControl[hidden]{display:none}#roadParallelControls select{padding:6px;background:#183746;color:#e2f2f5;border:1px solid #7596a8;border-radius:4px;font-size:11px}#roadParallelToggle:has(input:disabled){opacity:.45}
+
+/* Build dock: legible labels, a stable selected state, and no live backdrop blur. */
+.category-bar{width:calc(100% - 24px);max-width:1200px;height:76px;margin:0 auto 8px;padding:8px 10px;gap:10px;border:1px solid #708d9d42;border-radius:14px;background:linear-gradient(180deg,#243642f5,#172731fa);backdrop-filter:none;box-shadow:0 8px 24px #07121c66,inset 0 1px #c9e6f00d}
+#categories{min-width:0;flex:1;justify-content:center;gap:3px;padding:2px 1px;scrollbar-width:thin;scrollbar-color:#547081 transparent}
+#categories button,.category-end button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;width:56px;height:56px;flex:0 0 56px;padding:5px 2px 8px;border:1px solid transparent;border-radius:8px;background:transparent;box-shadow:none;transition:background .14s,border-color .14s,color .14s;--tool-color:#c5dce8}
+#categories button svg,.category-end button svg{width:25px;height:25px;flex-shrink:0;color:var(--tool-color);filter:none}
+#categories .tool-label,.category-end .tool-label{font-size:10px;font-weight:500;line-height:12px;letter-spacing:.1px;color:#a8bdcb}
+#categories button:hover,.category-end button:hover{background:#a1c9e012;border-color:#8aafc12e}
+#categories button:hover .tool-label,.category-end button:hover .tool-label{color:#f0f7fb}
+#categories button.active,.category-end button.active{background:linear-gradient(180deg,#427b994d,#2b506640);border-color:#86c9e566;box-shadow:inset 0 1px #a8def018}
+#categories button.active .tool-label,.category-end button.active .tool-label{color:#fff}
+#categories button.active::after,.category-end button.active::after{content:'';position:absolute;bottom:2px;width:18px;height:3px;border-radius:2px;background:var(--tool-color)}
+#categories button:focus-visible,.category-end button:focus-visible{outline:2px solid #b3e6ff;outline-offset:-2px;background:#335469}
+#categories button[data-category=zones]{--tool-color:#91d68b}
+#categories button[data-category=power]{--tool-color:#efce68}
+#categories button[data-category=water]{--tool-color:#70cbe9}
+#categories button[data-category=health]{--tool-color:#f09c86}
+#categories button[data-category=education]{--tool-color:#b2bfdc}
+#categories button[data-category=safety]{--tool-color:#e8c77f}
+#categories button[data-category=parks]{--tool-color:#8dcd83}
+#categories button[data-category=transport]{--tool-color:#a9d878}
+#categories button[data-category=environment]{--tool-color:#9acbbb}
+#categories button[data-category=power],#categories button[data-category=overlays]{margin-left:7px}
+.category-end{align-self:stretch;align-items:center;gap:3px;margin:0;padding-left:10px;border-left:1px solid #66899d40;flex-shrink:0}
+.category-end button{width:52px;flex-basis:52px}
+.category-end #bulldoze{--tool-color:#edc66b}
+.category-end #bulldoze.active{background:#b8872526;border-color:#edc66b88}
+.category-bar .milestone-button{height:56px;border-radius:9px;padding:7px 10px;background:#101e294d;border-color:#7896a62b;box-shadow:none;flex-shrink:0}
+.category-bar .milestone-button>span{font-size:24px}
+.category-bar .milestone-button strong{font-size:9px;max-width:112px;overflow:hidden;text-overflow:ellipsis}
+.category-bar .milestone-button small{font-size:8px;letter-spacing:1px}
+.category-bar .demand-pill{display:grid;gap:6px;width:72px;min-width:72px;height:56px;flex-shrink:0;padding:7px 9px;border-radius:9px;background:#101e294d;border-color:#7896a62b}
+.category-bar .demand-pill::before{content:'DEMAND';font-size:8px;line-height:9px;letter-spacing:1px;color:#a8bdcb;text-align:left}
+.category-bar #demandBars{gap:3px}.category-bar #demandBars i{height:3px;max-width:52px}
+.tool-status{bottom:140px}
+@media(max-width:1180px){.category-bar{gap:6px}#categories{justify-content:flex-start}#categories button{width:51px;flex-basis:51px}.category-bar .milestone-button{padding:6px 8px}.category-end{padding-left:6px}.category-end button{width:48px;flex-basis:48px}}
+@media(max-width:900px){.category-bar .milestone-button{display:none}}
+@media(max-width:760px){.category-bar{width:calc(100% - 12px);height:70px;padding:6px;margin-bottom:6px;border-radius:11px;gap:5px}#categories button{width:48px;flex-basis:48px;height:54px}#categories button svg,.category-end button svg{width:23px;height:23px}#categories .tool-label,.category-end .tool-label{font-size:9px}.category-end{padding-left:5px;gap:1px}.category-end button{width:45px;flex-basis:45px;height:54px}.category-bar .demand-pill{width:48px;min-width:48px;padding:7px 5px;height:54px}.category-bar .demand-pill::before{font-size:7px;letter-spacing:.4px}.category-bar #demandBars i{max-width:36px}.tool-status{bottom:128px}}
+@media(prefers-reduced-motion:reduce){#categories button,.category-end button{transition:none}}
+/* City progression shares the dock's quiet blue-gray palette. */
+.progression-choice{margin:18px 0;display:grid;gap:8px}.progression-choice select{width:100%}.progression-choice small{color:#b8cbd5;line-height:1.5;font-weight:400}
+#milestonesDialog{width:min(760px,calc(100vw - 28px));max-height:85vh;overflow:auto}
+#milestonesSummary{color:#b8cbd5;line-height:1.5;margin:10px 0 20px}
+.milestone-list{display:grid;gap:10px}.milestone-card{display:flex;gap:15px;padding:16px;border:1px solid #6d899733;border-radius:10px;background:#142631}
+.milestone-card.current{border-color:#8bbebd88;background:#203b46}.milestone-number{flex:none;display:grid;place-items:center;align-self:flex-start;width:36px;height:36px;border:1px solid #8bbebd66;border-radius:50%;color:#badfd8;font-size:13px}
+.milestone-card h3{font-size:16px;margin:0 0 5px}.milestone-meta{font-size:12px;color:#b1d6ce;margin:0 0 9px}.milestone-unlocks{font-size:12px;color:#b7c8d2;line-height:1.65;margin:0}
+#enableProgressionNotice{margin-top:18px;font-size:13px;line-height:1.5;color:#b7c8d2}#enableProgression{margin-top:8px}
+.build-option.is-locked{background:#172730;color:#9aaab3;border-color:#7592a126}.build-option.is-locked .model-icon{opacity:.42;filter:grayscale(.75)}.build-option.is-locked strong{color:#aebdc5}.build-option.is-locked small{color:#94a7b2}
+.build-option .unlock-note{font-size:10px;line-height:1.4;color:#e0c18a;margin-top:6px;white-space:normal}.build-option .unlock-note[hidden]{display:none}
+#categories button.category-locked svg{opacity:.48}#categories button.category-locked:after{content:'';position:absolute;right:8px;top:5px;bottom:auto;width:5px;height:6px;border:1px solid #d4c49b;border-radius:1px;background:#263944}
+
+.build-option:has(.unlock-note){height:auto;min-height:128px;padding-bottom:10px}.build-option .unlock-note{flex-shrink:0}.zoning-panel .build-option:has(.unlock-note){min-height:128px}
+#categories button.category-locked:before{content:'';position:absolute;right:9px;top:2px;width:3px;height:4px;border:1px solid #d4c49b;border-bottom:0;border-radius:3px 3px 0 0}
+
+@media(max-width:480px){.status-bar{gap:3px}.status-bar .population-section{min-width:58px}.status-bar .happiness-section{min-width:42px}.status-bar .time-section #date{min-width:26px;margin:0 2px}}

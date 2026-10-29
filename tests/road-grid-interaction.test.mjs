@@ -18,7 +18,7 @@ function harness(type='street'){
  const classList={add(){},remove(){},toggle(){}};
  const $=id=>{
   if(!nodes.has(id))nodes.set(id,{id,textContent:'',value:id==='roadGridSize'?'96':'',checked:true,hidden:false,disabled:false,open:false,classList,
-   addEventListener:(name,fn)=>events[name]=fn,setPointerCapture(){},showModal(){this.open=true;},close(){this.open=false;},focus(){}});
+   setAttribute(){},addEventListener:(name,fn)=>events[name]=fn,setPointerCapture(){},showModal(){this.open=true;},close(){this.open=false;},focus(){}});
   return nodes.get(id);
  };
  const modes=['straight','curve','grid','replace','roundabout'].map(mode=>({dataset:{roadMode:mode},disabled:false,classList}));
@@ -31,7 +31,7 @@ function harness(type='street'){
   showRoadGridPreview(plan,type,ok,details){previews.push({plan:plain(plan),type,ok,details:plain(details)});},
   hover(){},clearRoadZoning(){},setBuild(){},setZoning(){},setOverlay(){},setNight(){},setWorld(){},cursor:{visible:true},grid:{visible:true}};
  const session={screen:'game',world,paused:false,start(){this.world=E.createWorld('Other world','plains',9);}};
- const state={E,planRoadGrid,quoteRoadGrid,buildRoadGrid,createRoadSnapIndex,resolveRoadSnap,$,view,session,document,
+ const state={E,P:E.Progression,visibleProgression:null,planRoadGrid,quoteRoadGrid,buildRoadGrid,createRoadSnapIndex,resolveRoadSnap,$,view,session,document,
   tool:'road',toolOptions:{roadType:type},roadMode:'grid',curvePoints:[],gridPoints:[],gridWorld:null,roadGridSize:96,roadParallel:false,roadParallelGap:8,roadParallelSide:1,roadParallelReverse:true,newRoadSides:'both',newRoadSelect:$('newRoadSides'),
   roadSnapIndex:null,roadStartSnap:null,roadLastSnap:null,rightRoadPress:null,lastRoadPointer:null,roadSnapping:{nodes:true,angles:true,lengths:false},
   drag:null,photo:false,painted:new Set(),busStops:[],facilityHover:null,finishTerrain(){},money:n=>'₡'+n,toast:(...args)=>messages.push(args),update(){updates++;},
@@ -42,7 +42,7 @@ function harness(type='street'){
  const load=prefix=>{const line=source.split('\n').find(line=>line.startsWith(prefix));assert.ok(line,`Production handler ${prefix} must exist`);vm.runInContext(line,context);};
  for(const name of ['pointerdown','pointermove','pointerup','pointercancel'])load(`$('city').addEventListener('${name}'`);
  for(const name of ['keydown','keyup'])load(`window.addEventListener('${name}'`);
- for(const name of ['selectTool','start','pauseMenu'])load(`function ${name}(`);
+ for(const name of ['syncCategorySelection','selectTool','start','pauseMenu'])load(`function ${name}(`);
  load("document.querySelectorAll('[data-road-mode]')");load("$('photo').onclick");
  const pointer=(name,x,y,extra={})=>events[name]({clientX:x,clientY:y,button:0,pointerId:1,altKey:false,...extra});
  const key=(name,key)=>keyEvents[name]({key,type:name,target:{tagName:'CANVAS'},preventDefault(){}});
