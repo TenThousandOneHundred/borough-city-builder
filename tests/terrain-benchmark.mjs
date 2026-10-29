@@ -1,4 +1,10 @@
-import E from '../dist/engine.js';import {world,harness} from './fixtures/road-build-view.mjs';import {groundHeight,wetness} from '../dist/landscape.js';import * as T from '../dist/vendor/three.module.js';
-import {createRoadEarthworks as before} from './fixtures/earthworks-before152.mjs';import {createRoadEarthworks as after} from '../dist/road-earthworks.js';
-const w=world();w.roadPaths=[];for(const t of w.tiles)t.type=null;for(const y of [12,24,36])E.buildRoadPath(w,[{x:6,y},{x:42,y}],'avenue');const v=harness(w);v.refresh(true);const surfaces=v.roadworks.earthworks.surfaceSnapshot,g=new T.PlaneGeometry(192,192,192,192);g.rotateX(-Math.PI/2);const pos=g.attributes.position;for(let i=0;i<pos.count;i++)pos.setY(i,groundHeight(w,pos.getX(i),pos.getZ(i)));g.computeVertexNormals();const caches={before:{},after:{}};
-for(let i=0;i<12;i++)for(const [name,fn]of (i%2?[['after',after],['before',before]]:[['before',before],['after',after]])){let t=performance.now();const p=fn({world:w,surfaces,groundHeight,wetness,regionCache:caches[name]});const build=performance.now()-t;t=performance.now();p.beginApplication();const r=p.applyToGeometry(g);console.log(JSON.stringify({run:i,name,build,apply:performance.now()-t,cache:p.cacheStats}));p.dispose();r.replacement.dispose();r.walls?.dispose();}v.cleanup();
+import {terrainEdgeFixture} from './fixtures/terrain-edge-fixture.mjs';
+import {createRoadEarthworks as before} from './fixtures/earthworks-before152.mjs';
+import {createRoadEarthworks as after} from '../dist/road-earthworks.js';
+for(const kind of ['grid','curved']){
+ const f=terrainEdgeFixture(kind),caches={before:{},after:{}};
+ for(let run=0;run<10;run++)for(const [name,create]of (run%2?[['after',after],['before',before]]:[['before',before],['after',after]])){
+  let t=performance.now();const p=create({...f.options,regionCache:caches[name]}),build=performance.now()-t;p.beginApplication();t=performance.now();const r=p.applyToGeometry(f.geometry),apply=performance.now()-t;
+  console.log(JSON.stringify({kind,run,name,build,apply,total:build+apply,cache:p.cacheStats}));p.dispose();r.replacement.dispose();r.walls?.dispose();
+ }f.cleanup();
+}

@@ -11,6 +11,6 @@ jobs:
         with:
           node-version: '22'
       - name: Verify unchanged terrain
-        run: node --test tests/road-earthworks-performance.test.mjs tests/road-earthworks.test.mjs
+        run: node --test tests/road-earthworks-performance.test.mjs tests/road-earthworks.test.mjs tests/terrain-edge-search.test.mjs
       - name: Alternate released and candidate terrain preparation
         run: node tests/terrain-benchmark.mjs

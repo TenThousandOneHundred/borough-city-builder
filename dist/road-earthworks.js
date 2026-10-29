@@ -19,19 +19,21 @@ function pointIn(t,x,z,epsilon=0){
  return u>=-eb&&v>=-ec&&u+v<=1+ea?[1-u-v,u,v]:null;
 }
 const value=(t,b,k)=>t.p[0][k]*b[0]+t.p[1][k]*b[1]+t.p[2][k]*b[2];
+// Numeric columns avoid constructing coordinate strings on each height query.
+// cellKeys records original first-insertion order for terrain partitioning.
 class Index{
- constructor(){this.cells=new Map();this.large=[];this.items=[];this.queryResult=[];this.queryGeneration=0;this.queryMark=Symbol('spatial-query');this.bounds={minX:Infinity,maxX:-Infinity,minZ:Infinity,maxZ:-Infinity};}
+ constructor(){this.cells=new Map();this.cellKeys=[];this.large=[];this.items=[];this.queryResult=[];this.queryGeneration=0;this.queryMark=Symbol('spatial-query');this.bounds={minX:Infinity,maxX:-Infinity,minZ:Infinity,maxZ:-Infinity};}
  add(t){t.id=this.items.length;this.items.push(t);const b=t.bounds;this.bounds.minX=Math.min(this.bounds.minX,b.minX);this.bounds.maxX=Math.max(this.bounds.maxX,b.maxX);this.bounds.minZ=Math.min(this.bounds.minZ,b.minZ);this.bounds.maxZ=Math.max(this.bounds.maxZ,b.maxZ);const x0=Math.floor(b.minX/CELL),x1=Math.floor(b.maxX/CELL),z0=Math.floor(b.minZ/CELL),z1=Math.floor(b.maxZ/CELL);
   if((x1-x0+1)*(z1-z0+1)>MAX_CELLS){this.large.push(t);return;}
-  for(let x=x0;x<=x1;x++)for(let z=z0;z<=z1;z++){const k=x+','+z;let bucket=this.cells.get(k);if(!bucket)this.cells.set(k,bucket=[]);bucket.push(t);}
+  for(let x=x0;x<=x1;x++){let column=this.cells.get(x);if(!column)this.cells.set(x,column=new Map());for(let z=z0;z<=z1;z++){let bucket=column.get(z);if(!bucket){column.set(z,bucket=[]);this.cellKeys.push(x+','+z);}bucket.push(t);}}
  }
  // Borrowed scratch is consumed synchronously; no caller re-enters the same
  // index while iterating it. Preserve insertion/id ordering in every branch.
  query(b){const result=this.queryResult;result.length=0;if(!overlaps(this.bounds,b))return result;const x0=Math.floor(b.minX/CELL),x1=Math.floor(b.maxX/CELL),z0=Math.floor(b.minZ/CELL),z1=Math.floor(b.maxZ/CELL);
-  if(x0===x1&&z0===z1&&!this.large.length){for(const t of this.cells.get(x0+','+z0)||[])if(overlaps(t.bounds,b))result.push(t);return result;}
+  if(x0===x1&&z0===z1&&!this.large.length){for(const t of this.cells.get(x0)?.get(z0)||[])if(overlaps(t.bounds,b))result.push(t);return result;}
   if((x1-x0+1)*(z1-z0+1)>MAX_CELLS){for(const t of this.items)if(overlaps(t.bounds,b))result.push(t);return result;}
   const generation=++this.queryGeneration,mark=this.queryMark,add=t=>{if(t[mark]===generation)return;t[mark]=generation;if(overlaps(t.bounds,b))result.push(t);};
-  for(const t of this.large)add(t);for(let x=x0;x<=x1;x++)for(let z=z0;z<=z1;z++)for(const t of this.cells.get(x+','+z)||[])add(t);
+  for(const t of this.large)add(t);for(let x=x0;x<=x1;x++){const column=this.cells.get(x);if(column)for(let z=z0;z<=z1;z++)for(const t of column.get(z)||[])add(t);}
   return result.sort((a,b)=>a.id-b.id);
  }
  // Existence-only callers need neither a sorted result nor duplicate marks.
@@ -39,10 +41,10 @@ class Index{
  intersects(b){if(!overlaps(this.bounds,b))return false;const x0=Math.floor(b.minX/CELL),x1=Math.floor(b.maxX/CELL),z0=Math.floor(b.minZ/CELL),z1=Math.floor(b.maxZ/CELL);
   if((x1-x0+1)*(z1-z0+1)>MAX_CELLS){for(const t of this.items)if(overlaps(t.bounds,b))return true;return false;}
   for(const t of this.large)if(overlaps(t.bounds,b))return true;
-  for(let x=x0;x<=x1;x++)for(let z=z0;z<=z1;z++)for(const t of this.cells.get(x+','+z)||[])if(overlaps(t.bounds,b))return true;
+  for(let x=x0;x<=x1;x++){const column=this.cells.get(x);if(column)for(let z=z0;z<=z1;z++)for(const t of column.get(z)||[])if(overlaps(t.bounds,b))return true;}
   return false;
  }
- at(x,z){const bucket=this.cells.get(Math.floor(x/CELL)+','+Math.floor(z/CELL))||[];return this.large.length?[...bucket,...this.large]:bucket;}
+ at(x,z){const bucket=this.cells.get(Math.floor(x/CELL))?.get(Math.floor(z/CELL))||[];return this.large.length?[...bucket,...this.large]:bucket;}
 }
 // Partition a convex polygon into the portion within a convex triangle and
 // nonoverlapping outside fragments. All attributes follow the same exact edge
@@ -252,7 +254,7 @@ function* buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePla
  // Work only with clipped local inputs. Intersecting a small tile with an
  // entire city-sized ring repeats that ring's sweep thousands of times.
  const shoulderIndex=new Index();for(const polygon of shoulderFootprints){yield;const p=polygon[0].map(v=>[v[0],0,v[1]]);shoulderIndex.add({p,bounds:bounds(p)});}
- const cells=new Set([...roadIndex.cells.keys(),...patches.cells.keys()]),regionByCell=new Map(),nextRegions=new Map();let reusedRegions=0,builtRegions=0;
+ const cells=new Set([...roadIndex.cellKeys,...patches.cellKeys]),regionByCell=new Map(),nextRegions=new Map();let reusedRegions=0,builtRegions=0;
  const rectangleClip=(vertices,b)=>{
   let p=vertices.map(v=>[v[0],v[2]]);
   for(const [axis,limit,sign]of [[0,b.minX,1],[0,b.maxX,-1],[1,b.minZ,1],[1,b.maxZ,-1]]){
@@ -441,5 +443,5 @@ function* buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePla
  }
  return {surfaceSnapshot,structuralSnapshot,beginApplication,applyToGeometry,applyToGeometrySteps,sample,contains,excluded:contains,mayAffectProtectedParcel,stats,cacheStats,
   rebuild(options={}){return createRoadEarthworks({world,surfaces:surfaceSnapshot,structuralSurfaces:structuralSnapshot,bridgePlan,groundHeight,wetness,protectedParcels,...options});},
-  dispose(){disposed=true;rendered=new Index();usedWalls.clear();for(const index of [patches,wallIndex,structureIndex]){index.cells.clear();index.items.length=0;index.large.length=0;}}};
+  dispose(){disposed=true;rendered=new Index();usedWalls.clear();for(const index of [patches,wallIndex,structureIndex]){index.cells.clear();index.cellKeys.length=0;index.items.length=0;index.large.length=0;}}};
 }
