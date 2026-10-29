@@ -37,11 +37,14 @@ const distance=(a,b)=>Math.hypot(...a.map((v,i)=>v-b[i]));
 const dot=(a,b)=>a.reduce((sum,v,i)=>sum+v*b[i],0);
 const subtract=(a,b)=>a.map((v,i)=>v-b[i]);
 
-test('industrial UV authoring preserves all released geometry, other UVs, materials, images and distant topology',()=>{
+test('industrial UV authoring preserves untouched geometry, UVs, materials, images and distant topology',()=>{
  // Compact immutable fingerprints of the Edition 127 assets. CI needs no
  // screenshot directory or copy of the 16 MB released GLB.
  const old=doc.nodes.filter(n=>n.extras.category!=='industrial');assert.equal(old.length,63);assert.equal(industrial.length,5);
- assert.equal(sha(JSON.stringify(old.map(n=>[n.name,modelDigest(n)]))),'572fea76c6940935e8e7490f6349f8401e83612cba98f3af649c512f0bd4a3cb');
+ const frozen=JSON.parse(fs.readFileSync(new URL('./fixtures/building-fingerprints-146.json',import.meta.url))),rebuilt=new Set(['raised-stoop-brick-terrace','dormer-roof-brick-terrace']);
+ // Preserve the original aggregate proof, then compare every untouched model.
+ assert.equal(sha(JSON.stringify(frozen.models)),'572fea76c6940935e8e7490f6349f8401e83612cba98f3af649c512f0bd4a3cb');
+ assert.deepEqual(old.filter(n=>!rebuilt.has(n.name)).map(n=>[n.name,modelDigest(n)]),frozen.models.filter(([name])=>!rebuilt.has(name)));
  assert.deepEqual(Object.fromEntries(industrial.map(n=>[n.name,modelDigest(n,true)])),{
   'industrial-trade-depot':'bbbbebf656fe3504338a046ad3667ea67a72be4fe0fec6bdec5decf1deb65092',
   'industrial-light-workshop':'2203bb212cc57f18a3d7724c85f45d5aef2a0f2b0ff105a341866b3e48f430e7',
@@ -52,8 +55,9 @@ test('industrial UV authoring preserves all released geometry, other UVs, materi
  const h=createHash('sha256');h.update(JSON.stringify({materials:doc.materials,textures:doc.textures,samplers:doc.samplers}));
  for(const image of doc.images){h.update(image.mimeType);h.update(viewBytes(doc.bufferViews[image.bufferView]));}
  assert.equal(h.digest('hex'),'a425d3ae6a02ef131bf54276bf48b6ac4249864783d48fb522114ff05cac01bb');
- assert.equal(sha(fs.readFileSync(new URL('../dist/assets/buildings/lod.bin',import.meta.url))),'0ee49ab0d6d16d3dbdf213275ab18dafa1203e1eb48daa839da96d256c45eba4');
- assert.equal(sha(fs.readFileSync(new URL('../dist/assets/buildings/lod.json',import.meta.url))),'63f643bb08867b9a73c70f81645995dd62647615e8e1b132b56c65e7c330257e');
+ const manifest=JSON.parse(fs.readFileSync(new URL('../dist/assets/buildings/lod.json',import.meta.url))),data=fs.readFileSync(new URL('../dist/assets/buildings/lod.bin',import.meta.url)),actual={};
+ for(const [name,parts]of Object.entries(manifest)){if(rebuilt.has(name))continue;const h=createHash('sha256');for(const p of parts){h.update(JSON.stringify({shared:p.sharedAttributes,indexCount:p.index.count,attributes:Object.keys(p.attributes||{})}));for(const a of [...Object.values(p.attributes||{}),p.index])h.update(data.subarray(a.offset,a.offset+a.count*4));}actual[name]=h.digest('hex');}
+ assert.equal(Object.keys(actual).length,87);assert.deepEqual(actual,Object.fromEntries(Object.entries(frozen.lod).filter(([name])=>!rebuilt.has(name))));
 });
 
 test('one metre of industrial paint stays one texture repeat across wall panels and narrow corrugations',()=>{

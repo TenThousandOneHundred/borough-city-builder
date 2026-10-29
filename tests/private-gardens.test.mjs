@@ -69,6 +69,7 @@ test('privacy screens have real plank geometry and hedges join without seams',()
  const ends=sign=>Array.from({length:p.count},(_,i)=>i).filter(i=>Math.abs(p.getX(i)-sign*.5)<1e-7).map(i=>[p.getY(i),p.getZ(i)]);
  assert.deepEqual(ends(-1),ends(1),'adjacent hedge panels meet with the same full profile');
  assert.ok(g.index.count/3<180,'continuous hedge uses bounded geometry');
+ const shrub=props.model('shrub');assert.equal(shrub.children.length,1,'leaf blades share the existing foliage draw');assert.ok(shrub.children[0].geometry.index.count/3<=600,'detailed shrubs retain a bounded shared geometry cost');
 });
 
 test('ordinary roadside growth and save reload retain complete gardens without editing residents or lots',async()=>{

@@ -1,4 +1,4 @@
-import {industrialSitePlan} from './industrial-site-plan.js?v=146';
+import {industrialSitePlan} from './industrial-site-plan.js?v=147';
 // Layout in the building's local coordinates. Features stay inside the owned
 // rotated envelope and outside the complete model bounds, including balconies.
 export function sitePlan(plan,footprint){
@@ -126,11 +126,21 @@ export function sitePlan(plan,footprint){
  if(plan.low){
   // Small rounded shrubs punctuate private lawns without blocking paths or
   // introducing a new tree model for each home.
-  let count=0;for(const bed of items.filter(a=>a.kind==='garden')){if(count>=5||Math.min(bed.w,bed.d)<.32)continue;
+  let count=0;for(const bed of items.filter(a=>a.kind==='garden')){
+   const streetRow=plan.rowEntrances?.length&&bed.z-bed.d/2>=frontStart-.001;
+   if(streetRow){
+    // Front lawns use low groups beside each door, matching the street-house
+    // reference. Tree-sized crowns would obscure the ground-floor windows.
+    if(Math.min(bed.w,bed.d)<.32)continue;
+    const groups=bed.w>1.05?2:1,span=Math.min(.54,(bed.w-.12)/groups,bed.d-.12);
+    for(let i=0;i<groups;i++)items.push({kind:'shrub',x:bed.x+((i+.5)/groups-.5)*(bed.w-.12),z:bed.z,w:span,d:span,height:span*.56});
+    continue;
+   }
+   if(count>=5||Math.min(bed.w,bed.d)<.32)continue;
    const span=Math.min(.42,bed.w-.08,bed.d-.08);items.push({kind:'shrub',x:bed.x,z:bed.z,w:span,d:span,height:span*.8});count++;
   }
  }
- const beds=items.filter(i=>i.kind==='garden');if(!plan.low)beds.sort((a,b)=>b.w*b.d-a.w*a.d);let treesLeft=plan.low?Infinity:6;for(const bed of beds){if(Math.min(bed.w,bed.d)<.48)continue;const alongX=bed.w>bed.d,long=Math.max(bed.w,bed.d),short=Math.min(bed.w,bed.d),count=Math.min(treesLeft,4,Math.max(1,Math.floor(long/(plan.low?1.7:2.2))));treesLeft-=count;
+ const beds=items.filter(i=>i.kind==='garden');if(!plan.low)beds.sort((a,b)=>b.w*b.d-a.w*a.d);let treesLeft=plan.low?Infinity:6;for(const bed of beds){if(plan.rowEntrances?.length&&bed.z-bed.d/2>=frontStart-.001)continue;if(Math.min(bed.w,bed.d)<.48)continue;const alongX=bed.w>bed.d,long=Math.max(bed.w,bed.d),short=Math.min(bed.w,bed.d),count=Math.min(treesLeft,4,Math.max(1,Math.floor(long/(plan.low?1.7:2.2))));treesLeft-=count;
   for(let n=0;n<count;n++){const offset=((n+.5)/count-.5)*long,span=Math.min(short-.12,long/count-.12);items.push({kind:'tree',x:bed.x+(alongX?offset:0),z:bed.z+(alongX?0:offset),w:span,d:span,height:Math.min(plan.low?1.35:1.9,span*1.7)});}
  }
  // Equipment is placed only where its complete footprint fits.

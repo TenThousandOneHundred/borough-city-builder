@@ -546,8 +546,8 @@ def street_terrace(name,dormered):
   s=1 if z>0 else -1;l=x-width/2;r=x+width/2
   face(l,r,lo,hi,z-s*.20,WOOD if door else OCCUPIED if round(x+lo)%3==0 else GLASS,(.40,.50,.48) if door else (.78,.85,.84))
   for a in [l,r]:m.quad((a,lo,z),(a,hi,z),(a,hi,z-s*.20),(a,lo,z-s*.20),CONCRETE,(.68,.67,.61))
-  for a in [l-.055,r+.055]:trim(a,lo-.06,z+s*.025,.11,hi-lo+.12,.18,s)
-  for y in [lo-.055,hi]:trim(x,y,z+s*.025,width+.22,.10,.21,s)
+  for a in [l-.045,r+.045]:trim(a,lo-.045,z-s*.045,.09,hi-lo+.09,.14,s,PAINT,(.40,.46,.43))
+  for y in [lo-.045,hi]:trim(x,y,z-s*.045,width+.18,.09,.14,s,PAINT,(.40,.46,.43))
   if door:
    face(l+.15,r-.15,hi-.65,hi-.12,z-s*.17,GLASS,(.80,.85,.81))
    for y in [lo+.16,lo+.79]:trim(x,y,z-s*.15,width-.26,.48,.045,s,PAINT,(.36,.46,.42))
@@ -555,9 +555,29 @@ def street_terrace(name,dormered):
    if s>0:m.streetFronts.append({'kind':'entrance','position':[x,lo,z+.10],'normal':[0,1],'width':width})
   else:
    trim(x,lo,z-s*.12,.045,hi-lo,.055,s,FRAME)
-   trim(x,lo+(hi-lo)*.55,z-s*.12,width,.065,.055,s,PAINT)
+   trim(x,lo+(hi-lo)*.60,z-s*.12,width,.055,.055,s,PAINT,(.42,.48,.46))
   trim(x,lo-.14,z+s*.06,width+.36,.085,.36,s,CONCRETE,(.83,.79,.69))
-  trim(x,hi+.10,z+s*.03,width+.38,.15,.22,s,CONCRETE,(.80,.77,.68))
+  # A narrow projecting sill and masonry header frame the real recess;
+  # no bright continuous box surrounds every pane.
+  trim(x,hi+.10,z+s*.03,width+.30,.12,.18,s,CONCRETE,(.58,.56,.49))
+  if door and s>0:
+   for side in [-1,1]:
+    trim(x+side*(width/2+.17),lo-.04,z+.05,.18,hi-lo+.30,.28,s,CONCRETE,(.66,.64,.57))
+    trim(x+side*(width/2+.17),lo-.04,z+.08,.24,.19,.34,s,CONCRETE,(.67,.65,.58))
+   trim(x,hi+.25,z+.12,width+.70,.13,.48,s,CONCRETE,(.67,.65,.58))
+   trim(x,hi+.38,z+.12,width+.80,.08,.54,s,CONCRETE,(.76,.74,.66))
+   m.detail=True
+   # The address plate and projecting wall lamp remain separate from glass.
+   m.box(r+.34,lo+1.45,z+.17,.16,.22,.035,FRAME)
+   m.box(l-.37,hi-.15,z+.20,.14,.24,.18,FRAME)
+   m.box(l-.37,hi-.12,z+.30,.09,.15,.025,PAINT,(.94,.89,.71))
+   m.detail=False
+  elif not dormered and s>0 and lo>base+fh and lo<base+2*fh and x>1:
+   m.detail=True
+   # One window air conditioner per raised-stoop home, below the sash.
+   m.box(x,lo-.42,z+.21,width*.78,.30,.62,FRAME,(.76,.80,.77))
+   for j in range(4):m.box(x,lo-.38+j*.055,z+.535,width*.67,.022,.025,CONCRETE,(.59,.61,.57))
+   m.detail=False
  # No side windows, overhanging eaves or other protrusions at party walls.
  for side in [-1,1]:
   x=side*w/2;q=[(x,0,-d/2),(x,h,-d/2),(x,h,d/2),(x,0,d/2)]
@@ -568,11 +588,11 @@ def street_terrace(name,dormered):
   for floor in range(3):
    y=base+floor*fh
    for bay in range(3):
-    x=(bay-1)*w/3;door=floor==0 and bay==0;width=1.10 if door else 1.40
-    lo=y+(.04 if door else .61);hi=y+2.36;l=x-width/2;r=x+width/2
+    x=(bay-1)*w/3;door=floor==0 and bay==0;width=1.10 if door else 1.14
+    lo=y+(.04 if door else .43);hi=y+2.46;l=x-width/2;r=x+width/2
     for rect in [(x-w/6,l,y,y+fh),(r,x+w/6,y,y+fh),(l,r,y,lo),(l,r,hi,y+fh)]:face(*rect,z)
     opening(x,lo,hi,width,z,door)
-  for y in [base-.06,base+fh-.05,base+2*fh-.05,h-.16]:
+  for y in [base-.06,h-.16]:
    m.box(0,max(.02,y),z,w,.12,.18,CONCRETE,(.76,.72,.63))
  # Individual entrance stairs and open metal railings leave the door visible.
  entryX=-w/3;stepCount=1 if dormered else 5;rise=(base+.04)/stepCount
@@ -587,22 +607,32 @@ def street_terrace(name,dormered):
     a=(x-.025,base+height,d/2+.10);b=(x-.025,.02+height,d/2+1.65)
     m.quad(a,b,(x+.025,b[1],b[2]),(x+.025,a[1],a[2]),FRAME)
  if dormered:
-  rise=2.45;front=d/2+.24;back=-d/2-.24
+  rise=3.7;front=d/2+.24;back=-d/2-.24
   def ry(z):return h+rise*(1-abs(z)/front)
   def roof(l,r,z0,z1):
    q=[(l,ry(z1),z1),(r,ry(z1),z1),(r,ry(z0),z0),(l,ry(z0),z0)]
    m.quad(*q,ROOF,(.63,.65,.63),uvs=[(x/2,z/2) for x,_,z in q])
   # Cut a real dormer opening from the slope; no roof passes through its glass.
-  roof(-w/2,w/2,back,0);roof(-w/2,-1.30,0,front);roof(1.30,w/2,0,front)
-  roof(-1.30,1.30,0,1.55);roof(-1.30,1.30,5.25,front)
-  z=5.25;lo=ry(z);top=h+2.27
-  face(-1.30,1.30,lo,lo+.25,z,PAINT,(.51,.58,.58))
-  face(-1.30,-1.12,lo+.25,top,z,PAINT,(.51,.58,.58));face(1.12,1.30,lo+.25,top,z,PAINT,(.51,.58,.58))
-  face(-1.12,1.12,top-.13,top,z,PAINT,(.51,.58,.58));opening(0,lo+.25,top-.13,2.24,z)
+  roof(-w/2,w/2,back,0);roof(-w/2,-1.10,0,front);roof(1.10,w/2,0,front)
+  roof(-1.10,1.10,0,1.20);roof(-1.10,1.10,4.20,front)
+  z=4.20;lo=ry(z);top=h+3.30
+  face(-1.10,1.10,lo,lo+.25,z,PAINT,(.51,.58,.58))
+  face(-1.10,-.94,lo+.25,top,z,PAINT,(.51,.58,.58));face(.94,1.10,lo+.25,top,z,PAINT,(.51,.58,.58))
+  face(-.94,.94,top-.13,top,z,PAINT,(.51,.58,.58));opening(0,lo+.25,top-.13,1.88,z)
   for s in [-1,1]:
-   q=[(s*1.3,ry(1.55),1.55),(s*1.3,top,1.55),(s*1.3,top,z),(s*1.3,lo,z)]
+   q=[(s*1.1,ry(1.20),1.20),(s*1.1,top,1.20),(s*1.1,top,z),(s*1.1,lo,z)]
    m.quad(*(q if s>0 else q[::-1]),PAINT,(.51,.58,.58))
-  m.box(0,top,3.40,2.6,.10,3.9,ROOF,(.54,.57,.56))
+  m.box(0,top,2.70,2.2,.10,3.0,ROOF,(.54,.57,.56))
+  # Fine standing seams follow both roof slopes and stop at the dormer hole.
+  # The main roof silhouette and glass remain in the distant topology.
+  m.detail=True
+  for k in range(1,20):
+   x=-w/2+k*w/20
+   spans=[(back,0),(0,front)] if abs(x)>1.13 else [(back,0),(0,1.20),(4.20,front)]
+   for z0,z1 in spans:
+    q=[(x-.018,ry(z1)+.025,z1),(x+.018,ry(z1)+.025,z1),(x+.018,ry(z0)+.025,z0),(x-.018,ry(z0)+.025,z0)]
+    m.quad(*q,ROOF,(.42,.45,.43),uvs=[(xx/2,zz/2) for xx,_,zz in q])
+  m.detail=False
   m.box(0,h+rise-.025,0,w,.12,.16,ROOF)
   for s in [-1,1]:
    q=[(s*w/2,h,back),(s*w/2,h+rise,0),(s*w/2,h,front),(s*w/2,h,back)]

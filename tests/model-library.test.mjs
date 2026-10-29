@@ -178,7 +178,7 @@ test('neighborhood houses retain their pitched or flat roof silhouettes and wind
  lib.ingestLod(JSON.parse(fs.readFileSync(new URL('../dist/assets/buildings/lod.json',import.meta.url))),bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.length));
  assert.equal(homes.length,14);assert.equal(homes.filter(m=>m.houseForm==='detached').length,8);
  for(const home of homes){
-  assert.ok(home.size.y>5&&home.size.y<(home.name.endsWith('-terrace')?12:11));assert.ok(home.streetFronts.some(f=>f.kind==='entrance'&&f.normal[1]>.9));
+  assert.ok(home.size.y>5&&home.size.y<(home.roofForm==='street-ridge-dormer'?13:home.name.endsWith('-terrace')?12:11));assert.ok(home.streetFronts.some(f=>f.kind==='entrance'&&f.normal[1]>.9));
   const roof=home.root.children.find(m=>m.material.name==='modern-roof');assert.ok(roof,home.name);
   const n=roof.geometry.attributes.normal;let slopes=0;
   for(let i=0;i<n.count;i++){assert.ok(n.getY(i)>=0,home.name+' roof faces upward');if(n.getY(i)>.1&&n.getY(i)<.95)slopes++;}

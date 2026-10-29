@@ -24,7 +24,7 @@ test('street terraces retain visible recessed windows, entrances, party walls an
    const entry=a.streetFronts.find(e=>e.kind==='entrance'&&e.normal[1]===1);assert.ok(entry);assert.ok(['modern-wood','modern-painted'].includes(front(entry.position[0]+.1,base+1.3).object.material.name),'entrance is not hidden behind a solid wall');
    assert.equal(ray(30,2,0,new THREE.Vector3(-1,0,0)).object.material.name,'modern-brick','attached side is a solid party wall');
    if(name===names[0]){assert.ok(Math.abs(down(0,1).point.y-a.origin.y-h)<.002,'flat roof stays below its parapet');assert.ok(down(-7.6/3,6.2).point.y-a.origin.y>.9,'stoop reaches the raised door');}
-   else{assert.ok(down(2.3,0).point.y-a.origin.y>h+2.3,'ridge runs parallel to the street');assert.ok(down(2.3,4).point.y-a.origin.y<h+1,'roof slopes toward the street');assert.ok(front(.3,h+1.9).object.material.name.startsWith('modern-glass'),'dormer has an actual opening in the roof');}
+   else{assert.ok(down(2.3,0).point.y-a.origin.y>h+2.3,'ridge runs parallel to the street');assert.ok(Math.abs(down(2.3,4).point.y-a.origin.y-h-3.7*(1-4/6.24))<.03,'the steeper roof slopes toward the street at its authored pitch');assert.ok(front(.3,h+1.9).object.material.name.startsWith('modern-glass'),'dormer has an actual opening in the roof');}
   };check();const brick=root.children.find(m=>m.material.name==='modern-brick'),positions=brick.geometry.attributes.position,normals=brick.geometry.attributes.normal,uv=brick.geometry.attributes.uv;for(let i=0;i<8;i++){assert.ok(Math.abs(normals.getX(i))>.99);assert.ok(Math.abs(uv.getX(i)-(positions.getZ(i)-a.origin.z)/2)<1e-5);assert.ok(Math.abs(uv.getY(i)-(positions.getY(i)-a.origin.y)/2)<1e-5,'party-wall courses run horizontally');}const near=root.children.reduce((n,m)=>n+m.geometry.index.count/3,0);for(const m of root.children)m.geometry=m.geometry.userData.lod;check();const far=root.children.reduce((n,m)=>n+m.geometry.index.count/3,0);
   assert.ok(a.size.x<=7.601,'no side eaves or trim prevent wall-to-wall placement');assert.ok(near<2300);assert.ok(far<near*.70);assert.ok(root.children.length<=8);
  }
@@ -55,4 +55,27 @@ test('adding street terraces leaves all 61 previous authored buildings byte-iden
  const b=fs.readFileSync(new URL('../dist/assets/buildings/modern.glb',import.meta.url)),length=b.readUInt32LE(12),doc=JSON.parse(b.subarray(20,20+length)),start=28+length,expected=JSON.parse(fs.readFileSync(new URL('./fixtures/unmodified-models-113.json',import.meta.url))),actual={};
  for(const node of doc.nodes){if(node.name.startsWith('industrial-')||names.includes(node.name))continue;const hash=createHash('sha256');hash.update(JSON.stringify(Object.fromEntries(Object.entries(node.extras).sort(([a],[b])=>a.localeCompare(b)))));for(const p of doc.meshes[node.mesh].primitives){hash.update(String(p.material));for(const [key,index]of Object.entries({...p.attributes,indices:p.indices}).sort(([a],[b])=>a<b?-1:a>b?1:0)){hash.update(key);const v=doc.bufferViews[doc.accessors[index].bufferView],offset=start+(v.byteOffset||0);hash.update(b.subarray(offset,offset+v.byteLength));}}actual[node.name]=hash.digest('hex');}
  assert.equal(doc.nodes.length,68);assert.equal(Object.keys(actual).length,61);assert.deepEqual(actual,expected);
+});
+
+test('rebuilt street fronts have slender sash openings and projecting entrance surrounds without sealing glass',async()=>{
+ const lib=await library();for(const name of names){const a=lib.models.find(m=>m.name===name),root=a.root.clone(true),base=name===names[0]?1:.12;root.updateMatrixWorld(true);
+  const front=(x,y)=>new THREE.Raycaster(new THREE.Vector3(x+a.origin.x,y+a.origin.y,30),new THREE.Vector3(0,0,-1)).intersectObject(root,true)[0];
+  const check=()=>{for(let f=0;f<3;f++){
+   for(const dy of [.66,1.5,2.25]){const hit=front(.3,base+f*2.95+dy);assert.ok(hit.object.material.name.startsWith('modern-glass'),'tall sash remains open');assert.ok(Math.abs(hit.point.z-a.origin.z-5.8)<.002);}
+   assert.equal(front(.8,base+f*2.95+1.3).object.material.name,'modern-brick','narrower windows leave real masonry piers');
+  }
+  const door=a.streetFronts.find(p=>p.kind==='entrance'&&p.normal[1]>0),head=front(door.position[0],base+2.76);assert.equal(head.object.material.name,'modern-concrete');assert.ok(head.point.z-a.origin.z>6.3,'entrance cornice projects beyond the wall');
+  };check();for(const m of root.children)m.geometry=m.geometry.userData.lod;check();
+ }
+});
+
+test('raised stoops reserve individual street gardens and connected paths without moving saved parcels',async()=>{
+ const lib=await library(),models=lib.models,w=E.createWorld('Stoop gardens','plains',8),plots={};
+ try{for(const name of names){lib.models=models.filter(m=>m.name===name);const parcel={entityId:'garden-fit',entitySeed:B.seed('garden-fit'),definition:{type:'residential',building:'townhouse',density:'medium',level:2},width:4,depth:4,oriented:{cx:0,cz:0,angle:.73,width:6.36,depth:6.36,frontage:{x:0,z:6,roadIndex:1176}}},saved=JSON.stringify(parcel),root=lib.create(w,1176,parcel),p=root.userData.plan,grounds=root.children.find(c=>c.userData.sitePlan),items=grounds.userData.sitePlan;
+  const paths=items.filter(a=>a.kind==='walk'&&a.z+a.d/2>=p.lotDepth/2-.10),gardens=items.filter(a=>a.kind==='garden'&&a.z+a.d/2>=p.lotDepth/2-.10);plots[name]={paths,gardens};if(name===names[0]){const front=Math.min(...gardens.map(g=>g.z-g.d/2));assert.ok(!items.some(a=>a.kind==='tree'&&a.z>=front),'low planting keeps street windows visible');assert.ok(items.some(a=>a.kind==='shrub'&&a.z>=front),'front lawns retain planting');for(const a of items.filter(a=>a.kind==='shrub'&&a.z>=front))assert.ok(a.height<=.31,'street shrubs stay below ground-floor windows');}
+  assert.equal(paths.length,p.rowEntrances.length,'every home has an independent route to the sidewalk');
+  for(const path of paths)for(const a of items.filter(a=>['fence','shrub','tree','shed'].includes(a.kind)))assert.ok(Math.abs(a.x-path.x)>=(a.w+path.w)/2-1e-7||Math.abs(a.z-path.z)>=(a.d+path.d)/2-1e-7,'planting and boundaries leave entrance routes clear');
+  root.rotation.y=0;root.position.set(0,0,0);const bounds=new THREE.Box3();for(const child of root.children)if(child.name===name||child.userData.sitePlan)bounds.expandByObject(child);assert.ok(bounds.min.x>=-p.lotWidth/2-.001&&bounds.max.x<=p.lotWidth/2+.001);assert.ok(bounds.min.z>=-p.lotDepth/2-.001&&bounds.max.z<=p.lotDepth/2+.001);assert.equal(JSON.stringify(parcel),saved);
+ }}finally{lib.models=models;}
+ assert.ok(plots[names[0]].gardens.length>=3,'raised homes have several usable front lawns');assert.ok(plots[names[0]].gardens.every(g=>g.d>.7),'front lawns have real depth');assert.ok(plots[names[1]].paths.every(p=>p.d<.3),'street dormers retain their close sidewalk frontage');
 });

@@ -1,16 +1,16 @@
-import {applyResidentialFinish,configureResidentialBrick} from './residential-finishes.js?v=146';
-import {IndustrialSurfaces,configureIndustrialPaint} from './industrial-surfaces.js?v=146';
-import {lotMaterials} from './lot-surfaces.js?v=146';
-import {bakeRoofFinish} from './roof-finishes.js?v=146';
-import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=146';
-import {loadBinary} from './asset-transfer.js?v=146';
-import {SiteDetails} from './site-details.js?v=146';
-import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=146';
+import {applyResidentialFinish,configureResidentialBrick} from './residential-finishes.js?v=147';
+import {IndustrialSurfaces,configureIndustrialPaint} from './industrial-surfaces.js?v=147';
+import {lotMaterials} from './lot-surfaces.js?v=147';
+import {bakeRoofFinish} from './roof-finishes.js?v=147';
+import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=147';
+import {loadBinary} from './asset-transfer.js?v=147';
+import {SiteDetails} from './site-details.js?v=147';
+import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=147';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {lotPlan} from './building-plan.js?v=146';
-import {floorHeight} from './landscape.js?v=146';
+import {lotPlan} from './building-plan.js?v=147';
+import {floorHeight} from './landscape.js?v=147';
 const IDENTITY=new THREE.Matrix4();
 const civicDefaults={hospital:'clinic',school:'elementary',police:'police',fire:'fire'};
 // Complete textured assets are loaded once, batched per material, and instanced.
@@ -20,9 +20,9 @@ export class ModelLibrary {
   const loader=new GLTFLoader();
   // Fetch the distant indices alongside the models instead of adding another
   // large download after all three catalogues have finished.
-  const distant=Promise.all([fetch(new URL('./assets/buildings/lod.json?v=126-final',import.meta.url)).then(r=>{if(!r.ok)throw Error(r.status);return r.json()}),loadBinary(new URL('./assets/buildings/lod.bin?v=126-final',import.meta.url))]).then(value=>({value}),error=>({error}));
+  const distant=Promise.all([fetch(new URL('./assets/buildings/lod.json?v=147-final',import.meta.url)).then(r=>{if(!r.ok)throw Error(r.status);return r.json()}),loadBinary(new URL('./assets/buildings/lod.bin?v=147-final',import.meta.url))]).then(value=>({value}),error=>({error}));
   await Promise.all(['urban','industry','modern'].map(async file=>{
-   try{const url=new URL(`./assets/buildings/${file}.glb?v=${file==='modern'?'128-final':21}`,import.meta.url),{scene}=await loader.parseAsync(await loadBinary(url),new URL('.',url).href);
+   try{const url=new URL(`./assets/buildings/${file}.glb?v=${file==='modern'?'147-final':21}`,import.meta.url),{scene}=await loader.parseAsync(await loadBinary(url),new URL('.',url).href);
     this.ingest(scene);
    }catch(error){console.warn('Building model fallback:',file,error.message);}
   }));
@@ -109,7 +109,7 @@ export class ModelLibrary {
   const c=Math.abs(Math.cos(p.angle)),s=Math.abs(Math.sin(p.angle));
   const occupiedX=buildingWidth*c+asset.size.z*s*scale,occupiedZ=buildingWidth*s+asset.size.z*c*scale;
   const clearanceX=Math.max(0,(p.parcelWidth-occupiedX)/2-.18),clearanceZ=Math.max(0,(p.parcelDepth-occupiedZ)/2-.18);
-  const frontageSpace=Math.max(0,(D-asset.size.z*scale)/2-.25);const setback=p.frontage&&!p.facility?Math.min(!p.oriented&&s>1e-6?clearanceX/s:Infinity,!p.oriented&&c>1e-6?clearanceZ/c:Infinity,frontageSpace)*(p.type==='industrial'||p.type==='commercial'&&p.density==='low'?-1:row?1:p.low?.2+p.variation*.45:1):0;
+  const frontageSpace=Math.max(0,(D-asset.size.z*scale)/2-.25);const rowSetback=asset.roofForm==='corniced-flat'?.35:1;const setback=p.frontage&&!p.facility?Math.min(!p.oriented&&s>1e-6?clearanceX/s:Infinity,!p.oriented&&c>1e-6?clearanceZ/c:Infinity,frontageSpace)*(p.type==='industrial'||p.type==='commercial'&&p.density==='low'?-1:row?rowSetback:p.low?.2+p.variation*.45:1):0;
   model.position.set(centers[0],0,setback);
   if(p.type==='industrial'){p.industrialForm=asset.name;p.loadingBays=asset.streetFronts.filter(f=>f.kind==='loading').map(f=>({x:(f.position[0]+asset.origin.x)*scale,z:(f.position[2]+asset.origin.z)*scale+setback,width:f.width*scale,raised:!!f.raised}));}
   if(!p.facility){const fronts=asset.streetFronts.filter(f=>f.kind==='entrance'&&f.normal[1]>.9),frontZ=Math.max(...fronts.map(f=>f.position[2]));p.entranceXs=centers.flatMap(x=>fronts.filter(f=>f.position[2]>=frontZ-.5).map(f=>x+(f.position[0]+asset.origin.x)*scale));if(row){p.rowEntrances=[...p.entranceXs].sort((a,b)=>a-b);p.rowDividers=centers.slice(1).map((x,i)=>(centers[i]+x)/2);}}

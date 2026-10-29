@@ -1,0 +1,347 @@
+{
+  "models": [
+    [
+      "compact-brick-dormer-home",
+      "a498f97afedcaae8ed04e986b362e8db8a0c9d3bc3638b434f33f15a02ee065f"
+    ],
+    [
+      "gambrel-garden-home",
+      "651c9cc434e3cc7177d64d6eb375c12bd1379c991e9c67097df633741e944f43"
+    ],
+    [
+      "gabled-garden-cottage",
+      "ea791392724155a3d35e74aad9a91f5d0c659733c2ffa75390260fc5a106d3cd"
+    ],
+    [
+      "hipped-brick-bungalow",
+      "8774646b80e8e281a34d809d096b2ae553387c2d6191e541681dc7a0987e85bf"
+    ],
+    [
+      "dormer-detached-home",
+      "e2625466c76b0f4567165fad7363cc9b2da5f8a661788be2bcd4932aee31c726"
+    ],
+    [
+      "covered-porch-family-home",
+      "0419f912acd567c61044659a99c72c46d32404bae905e35eaa380955cb29355d"
+    ],
+    [
+      "cross-gable-family-home",
+      "9499bb267f4804346fba3760f93c9d06def0985305ee07aef4ada4dd0603b8c3"
+    ],
+    [
+      "brick-paired-homes",
+      "88fa63b7937434e76b2c269b7055378ea2a217ed3863067287f72baf6af403f5"
+    ],
+    [
+      "narrow-gabled-townhouse",
+      "e33dc7a2ba8766f89ee690aaae9e5508db8cbf301b9c0df0af42398f0766663e"
+    ],
+    [
+      "stepped-gable-brick-terrace",
+      "d95f9c0fc4cab2f4c15d9cf025d878541f71982e8f83793363e403b9e6925fe4"
+    ],
+    [
+      "bell-gable-brick-terrace",
+      "7ed5e278da394acf7df31ad2baea8bd306a3e660696226af3d165c65fa042f59"
+    ],
+    [
+      "raised-stoop-brick-terrace",
+      "fceaf5f7fff8496b753c1b748a55adc0c4661dc60489e28662672d14cd317ac9"
+    ],
+    [
+      "dormer-roof-brick-terrace",
+      "4f5dbf6417b38b2420fd5d22aaa4ae69b2c0dab984c4d8f656824ad220493bed"
+    ],
+    [
+      "garden-wing-bungalow",
+      "f609fcce8795171d37ba7d144555612b3678ff1d42ccddcdeb404773daa4dd23"
+    ],
+    [
+      "glass-podium-offices",
+      "d6048d2ddff5b6632189e13b310de10c12f100dea795bc18cec0232f4c8a0d64"
+    ],
+    [
+      "stepped-concrete-offices",
+      "8e14ebdde037c2d7f26959dbf59b8c8c5aaf9ae0eca81bed2397892a38fd3f0f"
+    ],
+    [
+      "elliptic-glass-offices",
+      "3587a77937504574815213f600b8bc751097210963a2bf61ecacd7d3d81c774b"
+    ],
+    [
+      "slender-glass-offices",
+      "8654424dbcd674d0dc330ac27fffb73430392ed06c45d0f37007ff6b7da88486"
+    ],
+    [
+      "corner-glass-local-offices",
+      "4e4b60b969854a790dab808c038c03f2b0ab068ebe97d8c771a6c59b8425969d"
+    ],
+    [
+      "garden-wing-local-offices",
+      "98ec8a86dd844ee146642b8452881fd18405fb545e748f09ca2e1f3b8ce9e4ce"
+    ],
+    [
+      "garden-terrace-residences",
+      "d25cf3667a5851e545d916da36fa4dc5aa9d3126063d8972539cb0c53686bafa"
+    ],
+    [
+      "balcony-podium-residences",
+      "b4cd294f8c7228f060083ffc9b87c18d5cd81376a25101873ebe84aa174ee727"
+    ],
+    [
+      "split-wing-residences",
+      "54b2057b86777ad7ee9792b5a04c26d37380bed73eabf16ee26db6069be80358"
+    ],
+    [
+      "courtyard-concrete-residences",
+      "553c21f06a200b15d04b46c813a1d5a0cbc654adafc3fcea65a0346d04e3c929"
+    ],
+    [
+      "lowrent-staggered-slab",
+      "61f72293989da65580e5648ae99f216ed4ebc9d9261d8987d82e4569acb5efa5"
+    ],
+    [
+      "lowrent-court-block",
+      "ed08cbdeb47f5fc978c38c448834c1fc222626cf9b4010ab5765e6c96aea4b74"
+    ],
+    [
+      "linear-balcony-apartments",
+      "49d3a776d829ae5145eca3dd0310e83cc9f489963aadcfcd5c39a288d85574aa"
+    ],
+    [
+      "small-courtyard-apartments",
+      "0810fa2ae5dd269dd4552a67eb5f58aa218a566f45240e751860d97cedc3768b"
+    ],
+    [
+      "brick-neighborhood-walkup",
+      "5b245fbcfff76b152a44f5bd123699c1abba35960e69c72309b94bb0e420eb8d"
+    ],
+    [
+      "compact-hipped-apartments",
+      "db0a027ff586f322733d14137685df42517cd856efc4b9aaf3899888522024bb"
+    ],
+    [
+      "narrow-balcony-apartments",
+      "dbaffd2f7b839fca1132108fe8e184d8a665421c1b58bdb867d4497079d068c6"
+    ],
+    [
+      "stepped-midrise-apartments",
+      "39eb895ad5224576c9ed6fc435548a21afb8c070e6fdaf824cb976e2ae2a4052"
+    ],
+    [
+      "corner-retail-gallery",
+      "8069aa49e87bbb9875cd7727958f29362e69a97c66fcb6f32d56572f6a999af9"
+    ],
+    [
+      "neighborhood-mixed-use",
+      "873385df2801ead4c428edd673431be3a58a58f499aae207ab3875265e624c81"
+    ],
+    [
+      "neighborhood-u-court-apartments",
+      "50748345951d0e52174b50a25c51ff48f4215887ecb51039fdad7b8f3eba921f"
+    ],
+    [
+      "neighborhood-l-court-apartments",
+      "da4d84c2a916c5745701bcfdcb6f0d65f7a748de98eec8eb782f1c95a92e55e3"
+    ],
+    [
+      "modern-courtyard-house",
+      "d3a204710954840991ae876c0ffbb1f4962ec0f8d9d59302277a3f2afb05deb1"
+    ],
+    [
+      "modern-rowhouse",
+      "2049d8a50f79ba545ceb2df1659e1487728aede66c63339c9d2a6e1972a6652a"
+    ],
+    [
+      "perimeter-garden-apartments",
+      "b006c46cce4287bef08d6d3f3f7efe47416701d424b9300e2a78443ca8f83fdf"
+    ],
+    [
+      "perimeter-terrace-residences",
+      "4a9b896265c3be9fd1682c294a51c47016bf6044451cedd9098d51f5283ad0f3"
+    ],
+    [
+      "perimeter-tower-residences",
+      "50c28e773bc798a5b4bffbbea252d4938fa6ff06c1033f96fb049062d01a6f9b"
+    ],
+    [
+      "perimeter-mixed-use",
+      "6a114f73768e8e9b28dd01282681a44fd17af9d8707f33c6d29f521feac2f128"
+    ],
+    [
+      "perimeter-campus-offices",
+      "d31dc17074b431bba246592aed1e33b47109200bcb320fb4edca88868a772892"
+    ],
+    [
+      "civic-clinic",
+      "f2c4d06b827fe0acdfe2670c3443bda08e3ba994fdcac5096387663706b64772"
+    ],
+    [
+      "civic-hospital",
+      "21f6b7b7e68b23685d17350f0b53c8630c99063ae8d60d9d3bb2f48bf967da2f"
+    ],
+    [
+      "civic-wellness",
+      "206be2b34540272b91ff66192ec48e44a8001bbf364cdfa3c9a593a1092a3768"
+    ],
+    [
+      "civic-elementary",
+      "b139538d1d02243c72f94218575076497aef509c7acc3630bc5a107eb11484b6"
+    ],
+    [
+      "civic-highschool",
+      "f64492db20e8083f9d34ba71a7525c13aae6db56e7905ff8cda351bbee096778"
+    ],
+    [
+      "civic-college",
+      "8d404a324db150bb5b9f72e59e258bf5c8171f64d0f5277de313e4c197e02007"
+    ],
+    [
+      "civic-police",
+      "13ea1b54eb74d9e283aaa37d92e18586cdd2aeb967c2c6dc6fa8dbc8b277b0fe"
+    ],
+    [
+      "civic-headquarters",
+      "fc9f01750f349252017bbe6698d90f8d96b51b1fe896f7989de2e2a7785665ae"
+    ],
+    [
+      "civic-fire",
+      "883f73e11eafee0c2d9e2ff95e55e4df2770caf4eaf4276bf39e068ad26bce19"
+    ],
+    [
+      "civic-rescue",
+      "d555ee8fdb6e6426d55df6a42dcf5b536ab3d34f4d6af91f587db30cb23c51f8"
+    ],
+    [
+      "site-clinic",
+      "32d78600d2a421e0b0b19a152a06d5be6a0f3cd43410ffedcef120246afdd3a3"
+    ],
+    [
+      "site-hospital",
+      "8cc61ee3c1a3ba4a9ef1cea671223cb03468e849cded3cac1830e527ae981c84"
+    ],
+    [
+      "site-wellness",
+      "f08c00262adbd5ead2702df60b971f234059c31cc959972cba12944900a99cbe"
+    ],
+    [
+      "site-elementary",
+      "b50a0a45dd6f045bab442c4feae711d943525c1921218e92b99154828e0ecf44"
+    ],
+    [
+      "site-highschool",
+      "deb2ac47caf8551938190c1e73cd22a6c44e4d56d115daaa3f69440bf5b54ce2"
+    ],
+    [
+      "site-college",
+      "0b0f6abed7ab8469e0c390dcb2fe020bac3cbbbe1311f231bdbe5790112d5a55"
+    ],
+    [
+      "site-police",
+      "43962429991d0d164d9fd9a96e7cede02348da986c7419472c0ca87f977113f2"
+    ],
+    [
+      "site-headquarters",
+      "6f7ccd0b59fa8d59c5b49aa730e7ee543bb62ab2ba7a6b52f01fe5f318df0e19"
+    ],
+    [
+      "site-fire",
+      "4fc90efbad7933c45cf86a779f53a299026523ed7748b2a33bd921682866ee5d"
+    ],
+    [
+      "site-rescue",
+      "d35e14ab7b2049502eb6a63923bee2fd4beb78a66232495056e4a521ecd9246e"
+    ]
+  ],
+  "lod": {
+    "townhouse": "eac56fbb04b18e3fa576f36e926159714c77a6106352969c8520b62112cb74ba",
+    "villa": "89a0368c51ee76058f951188a063292992f2a0d578c7d948d6567c7148f20aa4",
+    "rowhouse": "bc4278a0ee3b453797a2474fa5070a727a9070c61a4880f2082b712f634e8362",
+    "corner-apartments": "14b45883949055f2e8ee84e12fd2e2d5229c660da2e8b83fb1843d4a29e8d492",
+    "court-apartments": "1e70aaffbae6e747782eb2d40d6b210bd5245e850a89d6fede0ea232812448fc",
+    "residential-tower": "92f35ecdd92ea8f00b985cb2ed253d42b63ebd35701b1243df3bbeddeadefae0",
+    "terraced-residences": "5c282443147dbe41e8ba8ac73b3cbf28612bb614fe65feef95c0f4a33a9b4c83",
+    "shops": "9976fb48ba6405c0d6b9fef928769a988b566e4759b63e351c415386613cad33",
+    "department-store": "bbb5b0078e49054e06ac82964249fe281d6e037c5d3425d750301317e9833b63",
+    "civic-offices": "d2542da84a61ad593e91e576dee16fd9550ed996b5cff7f8f9509e5001bf9d26",
+    "office-tower": "43dbc079870938aede20c9eb4cc1427ed18a30d0a47d6e4c99715690361c593e",
+    "slender-offices": "bd6c05d6dc4c098ec55373e54fd79145f49d721f05d0adf51bdd7f0cb6f96ba0",
+    "narrow-apartments": "87f892701a5f94935531802f49d79844de0bc5e2957b43bddc5f14d02c5b0d75",
+    "crescent-offices": "fe16dbf29ae2ec6eaf6658f84ab1d7fdf290234e19af954277091bd25fac5c4b",
+    "round-residences": "96dcedc8ee6913a4cb027a856118f0e72837e6f92f14367670385766b0fcc436",
+    "oval-commerce": "d173db51ad07be4c260761e6deef006674b26ffbd09aaa182f906adbeeef7537",
+    "workshop": "08d1254b76b2b7aad0df649fc04a5f3bd430ba059fe73777f97964f547b346a0",
+    "warehouse": "d86f24fc17ac49711a6f04027872b8d5f93d14cf4c9e1a2a4e1f55a44d3180dc",
+    "brick-factory": "926c8df338013d5c8da528e054c23417459bca9b682a858ad7b4eb36ad592744",
+    "loft-apartments": "9b6250c5a3ff6c1a7b5edfbeec509f36d457ed4cf4e0771923cc9d68acbd3ae9",
+    "brick-retail": "5830e2e4fb29a3ff9b3dca0788f98a91f16b3d714b503ca204fa22d09bbd1243",
+    "compact-brick-dormer-home": "e02913539929ba571c164c842976d3cfb2d822277ed3f924aa4c3b43ab132221",
+    "gambrel-garden-home": "db2be8651db3fbf0d1bf2d99c5dd707af95b410d3c938a85dcdaa6b8b5c4c34c",
+    "gabled-garden-cottage": "b6d154dd55a57335d03c8550251a3e352198fa18c3ed56d8daa16efefca81f1c",
+    "hipped-brick-bungalow": "7bbe8a77a29f1bc44dd388adba4ee5659d87b0020e720a0bcb6e5f55dac35f72",
+    "dormer-detached-home": "6d2efa933d45c60d25140ccaa93159c3d792df87cf740a654dafba110427fd94",
+    "covered-porch-family-home": "b02efdffbfc531c6878ef0d201bb61b6c3b5ade4d1f7c1022241aaa47d201ba5",
+    "cross-gable-family-home": "b94ccc0bbea02df58656778e736842f32dd2544b29b3680b92fa1e257cb1437f",
+    "brick-paired-homes": "63d8ddf471c9539c71d4863310847930c67f4a352c51644bcd09412224081b42",
+    "narrow-gabled-townhouse": "24edafa6d244464bf4a7e61368b8bb8b92d8b9cf35fb8116628517b22cf88793",
+    "stepped-gable-brick-terrace": "dbd57f876d9d3bffece05cdd6c00e6326c9d9b58d02bbd18302cbd93b4548fc7",
+    "bell-gable-brick-terrace": "21cd20da5b29fadb2f1c779d717c425ce928eb9a98bea52c574c4c98e531e420",
+    "raised-stoop-brick-terrace": "09f4b2566e109206ef1f5272c43f94cb0c15e0cd79e582b8dcf9a150f66d5f7a",
+    "dormer-roof-brick-terrace": "cf40f1402bc881d90f3d20bae4effc7a7e585897c44bf718047ad225c033c300",
+    "garden-wing-bungalow": "94ac05c3bd867cff896d2dc733b77302a469e1ea61017746edbd5a7863fb9b5f",
+    "glass-podium-offices": "11afda504dbc22c98340f8be42cbc45d3b929ddd8c7a37a369cb254beaf1d324",
+    "stepped-concrete-offices": "f4867c41e9b5553f91ee3495262b375b2aa80957910b8e5a6075c83c1f1d0620",
+    "elliptic-glass-offices": "e9cbf946e1602c31c8b1720e53d0b6965e0357c864ebfb5a7dbce6e33b72feec",
+    "slender-glass-offices": "868e3b159ccd4c18691d5a3961e631c831b8aefe8103631a39a938b23e929887",
+    "corner-glass-local-offices": "5be17f2d1d4609f8bd5442796ea3e4d652c2cfe30564d55429f01eefec8f9a39",
+    "garden-wing-local-offices": "cdf926e3eb7ebacde0823dfbb0c0148393f16c4862edbbdd22cb0453db989f8e",
+    "garden-terrace-residences": "53164028a4d7b99d2632c281ac45b7a0594930045a1ce6c5746bd89b4decdbca",
+    "balcony-podium-residences": "0c98524f063f534efbfa2599e94ebaa222a6f7f311ec70cf93670b6b5a2d798c",
+    "split-wing-residences": "0da12b445d38282aaa0ca7513cfcd7e9ca423072d757b73c6dd93f8e0f8f3d6c",
+    "courtyard-concrete-residences": "da97f543b8d9d45da61c1aa8cef2003b6b9b012d6b9b4a5445bf385e26275cd8",
+    "lowrent-staggered-slab": "bd4f75afa6f7effb5b73ca4056c1064027ffda9e1918c12755c27f89ab114ed5",
+    "lowrent-court-block": "27a9f90aad2790e52e549c6fa6bc005ef7bdaaf160d2b7463f3b633e5cf32d31",
+    "linear-balcony-apartments": "c1b0b0fc727e9aa3ba54437970f47f7fe1782b8c1a0c3ab87776d354f892a4f0",
+    "small-courtyard-apartments": "172728a9a13a664bf3c5944dd7270b0b8223f82f4b0e15951632a80550206fb3",
+    "brick-neighborhood-walkup": "e355634bdbd15f7759195eb10be3815f0bf64c0db511503c96d882291e0dd580",
+    "compact-hipped-apartments": "2e4feacba1b1d28395cac586f691e7a619f05655f9b6143e0dfb3c39d7608918",
+    "narrow-balcony-apartments": "263d53747779ea2ae77acdb0a1f4dcdcdfbb2d798482a04f65dad26513b6fae7",
+    "stepped-midrise-apartments": "e231c0fa70b2e28be1e93b4a4c00cd2c4a5e41253c7ab3d57263fc08791cf59a",
+    "corner-retail-gallery": "623b1933d91cee86e5754a9d04b438696f10174a158ce2a7533a8e45bd79e8d2",
+    "neighborhood-mixed-use": "b5e8b294da718118871f7009438433ab6f02c24e5830617f1e1f2c390a453931",
+    "neighborhood-u-court-apartments": "62c5ceb5a583483253a4f25831ec9447808457d07e28c561faf3e8ed2c31a5c9",
+    "neighborhood-l-court-apartments": "21bac654848b4d6dfce3025b8bfe1cb32ce03bebecaa21d24131c6f0803ac14b",
+    "modern-courtyard-house": "d9041745acbbcb4a8b7734dadf1083737ef4d4887c91b64182842c593777a91f",
+    "modern-rowhouse": "d7f7650ce1b53e7af2773c1748109d571c03cb78bcdd15d95406e64460d6d614",
+    "perimeter-garden-apartments": "0abe452f039f77bdbca4fbdb7e617fe0ef909114b9af86945932398651f5d717",
+    "perimeter-terrace-residences": "2b5a041ed152c779353b5ac0416678a95e901959b24a4ff2de861e8ab076ed9a",
+    "perimeter-tower-residences": "7d8887273df703f01fd96c034094f6f33796fa23b09f5d860eaed3485bd0c3ee",
+    "perimeter-mixed-use": "2b3c1dd049c0bed77c91c19b3cc31b82ac9f2b676346eec9aaae32037d9a8103",
+    "perimeter-campus-offices": "171f4a6d4abd232b18f0d5f4655638d5618b415294eed9d66381fc37ced1a3c3",
+    "civic-clinic": "3b0a24dccc02cc094577056f75f5fef4cb7202f4418e6b5a7ddb325a70b9f505",
+    "civic-hospital": "b81e8fd8f12e18e3976684c909741d3fd9534b26a6940959a9a72a6bf535f85a",
+    "civic-wellness": "b47c89f447029fe50c59778bdb005578029dc9ddd930b27296b0529e24cce8d1",
+    "civic-elementary": "05133b456463914f08c180cfa2d9d421db19e0f8277c90e7519f4cbe714819dd",
+    "civic-highschool": "7550267b5d1b200f66e5ce36b2bcc4ee357bfb7b69acea46ca662b6de1f7a1ff",
+    "civic-college": "e7dcf411e7e47f11a42862d916762b4644f18235b5d4b226338ee48171ea3fec",
+    "civic-police": "9d6056fe2a48e8fc8de6ace45845b821afbdcf1dc2214d7a2ac1d4fdf61a9fcc",
+    "civic-headquarters": "96b0d550df3ef316b31e432964883bc93ff15057ef24f263fe8ba868e89e7da8",
+    "civic-fire": "9d52e26ab6d7786e3aa37b4d5758ee4fcf0b400c189d5f79369658c699be66f9",
+    "civic-rescue": "f567fd95f47c170a70d948ae4916289048df41b67091e46d137c06ac4c910ce8",
+    "site-clinic": "49530a773ff1c7ef3772621e8a635fcd5d43ba504d8671dc554525ea5515ec4c",
+    "site-hospital": "e96581cb64fd76d08c5345823ea9ffb3d7fb285c1f5f9a9a28ca277132bc4557",
+    "site-wellness": "2817e3e8b72fe26da2754d9218f836c18f14fc825d108303c922f2009c567ead",
+    "site-elementary": "193162e53444d41aced896d4846e7ca1375522d6398aa29e3e7519c2b5b7710b",
+    "site-highschool": "aeb741bfb9d8bdac1db79c32d71747ade350e0ca23964ab2e8177deba30613f5",
+    "site-college": "b226369b81439d969a6ef7ed1eb6404ca79a5ab54ff26947db32aa701d4519ab",
+    "site-police": "66a6ca91e99842b0e634f1f8f437cc023b7b8aaf0256fa8f5caa43409c40b467",
+    "site-headquarters": "61d9044db9806374b342a7081bb21acb48a2e70b798376bc7ee8013fe237269e",
+    "site-fire": "22c4f66bcbe8c84e123af047af2f0243f1e1a1f430bbd4e2a09cd1f323961beb",
+    "site-rescue": "7a616f0ade4c107a5b0917f1c71973cb67e80c0a5cbb60d18dd855fae41d965a",
+    "industrial-trade-depot": "a27f175565bad34331d2126c9595f78feeb9802af563173f5e0b386a01ed060b",
+    "industrial-light-workshop": "ebe30373337ba9461a8d29621206e508e5b3b5e3d3799d76eeb4ea735d256c08",
+    "industrial-distribution-hall": "e86b7c906514d8155d65764f64506acb19efaf751787bae94047cdce3bfde884",
+    "industrial-sawtooth-works": "59366cffe4ef0048b84131c4b83f30f3d056bec5813b9f0104a179e6aac9a598",
+    "industrial-processing-yard": "304eedbe7d0ef4fbf7c4bceb6b3ba1a1fc3871c9b66738c6c9f5803fe9669f60"
+  }
+}

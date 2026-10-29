@@ -69,8 +69,20 @@ export class GardenProps{
     for(let j=1;j<7;j++){indices.push(0,j+1,j,64,64+j,65+j);}
     g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));g.setIndex(indices);g.computeVertexNormals();g.setAttribute('uv',new THREE.Float32BufferAttribute(Array(p.length/3*2).fill(0),2));
    }else{
-    g=new THREE.SphereGeometry(.5,12,8).translate(0,.5,0);const p=g.attributes.position;
-    for(let i=0;i<p.count;i++){const y=p.getY(i),jitter=1+Math.sin(p.getX(i)*53+p.getZ(i)*79+y*31)*.045;p.setXYZ(i,Math.max(-.5,Math.min(.5,p.getX(i)*jitter)),y,Math.max(-.5,Math.min(.5,p.getZ(i)*jitter)));}g.computeVertexNormals();
+    // A small interior crown supplies depth. Separate folded leaf blades
+    // break the silhouette instead of stretching a smooth sphere into a bush.
+    const core=new THREE.SphereGeometry(.40,10,6).translate(0,.48,0),p=core.attributes.position;
+    for(let i=0;i<p.count;i++){const y=p.getY(i),jitter=1+Math.sin(p.getX(i)*53+p.getZ(i)*79+y*31)*.12;p.setXYZ(i,p.getX(i)*jitter,y,p.getZ(i)*jitter);}core.computeVertexNormals();
+    const points=[],indices=[],uv=[],normal=new THREE.Vector3(),u=new THREE.Vector3(),v=new THREE.Vector3(),center=new THREE.Vector3(),up=new THREE.Vector3(0,1,0);
+    for(let i=0;i<110;i++){
+     const y=1-2*(i+.5)/110,r=Math.sqrt(1-y*y),angle=i*2.399963229728653;normal.set(Math.cos(angle)*r,y,Math.sin(angle)*r);u.crossVectors(up,normal).normalize();v.crossVectors(normal,u);center.copy(normal).multiplyScalar(.425);center.y+=.49;
+     const start=points.length/3,turn=Math.sin(i*13.7),axis=u.clone().multiplyScalar(Math.cos(turn)).addScaledVector(v,Math.sin(turn)),cross=new THREE.Vector3().crossVectors(normal,axis);
+     for(const [a,b,h]of [[0,0,.022],[-.092,0,0],[-.028,-.047,0],[.080,0,0],[.020,.047,0]]){
+      const q=center.clone().addScaledVector(axis,a).addScaledVector(cross,b).addScaledVector(normal,h);points.push(q.x,q.y,q.z);uv.push(a/.184+.5,b/.094+.5);
+     }
+     for(let j=1;j<=4;j++)indices.push(start,start+j,start+(j%4)+1);
+    }
+    const leaves=new THREE.BufferGeometry();leaves.setAttribute('position',new THREE.Float32BufferAttribute(points,3));leaves.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));leaves.setIndex(indices);leaves.computeVertexNormals();g=mergeGeometries([core,leaves],false);core.dispose();leaves.dispose();
    }
    const p=g.attributes.position,colors=[];for(let i=0;i<p.count;i++){const shade=.65+p.getY(i)*.28+Math.sin(p.getX(i)*77+p.getZ(i)*53)*.045;colors.push(shade*.92,shade,shade*.85);}g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));add(g,'foliage');
 
