@@ -1,6 +1,14 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 153 — Remove the automatic overview sidebar
+
+The City Overview sidebar has been removed from the game. Starting or continuing a city leaves the map clear. The city-name button opens milestones, the population counter opens residents and households, and the top-left layers button opens Information views. Traffic policy, outside-connection location, household statistics and utility capacity remain available in compact contextual views above the build dock. Trip counters, the generic advice card and the long mixed-purpose overview are gone.
+
+The information panel shows only the selected topic: land use, traffic, utilities or pollution. Utility demand and capacity have simple meters and an explicit no-supply state. Selecting another tool or closing Views restores the normal map. This organization follows the selected-view approach described in the official [Traffic AI development diary](https://colossalorder.fi/news/development-diary-2-traffic-ai/); it does not claim full interface or simulation parity. Static panel backgrounds avoid adding live blur work.
+
+Browser QA verified the clear start screen, opening and closing Views, changing and restoring the default intersection policy, live utility values, population-to-household navigation and city-name-to-milestone navigation. No browser warnings or errors were reported. Progression and road-input checks pass; the complete existing release suite runs before Pages deployment. Saving, five-minute autosave, multiple worlds and simulation behavior are unchanged.
+
 ## Edition 152 — City progression and build dock
 
 New cities default to population-based progression, with an optional Sandbox mode. Seven stages run from Founding Village to Great City (0, 100, 300, 650, 1,200, 2,000 and 3,500 residents). The starting set includes local roads, detached housing, shops, industry, power and water. Later milestones unlock denser housing, wider roads, highways, advanced utilities and city services, with one-time grants from ₡5,000 to ₡35,000. The milestone screen lists every unlock and its population requirement; locked construction cards remain visible and explain their requirement.
