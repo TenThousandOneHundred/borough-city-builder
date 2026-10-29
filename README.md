@@ -1,6 +1,14 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 151 — Retain prepared road scenery buffers
+
+Road graphics preparation now uploads the actual instance buffers that the new scene will display. Previously it cloned repeated scenery, uploaded the clone's instance attributes, then disposed those attributes; the final city draw still had to upload the real instances. Shared base geometry no longer causes distinct instance batches to be skipped. Preparation temporarily borrows meshes without changing their parent, suppresses their draw callbacks, and restores visibility, shadow, culling and renderer state even if interrupted. Road geometry, buildings, terrain, textures and vegetation detail are unchanged.
+
+All 30 focused local graphics, road-job, cancellation, scenery and frozen-geometry checks pass. Root-module syntax and asset integrity checks pass. A background terrain-worker experiment also passed correctness tests, but two browser comparisons took longer overall (3.75/4.12 seconds versus 2.83/3.11 seconds); it was rejected and is not included. The broad local suite was stopped to avoid competing with browser measurements; the full release suite runs in GitHub before deployment. Current timings vary with other active applications, so this release fixes redundant graphics work without claiming that every placement hitch is eliminated.
+
+Manual saving after a connected ₡200 street in Residential Streets QA 147 was verified at 2:17:14 PM on October 29, retaining 288 residents. Five-minute autosave, world selection, home/continue behavior and independent simulation are unchanged.
+
 ## Edition 150 — Reduce uninterrupted road preparation work
 
 Terrain fitting now uses a finer spatial lookup inside each construction cell, retaining the exact original partition order while skipping distant polygons. Finished terrain buffers are packed in cancellable batches instead of one uninterrupted allocation/copy step. Each preparation phase yields before starting, and the final visible swap gets its own frame opportunity. These changes retain the existing road, terrain, building and vegetation geometry. A larger per-triangle cache was tested and rejected because it slowed the browser despite reducing calculations.
