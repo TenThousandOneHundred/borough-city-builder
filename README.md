@@ -1,6 +1,14 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 166 — Compact road picker
+
+Replaced the oversized road cards with a shallow thumbnail shelf grouped into Small, Medium, Large and Highways. All twelve road types remain available, with names, costs and unlock requirements shown in a shared detail row on hover or keyboard focus. Drawing modes, parallel settings, zoning sides and snapping live in a compact box beside the shelf. On smaller screens, Tool options expands beneath the shelf. The build dock becomes shorter while Roads is open.
+
+The layout was compared before and after against the actual [Cities: Skylines II road-tool screenshot](https://www.galaxus.at/Files/7/5/3/3/5/2/9/1/CSll_BuildingRoad-2_png_jpgcopy.jpg), with categories checked against the [official Road Tools feature](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/road-tools). At 1280 × 720, the old picker occupied 1000 × 276 pixels; the new shelf is 520 × 117 with a separate 220 × 124 tool box, about 68% less combined panel area. This measurement excludes the bottom dock and hints. The original vector thumbnails and available controls are not an exact reproduction of the commercial game.
+
+All 980 release checks pass, along with syntax, building assets and compressed-asset verification. Browser checks cover all road families, locked options, straight/curved/grid/replace/roundabout modes, parallel gap/side settings, snapping, category switching and 800 × 600 / 390 × 844 layouts. No browser warnings or errors were observed. This interface change adds no scene geometry or simulation work. This is feature update two after optimization 164.
+
 ## Edition 165 — Camera-relative movement
 
 WASD and arrow keys now move continuously in the direction the camera is facing, rather than making seven-unit jumps along fixed map axes on keyboard repeats. Forward/back follow the ground-projected viewing direction, and left/right strafe across that view. The direction updates while rotating. Camera height, tilt and zoom remain unchanged during keyboard movement. Diagonals have the same speed as straight movement; a short acceleration ramp makes starting smooth, with an immediate stop on release. Speed scales with zoom and Shift doubles it. Middle-button panning stays on the ground plane.

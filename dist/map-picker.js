@@ -1,10 +1,10 @@
-import {MAPS} from './map-catalog.js?v=165';
-import {MAP_STATS} from './map-preview-stats.js?v=165';
+import {MAPS} from './map-catalog.js?v=166';
+import {MAP_STATS} from './map-preview-stats.js?v=166';
 
 export function createMapPicker(document){
  const $=id=>document.getElementById(id),choices=$('mapChoices');
  const key=map=>map.id+({'72':'-large','96':'-extra-large'}[$('newMapSize').value]||'');
- const preview=map=>new URL('./assets/maps/'+key(map)+'.webp?v=165',import.meta.url).href;
+ const preview=map=>new URL('./assets/maps/'+key(map)+'.webp?v=166',import.meta.url).href;
  function describeLand(){
   const count=(Number($('newMapSize').value)/24)**2,sandbox=$('newProgression').value==='sandbox';
   $('newLandHelp').textContent=sandbox?`All ${count} districts are yours in Sandbox.`:`Start with 1 of ${count} districts. Earn merits at population milestones, then open Land to buy tiles for 2 merits each. The first 100 residents earn your first expansion.`;

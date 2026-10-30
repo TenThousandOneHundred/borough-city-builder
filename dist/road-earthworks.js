@@ -1,5 +1,5 @@
-import {TerrainPartitionIndex} from './terrain-partition-index.js?v=165';
-import {finishBuild} from './build-scheduler.js?v=165';
+import {TerrainPartitionIndex} from './terrain-partition-index.js?v=166';
+import {finishBuild} from './build-scheduler.js?v=166';
 import * as THREE from './vendor/three.module.js';
 import clipping from './vendor/polygon-clipping.umd.min.js';
 

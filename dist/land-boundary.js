@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import {groundHeight} from './landscape.js?v=165';
+import {groundHeight} from './landscape.js?v=166';
 export function updateLandBoundary(view){
  if(view.landBoundary){view.landBoundary.geometry.dispose();view.landBoundary.material.dispose();view.landBoundary.removeFromParent();view.landBoundary=null;}
  const w=view.world,L=globalThis.BoroughLand;if(!w?.land||view.menu||w.land.owned.length===L.columns(w)**2)return;
