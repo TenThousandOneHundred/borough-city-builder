@@ -1,6 +1,20 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 160 — Preserve roads during neighborhood growth
+
+This is the optimization pass after features 157–159. Completed or demolished roadside lots now prepare their changed terrain and access paths while borrowing the existing pavement, bridge plans, road surfaces and materials. The visible roads, traffic lights and GPU buffers stay in place through the swap. Ordinary road edits still rebuild the road network. Cancellation and failure release only privately prepared terrain/access resources; late construction changes are reconciled before the final terrain is shown.
+
+Terrain sampling also stops calculating unused relief noise and mountain ridges during distant shoreline-only queries. Each regional height sample shares one shoreline distance between water, regional relief and the scenic valley transition. The shape, resolution, vertex normals, colors and indices of all fourteen current map meshes remain byte-identical to published Edition 159. Older terrain and bridge fingerprints remain covered. No asset, tree density, material or rendering detail was reduced; no new asset was authored.
+
+In the actual browser, alternating one warm-up and three measured samples per version gave Large-map terrain generation medians of 464→355 ms for Highland Pass (23%), 409→357 ms for Lake District (13%), 414→375 ms for Crescent Bay (9%) and 397→352 ms for River Delta (11%). River and island results were within 2% of the prior build, without an improvement. A separate fixed 294-resident growth fixture measured CPU preparation at 474→297 ms (37%) when retaining roads rather than reconstructing them. These are scoped CPU measurements, not an overall frame-rate guarantee.
+
+All 933 release checks pass. Added tests freeze every terrain buffer and both shoreline/relief fields across the inland cache boundary, require one shoreline query per regional height, and check sculpting and world switches. Growth and demolition must match complete reconstruction at terrain versions 2 and 3 while retaining road object identities and avoiding road-buffer disposal. Failed/cancelled preparations and construction finishing during preparation are covered. Existing independent traffic/walking, manual save, five-minute autosave, selectable worlds, progression and land-purchase checks remain enabled. Asset and compression checks pass.
+
+Browser QA grew the same neighborhood from 294 to 310 residents through the normal interactive refresh path, confirming retained road buffers without console warnings/errors. The prior-edition save continued at its saved day and funds, and manual saving succeeded.
+
+The official [Mountain Village reference photograph](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/maps-themes) was inspected again. Before/after browser views of the same neighborhood retain its visible models and terrain. This optimization does not resolve the remaining differences in regional scale, forest distribution, mountain detail, lighting, buildings or simulation; exact Cities: Skylines II parity remains incomplete. The next optimization is due after three further feature updates.
+
 ## Edition 159 — Broad regional valleys
 
 New cities use continuous regional terrain instead of narrow stepped shelves and the artificial trench around the starting road. River Valley has broad lowlands, lakes and coastal maps have low rolling hills, and Highland Pass keeps tall bordering ridges with a usable central valley. Distant riverbanks on the newer map types also descend over a wider transition. All fourteen map previews were resampled from the actual selected-size terrain.

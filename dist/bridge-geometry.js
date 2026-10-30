@@ -1,8 +1,8 @@
-import {bridgeWidth} from './bridge-spans.js?v=159';
+import {bridgeWidth} from './bridge-spans.js?v=160';
 import * as THREE from './vendor/three.module.js';
-import {atDistance,distanceSection} from './street-geometry.js?v=159';
-import {junctionCuts,clearRanges} from './road-junction-plan.js?v=159';
-import {SIDEWALK_HEIGHT,ASPHALT_HEIGHT} from './road-profile.js?v=159';
+import {atDistance,distanceSection} from './street-geometry.js?v=160';
+import {junctionCuts,clearRanges} from './road-junction-plan.js?v=160';
+import {SIDEWALK_HEIGHT,ASPHALT_HEIGHT} from './road-profile.js?v=160';
 // Concrete profiles and rail sections are swept along the complete crossing.
 // One buffer per material is added to the existing static road batches.
 export function bridgeGeometry(plan,height,ground,junctions=[],pavement=[],stationsForSpan=span=>span.points){

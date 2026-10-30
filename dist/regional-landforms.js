@@ -1,19 +1,19 @@
-import './map-grid.js?v=159';
-import './map-terrain.js?v=159';
-import './coastline.js?v=159';
-import {terrainNoise} from './terrain-field.js?v=159';
+import './map-grid.js?v=160';
+import './map-terrain.js?v=160';
+import './coastline.js?v=160';
+import {terrainNoise} from './terrain-field.js?v=160';
 const ease=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
 
 // Version three is a continuous regional landform, not a staircase of narrow
 // shelves cut by a special starting-road trench. Old saves keep their fields.
-export function regionalRelief(world,x,z,water){
+export function regionalRelief(world,x,z,water,shoreDistance){
  if(water>=.12)return 0;
  const half=globalThis.BoroughGrid.size(world)*2,seed=world.seed;
  const edge=1-ease((Math.max(Math.abs(x),Math.abs(z))-(half+14))/90);
  if(!edge)return 0;
  const maps=globalThis.BoroughMapTerrain,rolling=terrainNoise(x*.011,z*.011,seed+419),broad=terrainNoise(x*.004,z*.004,seed+311);
  let distance=1000;
- if(maps.isNew(world.terrain))distance=maps.distance(world.terrain,seed,x,z);
+ if(maps.isNew(world.terrain))distance=shoreDistance??maps.distance(world.terrain,seed,x,z);
  else if(world.terrain==='islands')distance=globalThis.BoroughCoastline.distance(seed,x,z);
  else if(world.terrain==='river'){
   const gx=(x+half)/4-.5,gz=(z+half)/4-.5;

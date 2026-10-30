@@ -1,21 +1,21 @@
-import './map-grid.js?v=159';
+import './map-grid.js?v=160';
 const G=globalThis.BoroughGrid;
-import {finishBuild} from './build-scheduler.js?v=159';
-import './map-terrain.js?v=159';
-import './coastline.js?v=159';
-import './building-entities.js?v=159';
+import {finishBuild} from './build-scheduler.js?v=160';
+import './map-terrain.js?v=160';
+import './coastline.js?v=160';
+import './building-entities.js?v=160';
 const Buildings=globalThis.BoroughBuildings;
-import {supportsTree} from './tree-placement.js?v=159';
-import {terrainMeshes} from './terrain-mesh.js?v=159';
-import {inlandRelief} from './landforms.js?v=159';
-import {streetStations,atDistance} from './street-geometry.js?v=159';
-import {terrainOffset} from './terrain-edit.js?v=159';
-import {outsidePortals} from './traffic.js?v=159';
-import {ScannedRocks} from './scanned-rocks.js?v=159';
-import {groundCover} from './ground-cover.js?v=159';
-import {terrainField} from './terrain-field.js?v=159';
-import {reflectedWater} from './water.js?v=159';
-import {naturalTerrain} from './terrain-material.js?v=159';
+import {supportsTree} from './tree-placement.js?v=160';
+import {terrainMeshes} from './terrain-mesh.js?v=160';
+import {inlandRelief} from './landforms.js?v=160';
+import {streetStations,atDistance} from './street-geometry.js?v=160';
+import {terrainOffset} from './terrain-edit.js?v=160';
+import {outsidePortals} from './traffic.js?v=160';
+import {ScannedRocks} from './scanned-rocks.js?v=160';
+import {groundCover} from './ground-cover.js?v=160';
+import {terrainField} from './terrain-field.js?v=160';
+import {reflectedWater} from './water.js?v=160';
+import {naturalTerrain} from './terrain-material.js?v=160';
 import * as THREE from './vendor/three.module.js';
 export const TILE=4,SIZE=48,HALF=96;
 const landBase=new THREE.Color('#c8e0ad'),landLight=new THREE.Color('#d4dfb3'),shoreColor=new THREE.Color('#c3bda6'),slopeColor=new THREE.Color('#959a8d');
@@ -25,14 +25,14 @@ function noise(x,y,seed){const a=Math.floor(x),b=Math.floor(y),u=smooth(x-a),v=s
 function wetTile(w,x,y){if(globalThis.BoroughMapTerrain.isNew(w.terrain))return globalThis.BoroughMapTerrain.distance(w.terrain,w.seed,(x+.5)*4-G.half,(y+.5)*4-G.half)<1.5?1:0;if(x>=0&&y>=0&&x<G.n&&y<G.n)return w.tiles[y*G.n+x].ground==='water'?1:0;if(w.terrain==='river')return Math.abs(x-(34+Math.sin(y/7+w.seed%9)*3))<2.3?1:0;if(w.terrain==='islands')return Math.sin(x/7)+Math.cos(y/8)+Math.sin((x+y)/9)>1.05?1:0;return 0}
 const waterFields=new WeakMap();
 function field(w){if(waterFields.has(w))return waterFields.get(w);const f=new Float32Array(52*52),weights=[.18,.64,.18];for(let y=-2;y<50;y++)for(let x=-2;x<50;x++){let v=0;for(let j=-1;j<=1;j++)for(let i=-1;i<=1;i++)v+=wetTile(w,x+i,y+j)*weights[i+1]*weights[j+1];f[(y+2)*52+x+2]=v}waterFields.set(w,f);return f}
-function baseWetness(w,x,z){if(globalThis.BoroughMapTerrain.isNew(w.terrain))return 1-smooth(clamp((globalThis.BoroughMapTerrain.distance(w.terrain,w.seed,x,z)+3)/6,0,1));const gx=(x+G.half)/TILE-.5,gy=(z+G.half)/TILE-.5;if(w.terrain==='river'){const distance=Math.abs(gx-(34+Math.sin(gy/7+w.seed%9)*3));return smooth(clamp((3.35-distance)/2.1,0,1))}if(w.terrain==='islands'&&[2,3].includes(w.landformVersion))return 1-smooth(clamp((globalThis.BoroughCoastline.distance(w.seed,x,z)+3)/6,0,1));if(w.terrain==='islands'){const level=Math.sin(gx/7)+Math.cos(gy/8)+Math.sin((gx+gy)/9);return smooth(clamp((level-.72)/.65,0,1))}return 0}
+function baseWetness(w,x,z,shoreDistance){if(globalThis.BoroughMapTerrain.isNew(w.terrain))return 1-smooth(clamp(((shoreDistance??globalThis.BoroughMapTerrain.distance(w.terrain,w.seed,x,z))+3)/6,0,1));const gx=(x+G.half)/TILE-.5,gy=(z+G.half)/TILE-.5;if(w.terrain==='river'){const distance=Math.abs(gx-(34+Math.sin(gy/7+w.seed%9)*3));return smooth(clamp((3.35-distance)/2.1,0,1))}if(w.terrain==='islands'&&[2,3].includes(w.landformVersion))return 1-smooth(clamp((globalThis.BoroughCoastline.distance(w.seed,x,z)+3)/6,0,1));if(w.terrain==='islands'){const level=Math.sin(gx/7)+Math.cos(gy/8)+Math.sin((gx+gy)/9);return smooth(clamp((level-.72)/.65,0,1))}return 0}
 export function wetness(w,x,z,height=groundHeight){const offset=terrainOffset(w,x,z);if(Math.abs(offset)<.0001)return baseWetness(w,x,z);return smooth(clamp((.65-height(w,x,z))/1.3,0,1));}
 // Scenic coastal hills taper across an inland apron. Their amplitude is zero
 // throughout the editable map, so this cannot lift existing buildings or roads.
-function valleyFalloff(w,x,z,water){if(w.landformVersion===3&&globalThis.BoroughMapTerrain.isNew(w.terrain))return smooth(clamp((globalThis.BoroughMapTerrain.distance(w.terrain,w.seed,x,z)-3)/90,0,1));if(w.terrain==='river'){const gx=(x+G.half)/4-.5,gy=(z+G.half)/4-.5,d=Math.abs(gx-(34+Math.sin(gy/7+w.seed%9)*3))*4;return smooth(clamp((d-10)/65,0,1))}if(w.terrain==='islands'&&[2,3].includes(w.landformVersion))return smooth(clamp(globalThis.BoroughCoastline.distance(w.seed,x,z)/70,0,1));return 1-smooth(clamp(water*3,0,1))}
+function valleyFalloff(w,x,z,water,shoreDistance){if(w.landformVersion===3&&globalThis.BoroughMapTerrain.isNew(w.terrain))return smooth(clamp(((shoreDistance??globalThis.BoroughMapTerrain.distance(w.terrain,w.seed,x,z))-3)/90,0,1));if(w.terrain==='river'){const gx=(x+G.half)/4-.5,gy=(z+G.half)/4-.5,d=Math.abs(gx-(34+Math.sin(gy/7+w.seed%9)*3))*4;return smooth(clamp((d-10)/65,0,1))}if(w.terrain==='islands'&&[2,3].includes(w.landformVersion))return smooth(clamp(globalThis.BoroughCoastline.distance(w.seed,x,z)/70,0,1));return 1-smooth(clamp(water*3,0,1))}
 // The scenic hills contribute zero inside the map apron. Avoid sampling their
 // erosion field there; elsewhere reuse the wetness already computed below.
-export function groundHeight(w,x,z){const water=baseWetness(w,x,z),inland=.35+noise(x*.012,z*.012,w.seed)*1.6+noise(x*.028,z*.028,w.seed+3)*.7+noise(x*.09,z*.09,w.seed+17)*.12;const edge=smooth(clamp((Math.max(Math.abs(x),Math.abs(z))-G.halfPlus2)/150,0,1)),hills=edge>0?edge*terrainField(w.seed).sample(x,z)*valleyFalloff(w,x,z,water):0,bank=smooth(clamp(water*1.85,0,1));return inland*(1-bank)+hills-bank*1.6+inlandRelief(w,x,z,water)+terrainOffset(w,x,z);}
+export function groundHeight(w,x,z){const shoreDistance=globalThis.BoroughMapTerrain.isNew(w.terrain)?globalThis.BoroughMapTerrain.distance(w.terrain,w.seed,x,z):undefined,water=baseWetness(w,x,z,shoreDistance),inland=.35+noise(x*.012,z*.012,w.seed)*1.6+noise(x*.028,z*.028,w.seed+3)*.7+noise(x*.09,z*.09,w.seed+17)*.12;const edge=smooth(clamp((Math.max(Math.abs(x),Math.abs(z))-G.halfPlus2)/150,0,1)),hills=edge>0?edge*terrainField(w.seed).sample(x,z)*valleyFalloff(w,x,z,water,shoreDistance):0,bank=smooth(clamp(water*1.85,0,1));return inland*(1-bank)+hills-bank*1.6+inlandRelief(w,x,z,water,shoreDistance)+terrainOffset(w,x,z);}
 export function terrainColor(w,x,z,height=groundHeight){const wet=wetness(w,x,z,height),variation=noise(x*.037,z*.037,w.seed+51),c=landBase.clone().lerp(landLight,variation*.7);c.lerp(shoreColor,smooth(clamp(wet*3,0,1)));const slope=Math.abs(height(w,x+1,z)-height(w,x-1,z))+Math.abs(height(w,x,z+1)-height(w,x,z-1));c.lerp(slopeColor,clamp((slope-1.2)*.28,0,.8));return c.multiplyScalar(.93+noise(x*.14,z*.14,w.seed+21)*.13)}
 export function floorHeight(w,x,z){return Math.max(.2,groundHeight(w,x,z))}
 // Street trees may sit in a sidewalk well, but their trunks must stay clear

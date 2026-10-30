@@ -1,14 +1,14 @@
-import {regionalRelief} from './regional-landforms.js?v=159';
-import './map-grid.js?v=159';
+import {regionalRelief} from './regional-landforms.js?v=160';
+import './map-grid.js?v=160';
 const G=globalThis.BoroughGrid;
-import './map-terrain.js?v=159';
-import './coastline.js?v=159';
-import {terrainNoise} from './terrain-field.js?v=159';
+import './map-terrain.js?v=160';
+import './coastline.js?v=160';
+import {terrainNoise} from './terrain-field.js?v=160';
 const ease=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
 // Versioned relief belongs to the saved world: loading an older city cannot
 // move its buildings or roads. Broad shelves retain usable development areas.
-export function inlandRelief(world,x,z,water=0){
- if(world.landformVersion===3)return regionalRelief(world,x,z,water);
+export function inlandRelief(world,x,z,water=0,shoreDistance){
+ if(world.landformVersion===3)return regionalRelief(world,x,z,water,shoreDistance);
  if(![1,2].includes(world.landformVersion))return 0;
  const edge=1-ease((Math.max(Math.abs(x),Math.abs(z))-(G.half+14))/90);
  const valley=ease((Math.hypot(x+22,z-2)-30)/40),corridor=x<0?ease((Math.abs(z-2)-7)/18):1;

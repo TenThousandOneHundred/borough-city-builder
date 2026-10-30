@@ -1,6 +1,6 @@
-import './map-grid.js?v=159';
+import './map-grid.js?v=160';
 const G=globalThis.BoroughGrid;
-import {lotPlan} from './building-plan.js?v=159';
+import {lotPlan} from './building-plan.js?v=160';
 
 // A rotated developed site may own a stair-stepped set of zoning cells. Its
 // complete rectangular ground footprint must be covered by those cells.

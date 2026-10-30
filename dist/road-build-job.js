@@ -1,25 +1,26 @@
-import {lotGradingKey} from './lot-grading.js?v=159';
-import {geometryUploadSteps} from './geometry-upload.js?v=159';
-import {constructionGridSteps} from './construction-grid.js?v=159';
-import {groundCoverSteps} from './ground-cover.js?v=159';
-import {groundHeight,wetness} from './landscape.js?v=159';
+import {borrowRoadsForTerrain} from './terrain-refresh-plan.js?v=160';
+import {lotGradingKey} from './lot-grading.js?v=160';
+import {geometryUploadSteps} from './geometry-upload.js?v=160';
+import {constructionGridSteps} from './construction-grid.js?v=160';
+import {groundCoverSteps} from './ground-cover.js?v=160';
+import {groundHeight,wetness} from './landscape.js?v=160';
 import * as THREE from './vendor/three.module.js';
-import {changedRoadCells} from './road-frontage.js?v=159';
-import {Roadworks} from './roadworks.js?v=159';
-import {scheduleBuild} from './build-scheduler.js?v=159';
+import {changedRoadCells} from './road-frontage.js?v=160';
+import {Roadworks} from './roadworks.js?v=160';
+import {scheduleBuild} from './build-scheduler.js?v=160';
 
 // Build an invisible replacement. The visible city and its traffic remain live
 // until both road meshes and fitted terrain are ready for one synchronous swap.
 export function prepareRoadRefresh(view,{schedule=scheduleBuild,reason='roads'}={}){
  if(view.roadRefreshJob)return view.roadRefreshJob.promise;
- const world=view.world,revision=world.roadEditRevision||0,snapshot=structuredClone(world),old=view.roadworks,next=new Roadworks(view),terrain=[],bases=view.landscape.terrainBases||[];
+ const world=view.world,revision=world.roadEditRevision||0,snapshot=structuredClone(world),old=view.roadworks,borrowed=reason==='terrain'&&old.world===world&&old.earthworkSurfaces?.length?borrowRoadsForTerrain(old,snapshot):null,next=borrowed?.planner||new Roadworks(view),terrain=[],bases=view.landscape.terrainBases||[];
  // Retain the already uploaded asphalt textures through the atomic swap.
  const sources=['color','normal','rough'].map(slot=>view.landscape.assets?.['road-asphalt-'+slot]),sharedAsphalt=old.asphalt&&sources.every((source,i)=>old.asphaltSources?.[i]===source)?old.asphalt:null;
  if(sharedAsphalt){next.asphalt=sharedAsphalt;next.asphaltSources=old.asphaltSources;}
  next.world=snapshot;next.heightRevision=old.heightRevision;next.accessRevision=old.accessRevision;
  next.earthworkRegionCache={cells:old.earthworkRegionCache?.cells||new Map()};
  next.group.visible=false;next.signalGroup.visible=false;
- const stats={slices:0,maxSliceMs:0,swapMs:0},started=performance.now();
+ const stats={slices:0,maxSliceMs:0,swapMs:0,reusedRoadMeshes:!!borrowed},started=performance.now();
  const job={force:false,promise:null};view.roadRefreshJob=job;view.onRoadBuildStatus?.(true,reason);
  const cancelled=()=>view.roadRefreshJob!==job||view.world!==world||(world.roadEditRevision||0)!==revision||view.landscape.terrainBases!==bases;
  const onSlice=ms=>{stats.slices++;stats.maxSliceMs=Math.max(stats.maxSliceMs,ms);};
@@ -33,7 +34,7 @@ export function prepareRoadRefresh(view,{schedule=scheduleBuild,reason='roads'}=
  let adopted=false,cover=null,grid=null,treePlan=null;
  job.promise=(async()=>{
   try{
-   await schedule(next.buildSteps(snapshot),sliceOptions);
+   await schedule(borrowed?next.syncEarthworksSteps(snapshot):next.buildSteps(snapshot),sliceOptions);
    const plan=next.earthworks,height=(w,x,z)=>{const y=plan?.sample(x,z);return Number.isFinite(y)?y:groundHeight(w,x,z);};plan?.beginApplication();
    for(const base of bases){
     // Borrow immutable terrain attributes, with original indices and colors.
@@ -61,18 +62,18 @@ export function prepareRoadRefresh(view,{schedule=scheduleBuild,reason='roads'}=
    await schedule(geometryUploadSteps(view.renderer,uploads,view.scene),sliceOptions);
    await schedule((function*(){})(),sliceOptions);
    if(cancelled()||changedRoadCells(world.tiles,layout).changed.length||JSON.stringify(world.roadPaths)!==pathsKey)throw new DOMException('Road preparation cancelled','AbortError');
-   view.roadRefreshJob=null;next.world=world;next.group.visible=true;next.signalGroup.visible=true;view.roadworks=next;adopted=true;
-   const swapStart=performance.now();if(next.asphalt===old.asphalt)old.asphalt=null;old.dispose();
+   view.roadRefreshJob=null;next.world=world;next.group.visible=true;next.signalGroup.visible=true;const swapStart=performance.now();view.roadworks=borrowed?borrowed.adopt():next;adopted=true;
+   if(!borrowed){if(next.asphalt===old.asphalt)old.asphalt=null;old.dispose();}
    const accessMatches=buildings=>buildings.size===buildingInputs.size&&[...buildings].every(([id,root])=>{const input=buildingInputs.get(id);return input?.root===root&&input.plan===root.userData.plan&&input.position===root.position.toArray().join(',');});
    if(treePlan&&treesKey===treeKey(world))view.landscape.preparedTreePlan=treePlan;
-   view.refresh(job.force,{roads:next,terrain,cover,grid,accessMatches,lotGradingKey:lotGradingKey(snapshot)});
+   view.refresh(job.force,{roads:view.roadworks,terrain,cover,grid,accessMatches,lotGradingKey:lotGradingKey(snapshot)});
    view.landscape.preparedTreePlan=null;next.accessGroup.visible=true;
-   next.night(view.night);stats.swapMs=performance.now()-swapStart;stats.totalMs=performance.now()-started;view.lastRoadBuildStats=stats;
+   view.roadworks.night(view.night);stats.swapMs=performance.now()-swapStart;stats.totalMs=performance.now()-started;view.lastRoadBuildStats=stats;
    return true;
   }catch(error){if(error.name!=='AbortError')throw error;return false;}
   finally{
    if(view.landscape.preparedTreePlan===treePlan)view.landscape.preparedTreePlan=null;
-   if(!adopted){grid?.dispose();cover?.userData.dispose?.();if(next.asphalt===sharedAsphalt)next.asphalt=null;next.dispose();for(const {result}of terrain){result.replacement?.dispose();result.walls?.dispose();}}
+   if(!adopted){grid?.dispose();cover?.userData.dispose?.();if(borrowed)borrowed.dispose();else{if(next.asphalt===sharedAsphalt)next.asphalt=null;next.dispose();}for(const {result}of terrain){result.replacement?.dispose();result.walls?.dispose();}}
    if(view.roadRefreshJob===job)view.roadRefreshJob=null;
    if(!view.roadRefreshJob)view.onRoadBuildStatus?.(false);
   }

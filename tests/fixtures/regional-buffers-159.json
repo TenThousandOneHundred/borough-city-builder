@@ -1,0 +1,151 @@
+{
+  "source": "c9663256a84b30b30b6256ce9e500a70c4be9eb6",
+  "geometry": [
+    {
+      "size": 48,
+      "terrain": "river",
+      "seed": 427,
+      "hash": "48d761b29f5592e64ce83ed0b0c5a9993122e34698d519f1d47792562bf9c5b7"
+    },
+    {
+      "size": 48,
+      "terrain": "lake",
+      "seed": 1847,
+      "hash": "35993f527009e09b97594e646781e9cc46622e64bfac0c87a80992fd5392560c"
+    },
+    {
+      "size": 48,
+      "terrain": "bay",
+      "seed": 761,
+      "hash": "507277c50bc8f8240460e52b8800c780aa55dcf7579e81b90bfdf08b70eacd1b"
+    },
+    {
+      "size": 48,
+      "terrain": "highlands",
+      "seed": 216,
+      "hash": "f81fe25dd288bf9049f8b9e15d80937eefd019b82b2cb679f6c8b9902a52a46b"
+    },
+    {
+      "size": 48,
+      "terrain": "delta",
+      "seed": 930,
+      "hash": "c3e83442a0a89bdcc8a697d0144bbfb8f7ec91849a8e6885f2af3786e7c3bc28"
+    },
+    {
+      "size": 48,
+      "terrain": "islands",
+      "seed": 427,
+      "hash": "5519ef1c095a651d1a636bc4258e1ba6f3c3302be91c5b4b6bc5aa99b862b136"
+    },
+    {
+      "size": 48,
+      "terrain": "plains",
+      "seed": 813,
+      "hash": "d3f4ab147f32a6b850a4badc29f4841f605fde6ae9034166ed131df54e9e993a"
+    },
+    {
+      "size": 72,
+      "terrain": "river",
+      "seed": 427,
+      "hash": "ccd3d62a57cea11b12688fadb2be648f3110d1c3b00b5d9b7d6cbec4592549d8"
+    },
+    {
+      "size": 72,
+      "terrain": "lake",
+      "seed": 1847,
+      "hash": "5abd79ee614e7e09fbf74df19baee0fe248b5fe68006bb320ba6e310a3154a73"
+    },
+    {
+      "size": 72,
+      "terrain": "bay",
+      "seed": 761,
+      "hash": "8d4edff99d272738316cbbd52dd3a23eb157506c6a034d8b48a34b9fda386d94"
+    },
+    {
+      "size": 72,
+      "terrain": "highlands",
+      "seed": 216,
+      "hash": "4c47d965c2f1a595ed9198c6c0e83c509cc6cd80d7413883debb05523d703f7b"
+    },
+    {
+      "size": 72,
+      "terrain": "delta",
+      "seed": 930,
+      "hash": "085de9f5f81677d637eea694691e69a5ccafbeb54e38bb106f9d239c44952bb1"
+    },
+    {
+      "size": 72,
+      "terrain": "islands",
+      "seed": 427,
+      "hash": "486d2b3302fcf7a6807575ba76253a99942b35adb2ffcaab7960c45870e25d1a"
+    },
+    {
+      "size": 72,
+      "terrain": "plains",
+      "seed": 813,
+      "hash": "2b17ac003fad8b24bad717ebeaafb9314a56aedea3bf303d5b1e5585da642551"
+    }
+  ],
+  "fields": [
+    {
+      "type": "lake",
+      "seed": 216,
+      "hash": "021d1e81a8fb8a88657a476fe7adb012fdaef2a4536f957888d3a53a35b2b315"
+    },
+    {
+      "type": "lake",
+      "seed": 427,
+      "hash": "e1f41721b73f91b87684c2fc2b3a4b90260a25046c2ffd18034b40a0834e7f81"
+    },
+    {
+      "type": "lake",
+      "seed": 1847,
+      "hash": "ad7e5aa3614e506b60687f5891b868b94a488e3fb1b05513445c4bf586cdb640"
+    },
+    {
+      "type": "delta",
+      "seed": 216,
+      "hash": "d22170ebb12836065426a53301c03b2fca5dc2e6b72231fa045738a9bdb68c32"
+    },
+    {
+      "type": "delta",
+      "seed": 427,
+      "hash": "e2065408e7e88078205e4e12ef3a1ece4547da9be604d74eac79de6e2db4b124"
+    },
+    {
+      "type": "delta",
+      "seed": 1847,
+      "hash": "7bedf0b917a03bde8ae286545b6f5eaae4a3bce653f6d8ab8d62b3821d06bef5"
+    },
+    {
+      "type": "highlands",
+      "seed": 216,
+      "hash": "b2403f9e9b3a94d39449314ebce8727824858acd4b64618c00db2e5bc99e261a"
+    },
+    {
+      "type": "highlands",
+      "seed": 427,
+      "hash": "666b7e576bf952b507fc2ea3222f55c9499b57fb4d822e4701a9f1f350fbff1e"
+    },
+    {
+      "type": "highlands",
+      "seed": 1847,
+      "hash": "33aa2662a84dcf359149cc55a9c4bbd246f2825968d8d240dd47ba7ec0bc4b08"
+    },
+    {
+      "type": "bay",
+      "seed": 216,
+      "hash": "f6be5db23565bf622c4838517d5b06ac6c9ac8aa3cb117cb7d595d78d92e9cd4"
+    },
+    {
+      "type": "bay",
+      "seed": 427,
+      "hash": "fea81d6284697ce450496dbc28624d83e41640a963485904c1e40af0c7fe6181"
+    },
+    {
+      "type": "bay",
+      "seed": 1847,
+      "hash": "a8ac8433fa920736135af0fa229bb5750525a141e573c97ab01cab04cb8f54b9"
+    }
+  ]
+}
