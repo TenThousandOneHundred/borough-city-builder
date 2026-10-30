@@ -1,21 +1,23 @@
-import './map-grid.js?v=160';
+import './map-grid.js?v=161';
+import './forest-layout.js?v=161';
+const Forest=globalThis.BoroughForest;
 const G=globalThis.BoroughGrid;
-import {finishBuild} from './build-scheduler.js?v=160';
-import './map-terrain.js?v=160';
-import './coastline.js?v=160';
-import './building-entities.js?v=160';
+import {finishBuild} from './build-scheduler.js?v=161';
+import './map-terrain.js?v=161';
+import './coastline.js?v=161';
+import './building-entities.js?v=161';
 const Buildings=globalThis.BoroughBuildings;
-import {supportsTree} from './tree-placement.js?v=160';
-import {terrainMeshes} from './terrain-mesh.js?v=160';
-import {inlandRelief} from './landforms.js?v=160';
-import {streetStations,atDistance} from './street-geometry.js?v=160';
-import {terrainOffset} from './terrain-edit.js?v=160';
-import {outsidePortals} from './traffic.js?v=160';
-import {ScannedRocks} from './scanned-rocks.js?v=160';
-import {groundCover} from './ground-cover.js?v=160';
-import {terrainField} from './terrain-field.js?v=160';
-import {reflectedWater} from './water.js?v=160';
-import {naturalTerrain} from './terrain-material.js?v=160';
+import {supportsTree} from './tree-placement.js?v=161';
+import {terrainMeshes} from './terrain-mesh.js?v=161';
+import {inlandRelief} from './landforms.js?v=161';
+import {streetStations,atDistance} from './street-geometry.js?v=161';
+import {terrainOffset} from './terrain-edit.js?v=161';
+import {outsidePortals} from './traffic.js?v=161';
+import {ScannedRocks} from './scanned-rocks.js?v=161';
+import {groundCover} from './ground-cover.js?v=161';
+import {terrainField} from './terrain-field.js?v=161';
+import {reflectedWater} from './water.js?v=161';
+import {naturalTerrain} from './terrain-material.js?v=161';
 import * as THREE from './vendor/three.module.js';
 export const TILE=4,SIZE=48,HALF=96;
 const landBase=new THREE.Color('#c8e0ad'),landLight=new THREE.Color('#d4dfb3'),shoreColor=new THREE.Color('#c3bda6'),slopeColor=new THREE.Color('#959a8d');
@@ -115,12 +117,30 @@ coverHeight(w,x,z){return this.renderHeight(w,x,z);}
 coverWetness(w,x,z){return this.earthworksExcluded(w,x,z)?1:wetness(w,x,z,(world,px,pz)=>this.renderHeight(world,px,pz));}
 leafMaterial(){if(this.leafMat)return this.leafMat;const c=document.createElement('canvas');c.width=c.height=128;const ctx=c.getContext('2d');for(let i=0;i<380;i++){let a=i*2.39996,r=Math.sqrt(i/380)*59,x=64+Math.cos(a)*r,y=64+Math.sin(a)*r;ctx.fillStyle=['#6c8047','#70874d','#526a36','#8a9659'][i%4];ctx.beginPath();ctx.ellipse(x,y,2.3+(i%3),1.5+(i%2),a,0,Math.PI*2);ctx.fill()}const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;this.leafMat=new THREE.MeshStandardMaterial({map:tex,alphaTest:.45,side:THREE.DoubleSide,roughness:1,envMapIntensity:.1});return this.leafMat}
 *treePlanSteps(w,{height=(world,x,z)=>this.renderHeight(world,x,z),roads=this.view.roadworks,excluded=(x,z)=>this.earthworksExcluded(w,x,z),earthworks=!!this.earthworks}={}){
-const positions=[];for(let i=0;i<w.tiles.length;i++){if(i%64===0)yield;const t=w.tiles[i];if(t.tree&&!t.type&&t.ground==='land'){const x=(i%G.n+.5)*4-G.half,z=(Math.floor(i/G.n)+.5)*4-G.half;for(let j=0;j<2;j++){const px=x+hash(i,j,w.seed)*3-1.5,pz=z+hash(j,i,w.seed)*3-1.5;if(wetness(w,px,pz)<.18)positions.push([px,pz,2.8+hash(i,j+3,w.seed)*2,i%4])}}}// Street trees occupy verges on straight road sections, not intersections.
+const positions=[];for(let i=0;i<w.tiles.length;i++){if(i%64===0)yield;const t=w.tiles[i];if(t.tree&&!t.type&&t.ground==='land'){const x=(i%G.n+.5)*4-G.half,z=(Math.floor(i/G.n)+.5)*4-G.half;if(w.forest){for(const p of Forest.pair(w,x,z,i))if(wetness(w,p[0],p[1])<.18)positions.push(p);}else{for(let j=0;j<2;j++){const px=x+hash(i,j,w.seed)*3-1.5,pz=z+hash(j,i,w.seed)*3-1.5;if(wetness(w,px,pz)<.18)positions.push([px,pz,2.8+hash(i,j+3,w.seed)*2,i%4])}}}}// Street trees occupy verges on straight road sections, not intersections.
 for(let i=0;i<w.tiles.length;i++){if(i%64===0)yield;const t=w.tiles[i];if(t.type!=='road'||t.ground!=='land'||t.pathIds?.length||i%3!==0)continue;const near=globalThis.BoroughRoadTypes.legacyNeighbors(w,i);if(near.length!==2||near[0]+near[1]!==2*i)continue;const horizontal=Math.abs(near[0]-i)===1,x=(i%G.n+.5)*4-G.half,z=(Math.floor(i/G.n)+.5)*4-G.half;for(const side of [-1,1])positions.push([x+(horizontal?0:side*1.73),z+(horizontal?side*1.73:0),1.6+hash(i,side,w.seed)*.5,i%4,true]);}
 // Small neighborhood trees soften developed block interiors without hiding roads.
 for(const path of w.roadPaths||[]){yield;const spec=CityEngine.ROADS[path.type];if(!spec?.green)continue;const stations=streetStations(CityEngine.sampleRoad(path.controls).map(p=>({x:(p.x+.5)*4-G.half,z:(p.y+.5)*4-G.half})));if(stations.length<2)continue;for(let d=3;d<stations.at(-1).distance-1;d+=12){const p=atDistance(stations,d),x=p.x+p.tz*(spec.width/2+.25),z=p.z-p.tx*(spec.width/2+.25);if(wetness(w,x,z)<.3)positions.push([x,z,2.6,positions.length%4,true]);}}
 for(let i=0;i<w.tiles.length;i++){if(i%64===0)yield;const t=w.tiles[i];if(t.type||t.zone||t.ground!=='land'||t.tree)continue;const neighbors=CityEngine.neighbors(i);if(neighbors.some(j=>['residential','commercial','office'].includes(w.tiles[j].type))&&!neighbors.some(j=>w.tiles[j].type==='road')&&hash(i,307,w.seed)>.4){const x=(i%G.n+.5)*4-G.half,z=(Math.floor(i/G.n)+.5)*4-G.half;positions.push([x,z,1.9+hash(i,311,w.seed)*1.2,i%4])}}
-for(let k=0;k<4200;k++){if(k%64===0)yield;const x=hash(k,77,w.seed)*640-320,z=hash(k,83,w.seed)*640-320;if(Math.abs(x)<98&&Math.abs(z)<98||Math.abs(z-2)<4&&x<0||wetness(w,x,z)>.08||noise(x*.017,z*.017,w.seed+7)<.42)continue;positions.push([x,z,4+hash(k,91,w.seed)*4,k%4])}const portals=outsidePortals(w),clearPositions=[],heights=new Map();
+if(w.forest){
+ const near=[],far=[],rim=G.half+32;let k=0;
+ // Continue the playable woodland's cell spacing into the first scenic band.
+ // Beyond that band, fewer tree pairs represent each distant grove.
+ for(const [extent,step,list]of [[rim,4,near],[320,12,far]])for(let z=-extent+step/2;z<extent;z+=step)for(let x=-extent+step/2;x<extent;x+=step){
+  const id=k++;if(id%64===0)yield;
+  if(list===near?Math.abs(x)<G.half&&Math.abs(z)<G.half:Math.abs(x)<rim+2&&Math.abs(z)<rim+2)continue;
+  if(Math.abs(z-2)<4&&x<0)continue;
+  const rank=hash(id,863,w.seed),score=Forest.field(w,x,z)+(rank-.5)*.14;
+  if(score<w.forest.threshold||wetness(w,x,z)>.08)continue;
+  list.push({x,z,k:id+10000,rank});
+ }
+ const order=(a,b)=>a.rank-b.rank||a.k-b.k;near.sort(order);far.sort(order);
+ const groves=near.slice(0,500);groves.push(...far.slice(0,Forest.FAR_LIMIT/2-groves.length));
+ for(let i=0;i<groves.length;i++){if(i%64===0)yield;const {x,z,k}=groves[i];for(const p of Forest.pair(w,x,z,k))if(wetness(w,p[0],p[1])<.08)positions.push(p);}
+
+}else{
+ for(let k=0;k<4200;k++){if(k%64===0)yield;const x=hash(k,77,w.seed)*640-320,z=hash(k,83,w.seed)*640-320;if(Math.abs(x)<G.half+2&&Math.abs(z)<G.half+2||Math.abs(z-2)<4&&x<0||wetness(w,x,z)>.08||noise(x*.017,z*.017,w.seed+7)<.42)continue;positions.push([x,z,4+hash(k,91,w.seed)*4,k%4])}
+}const portals=outsidePortals(w),clearPositions=[],heights=new Map();
 for(let i=0;i<positions.length;i++){if(i%64===0)yield;const p=positions[i],[x,z,h,v,street]=p;
  if(Buildings.blocked(w,x,z)||!(street?streetTreeClear(roads,x,z):!excluded(x,z))||!supportsTree(w,x,z,height)||portals.some(p=>(x-p.x)*p.dx+(z-p.z)*p.dz>0&&Math.abs((x-p.x)*p.dz-(z-p.z)*p.dx)<3))continue;
  clearPositions.push(p);

@@ -1,6 +1,6 @@
-import {loadBinary} from './asset-transfer.js?v=160';
-import {treeElevation,elevationTreeMaterial,elevationTreeDepthMaterial} from './tree-impostor.js?v=160';
-import {TreeSelection} from './tree-selection.js?v=160';
+import {loadBinary} from './asset-transfer.js?v=161';
+import {treeElevation,elevationTreeMaterial,elevationTreeDepthMaterial} from './tree-impostor.js?v=161';
+import {TreeSelection} from './tree-selection.js?v=161';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 export class Vegetation{
@@ -10,12 +10,13 @@ export class Vegetation{
  populate(group,positions,heightAt){
   if(!this.impostors.length)return null;
   const styles=[...this.broadleaf,...this.broadleaf,...this.impostors],objects=[],records=[],meshes=[];
+  const styleFor=i=>positions[i][5]==='pine'?this.broadleaf.length*2+i%this.impostors.length:positions[i][5]==='broadleaf'&&this.broadleaf.length?i%(this.broadleaf.length*2):i%styles.length;
   for(let style=0;style<styles.length;style++){
-   const indices=positions.map((_,i)=>i).filter(i=>i%styles.length===style),mesh=new THREE.InstancedMesh(new THREE.PlaneGeometry(1.28,1.2),styles[style].material,indices.length);
+   const indices=positions.map((_,i)=>i).filter(i=>styleFor(i)===style),mesh=new THREE.InstancedMesh(new THREE.PlaneGeometry(1.28,1.2),styles[style].material,indices.length);
    if(mesh.material.userData.elevationAtlas){this.treeDepth ||= new Map();if(!this.treeDepth.has(mesh.material))this.treeDepth.set(mesh.material,elevationTreeDepthMaterial(mesh.material.map));mesh.customDepthMaterial=this.treeDepth.get(mesh.material);}
    mesh.userData.sharedMaterial=true;mesh.castShadow=true;mesh.receiveShadow=true;group.add(mesh);objects.push(mesh);meshes.push(mesh);
    const bounds=new THREE.Box3();
-   for(let slot=0;slot<indices.length;slot++){const i=indices[slot],[x,z,h]=positions[i],y=heightAt(x,z);bounds.expandByPoint(new THREE.Vector3(x-h*.9,y-h*.1,z-h*.9));bounds.expandByPoint(new THREE.Vector3(x+h*.9,y+h*1.2,z+h*.9));records.push({i,x,z,h,y,slot,mesh,angle:NaN,elevation:NaN,hidden:false,source:i%styles.length<this.broadleaf.length*2?this.broadPrototype:this.prototypes[i%this.prototypes.length]});}
+   for(let slot=0;slot<indices.length;slot++){const i=indices[slot],[x,z,h]=positions[i],y=heightAt(x,z);bounds.expandByPoint(new THREE.Vector3(x-h*.9,y-h*.1,z-h*.9));bounds.expandByPoint(new THREE.Vector3(x+h*.9,y+h*1.2,z+h*.9));records.push({i,x,z,h,y,slot,mesh,angle:NaN,elevation:NaN,hidden:false,source:style<this.broadleaf.length*2?this.broadPrototype:this.prototypes[style-this.broadleaf.length*2]});}
    mesh.boundingSphere=indices.length?bounds.getBoundingSphere(new THREE.Sphere()):new THREE.Sphere(new THREE.Vector3(),0);
   }
   this.population={group,objects,records,meshes,near:new Map()};this.instances=meshes;this.nearCamera=null;this.facingCamera=null;this.lastNight=null;this.update();return objects;

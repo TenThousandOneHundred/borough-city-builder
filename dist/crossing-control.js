@@ -1,5 +1,5 @@
-import {pedestrianNetwork} from './pedestrian-network.js?v=160';
-import {signalPhase,junctionPolicy} from './junctions.js?v=160';
+import {pedestrianNetwork} from './pedestrian-network.js?v=161';
+import {signalPhase,junctionPolicy} from './junctions.js?v=161';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const controller=c=>'junction/'+Math.round(c.junction.x*10000)+'/'+Math.round(c.junction.z*10000);
 export function crossingPhase(world,c,time){if(!c.junction||junctionPolicy(world,controller(c))!=='signals')return 'uncontrolled';const axis=Math.abs(c.arm.tx)>Math.abs(c.arm.tz)?'z':'x';return signalPhase(time,axis)==='green'?'walk':'wait';}

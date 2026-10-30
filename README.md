@@ -1,6 +1,20 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 161 — Connected woodland and open meadows
+
+New cities distribute their existing tree-cell budget into connected woodland and broad clearings, guided by the actual Mountain Village photographs in the official [Maps & Themes diary](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/maps-themes). Tree pairs vary in age and height, and neighboring stands share broadleaf or imported tree varieties. The existing detailed models, materials and ten-tree close-model limit are retained. Close models now match the variety used by their distant canopy cards. No new tree asset was authored.
+
+The first photo comparison exposed an abrupt density change at the map edge. The revision continues the woodland field and close spacing for another 32 world units before thinning distant pairs. Scenic trees have a fixed 1,360-instance ceiling, and selection adds no per-frame terrain or woodland sampling. The seven maps at both sizes retain their previous number of tree-bearing cells; all fourteen previews now use the actual new natural-tree positions.
+
+Forest metadata and cleared cells persist in saves. Older cities retain their saved tree layout, while a corrected Large-map exclusion prevents distant scenery trees from appearing inside the expanded buildable area. Water, steep slopes, road earthworks, outside entrances and occupied lots still exclude natural trees. Manual saving, five-minute autosave, selectable worlds, merits and independent simulation remain enabled.
+
+All 950 checks pass, including deterministic groves for all fourteen map/size combinations, original tree-cell budgets and building-variant RNG, real road clearing and save/reload, legacy saves, wetness/slope exclusions, distant-tree limits, interleaved staged jobs, and matching near/distant tree varieties. Historical simulation and tree-geometry fingerprints remain unchanged using explicit old-world fixtures. Syntax, 91 building-asset checks and lossless-compression checks also pass.
+
+Two browser comparisons across four fixed views retained 27–46 draw calls and 16.4–16.8 ms median frames. GPU medians ranged from 3.5% lower to 5.6% higher than the baseline; this is not a general FPS improvement or a guarantee for populated cities. In separate alternating CPU measurements, woodland preparation was similar or lower in six of seven Large maps; Crescent Bay rose from 40.0 to 40.8 ms. New-world forest selection adds roughly 1–2 ms at creation. Cold terrain caches can still produce longer individual preparation steps. Browser QA created Woodland QA 161, verified a manual save at 11:07:27 PM on October 29, saved/exited, reloaded and continued with the same day-eight funds and land, then saved day 14 at 11:09:26 PM. No browser warnings or errors were observed. The five-minute timer is retained and tested; this check did not retime a full interval.
+
+The reference comparison is still incomplete: regional scale, mountain and river shape, lighting/fog, tree silhouettes and canopy materials differ substantially. This is a woodland-placement update, not visual equivalence. It is feature one after optimization 160; the next scheduled optimization is 164, after three feature releases.
+
 ## Edition 160 — Preserve roads during neighborhood growth
 
 This is the optimization pass after features 157–159. Completed or demolished roadside lots now prepare their changed terrain and access paths while borrowing the existing pavement, bridge plans, road surfaces and materials. The visible roads, traffic lights and GPU buffers stay in place through the swap. Ordinary road edits still rebuild the road network. Cancellation and failure release only privately prepared terrain/access resources; late construction changes are reconciled before the final terrain is shown.

@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import E from '../dist/engine.js';
 import {MAPS} from '../dist/map-catalog.js';
 import {groundHeight,wetness} from '../dist/landscape.js';
+import Forest from '../dist/forest-layout.js';
+import {supportsTree} from '../dist/tree-placement.js';
 const folder=new URL('../references/map-preview-data/',import.meta.url);fs.mkdirSync(folder,{recursive:true});
 const size=384,stats={};
 for(const map of MAPS)for(const mapSize of [48,72]){
@@ -12,9 +14,8 @@ for(const map of MAPS)for(const mapSize of [48,72]){
   data[i]=groundHeight(world,x,z);data[i+1]=wetness(world,x,z);
  }
  for(let i=0;i<world.tiles.length;i++)if(world.tiles[i].tree&&world.tiles[i].ground==='land'){
-  const x=(i%mapSize+.5)*4-half,z=(Math.floor(i/mapSize)+.5)*4-half,height=groundHeight(world,x,z);
-  const slope=Math.max(Math.abs(groundHeight(world,x+1,z)-height),Math.abs(groundHeight(world,x,z+1)-height));
-  if(slope<.65&&wetness(world,x,z)<.1)trees.push({x,z,height});
+  const cx=(i%mapSize+.5)*4-half,cz=(Math.floor(i/mapSize)+.5)*4-half;
+  for(const [x,z]of Forest.pair(world,cx,cz,i))if(supportsTree(world,x,z,groundHeight)&&wetness(world,x,z)<.18)trees.push({x,z,height:groundHeight(world,x,z)});
  }
  stats[key]={seed:map.seed,land:Math.round(world.tiles.filter(t=>t.ground==='land').length/world.tiles.length*100)};
  fs.writeFileSync(new URL(key+'.bin',folder),Buffer.from(data.buffer));

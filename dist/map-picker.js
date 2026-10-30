@@ -1,10 +1,10 @@
-import {MAPS} from './map-catalog.js?v=160';
-import {MAP_STATS} from './map-preview-stats.js?v=160';
+import {MAPS} from './map-catalog.js?v=161';
+import {MAP_STATS} from './map-preview-stats.js?v=161';
 
 export function createMapPicker(document){
  const $=id=>document.getElementById(id),choices=$('mapChoices');
  const key=map=>map.id+($('newMapSize').value==='72'?'-large':'');
- const preview=map=>new URL('./assets/maps/'+key(map)+'.webp',import.meta.url).href;
+ const preview=map=>new URL('./assets/maps/'+key(map)+'.webp?v=161',import.meta.url).href;
  function select(map){
   for(const card of choices.querySelectorAll('.map-card'))card.classList.toggle('selected',card.querySelector('input').value===map.id);
   $('selectedMapPreview').src=preview(map);$('selectedMapPreview').alt=map.name+' terrain preview';

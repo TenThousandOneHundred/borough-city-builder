@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {legacyForest} from './fixtures/legacy-forest.mjs';
 
 function normalize(E,w,name){
  w.id='economy135-'+name;w.name='Economy benchmark '+name;w.money=1e8;
@@ -7,6 +8,7 @@ function normalize(E,w,name){
 }
 export function economicFixture(E,name){
  const w=E.createWorld(name,'plains',name==='starter_curve'?8:321);w.money=1e8;
+ legacyForest(w);
  if(name==='starter_curve'){
   assert.ok(E.buildRoadPath(w,[{x:19,y:24},{x:23,y:14},{x:36,y:19}],'street').ok);return normalize(E,w,name);
  }
