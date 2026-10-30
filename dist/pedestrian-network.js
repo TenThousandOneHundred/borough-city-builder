@@ -1,7 +1,7 @@
-import './map-grid.js?v=161';
+import './map-grid.js?v=162';
 const G=globalThis.BoroughGrid;
-import {roadGeometry,junctionCorners,junctionCuts,clearSections,transitionWidth} from './road-junction-plan.js?v=161';
-import {streetStations,atDistance} from './street-geometry.js?v=161';
+import {roadGeometry,junctionCorners,junctionCuts,clearSections,transitionWidth} from './road-junction-plan.js?v=162';
+import {streetStations,atDistance} from './street-geometry.js?v=162';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function crossingPlan(j){if(j.arms.length<3)return [];return j.arms.filter(a=>a.spec.sidewalk).map(arm=>{const d=j.radius+.42,offset=arm.width/2+.22,center={x:j.x+arm.tx*d,z:j.z+arm.tz*d};return {junction:j,arm,center,halfWidth:arm.width/2+.38,halfDepth:.3,ends:[-1,1].map(side=>({x:center.x-arm.tz*offset*side,z:center.z+arm.tx*offset*side}))};});}
 export function pedestrianCrossings(world,geometry){

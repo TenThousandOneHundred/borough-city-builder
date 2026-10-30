@@ -1,6 +1,16 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 162 — Extra Large regions and merit-funded expansion
+
+All seven landscapes now offer Extra Large maps: 96 × 96 build cells, sixteen purchasable districts and four times the area of Standard (78% more than Large). Each starts with one west-edge district in Progression mode. The first 100 residents award two merits, enough to purchase one more district through the Land button. Extra Large milestone rewards total thirty merits, covering all fifteen remaining districts by Great City. Standard and Large reward receipts are unchanged. Sandbox owns the whole region from the beginning.
+
+The new-game screen explains the expansion rules and uses seven new previews sampled from the actual Extra Large terrain. Purchases save immediately, reject insufficient merits and preserve ownership across reloads. Existing cities keep their map sizes; choose Extra Large when creating a new city. Building detail, traffic simulation and the five-minute autosave interval are unchanged.
+
+All 961 release checks pass, plus syntax, 91 building-asset checks and lossless-compression verification. New coverage exercises starter growth and outside access on every Extra Large landscape, all sixteen land-selection targets, full merit-funded expansion, rejected purchases, mixed-size saves, and roads/sculpting beyond the former Large boundary. Browser QA verified an Extra Large new game and manual save/home flow, then purchased B3 for two merits in a naturally simulated test city. Reloading and continuing retained both owned districts and the zero-merit balance, with no browser warnings or errors. Empty and 196-resident overview views displayed 60 FPS on the test machine; this is a spot check, not a guarantee for developed cities. Larger regions require more terrain memory and can take longer to open.
+
+This is feature two after optimization 160; the next scheduled optimization remains 164. The unfinished mature-conifer asset work is separate from this release.
+
 ## Edition 161 — Connected woodland and open meadows
 
 New cities distribute their existing tree-cell budget into connected woodland and broad clearings, guided by the actual Mountain Village photographs in the official [Maps & Themes diary](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/maps-themes). Tree pairs vary in age and height, and neighboring stands share broadleaf or imported tree varieties. The existing detailed models, materials and ten-tree close-model limit are retained. Close models now match the variety used by their distant canopy cards. No new tree asset was authored.

@@ -1,11 +1,16 @@
-import {MAPS} from './map-catalog.js?v=161';
-import {MAP_STATS} from './map-preview-stats.js?v=161';
+import {MAPS} from './map-catalog.js?v=162';
+import {MAP_STATS} from './map-preview-stats.js?v=162';
 
 export function createMapPicker(document){
  const $=id=>document.getElementById(id),choices=$('mapChoices');
- const key=map=>map.id+($('newMapSize').value==='72'?'-large':'');
- const preview=map=>new URL('./assets/maps/'+key(map)+'.webp?v=161',import.meta.url).href;
+ const key=map=>map.id+({'72':'-large','96':'-extra-large'}[$('newMapSize').value]||'');
+ const preview=map=>new URL('./assets/maps/'+key(map)+'.webp?v=162',import.meta.url).href;
+ function describeLand(){
+  const count=(Number($('newMapSize').value)/24)**2,sandbox=$('newProgression').value==='sandbox';
+  $('newLandHelp').textContent=sandbox?`All ${count} districts are yours in Sandbox.`:`Start with 1 of ${count} districts. Earn merits at population milestones, then open Land to buy tiles for 2 merits each. The first 100 residents earn your first expansion.`;
+ }
  function select(map){
+  describeLand();
   for(const card of choices.querySelectorAll('.map-card'))card.classList.toggle('selected',card.querySelector('input').value===map.id);
   $('selectedMapPreview').src=preview(map);$('selectedMapPreview').alt=map.name+' terrain preview';
   $('selectedMapName').textContent=map.name;$('selectedMapRegion').textContent=map.region;
@@ -22,6 +27,7 @@ export function createMapPicker(document){
   caption.append(title,detail);card.append(input,image,caption);choices.append(card);
  }
  $('newMapSize').onchange=()=>{for(const card of choices.querySelectorAll('.map-card'))card.querySelector('img').src=preview(MAPS.find(m=>m.id===card.querySelector('input').value));select(MAPS.find(m=>m.id===choices.querySelector('input:checked').value));};
+ $('newProgression').addEventListener('change',describeLand);
  select(MAPS[0]);
  return {selected:()=>MAPS.find(map=>choices.querySelector('input:checked')?.value===map.id)||MAPS[0]};
 }

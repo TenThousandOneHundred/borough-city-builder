@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import {MeshBuilder} from './mesh-builder.js?v=161';
+import {MeshBuilder} from './mesh-builder.js?v=162';
 import {mergeVertices} from './vendor/BufferGeometryUtils.js';
 // One world unit represents five metres: these shapes fit the existing road lanes.
 export const VEHICLE_FORMS={

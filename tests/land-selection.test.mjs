@@ -16,10 +16,10 @@ test('multiple and disconnected tile purchases are atomic and retain their saved
  assert.ok(E.buildRoadPath(restored,[{x:65,y:60},{x:71,y:60}],'street').ok,'a purchased remote edge tile can hold its outside road');
  assert.equal(E.buildRoadPath(restored,[{x:60,y:45},{x:60,y:55}],'street').ok,false,'an unowned gap remains protected');
 });
-for(const size of [48,72])test(`in-world selection picks every ${size}-cell map tile and restores the camera`,()=>{
+for(const size of [48,72,96])test(`in-world selection picks every ${size}-cell map tile and restores the camera`,()=>{
  const v=view(world(size)),s=new LandSelection(v),camera=v.camera.position.clone(),target=v.controls.target.clone();s.open();v.scene.updateMatrixWorld(true);
  assert.equal(s.cells.length,(size/24)**2);assert.equal(s.group.children.length,3,'only three new draws while the view is open');assert.equal(v.landMode,true);
- assert.ok(s.fill.geometry.index.count<=31104);assert.equal(s.fill.geometry.attributes.color.itemSize,4);
+ assert.equal(s.fill.geometry.index.count,size*size*6);assert.equal(s.fill.geometry.attributes.color.itemSize,4);
  for(const c of s.cells){const p=s.screen(c.id);assert.ok(p.visible);assert.equal(s.pick(p.x,p.y),c.id);assert.ok(c.buildable>=0&&c.buildable<=.2304+1e-10);}
  assert.equal(s.pick(-2000,-2000),null);
  const positions=s.fill.geometry.attributes.position.array.slice(),samples=v.samples;const center=s.cells.at(-1);s.update(new Set([center.id]),center.id);assert.equal(v.samples,samples,'selection and hover never resample terrain');assert.deepEqual(s.fill.geometry.attributes.position.array,positions);

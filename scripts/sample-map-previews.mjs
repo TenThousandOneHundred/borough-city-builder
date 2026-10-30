@@ -6,8 +6,8 @@ import Forest from '../dist/forest-layout.js';
 import {supportsTree} from '../dist/tree-placement.js';
 const folder=new URL('../references/map-preview-data/',import.meta.url);fs.mkdirSync(folder,{recursive:true});
 const size=384,stats={};
-for(const map of MAPS)for(const mapSize of [48,72]){
- const half=mapSize*2,extent=mapSize*4,key=map.id+(mapSize===72?'-large':'');
+for(const map of MAPS)for(const mapSize of [48,72,96]){
+ const half=mapSize*2,extent=mapSize*4,key=map.id+({72:'-large',96:'-extra-large'}[mapSize]||'');
  const world=E.createWorld(map.name,map.id,map.seed,{mapSize}),data=new Float32Array(size*size*2),trees=[];
  for(let row=0;row<size;row++)for(let col=0;col<size;col++){
   const x=-half+extent*col/(size-1),z=-half+extent*row/(size-1),i=(row*size+col)*2;

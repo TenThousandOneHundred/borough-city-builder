@@ -1,10 +1,10 @@
-import './map-grid.js?v=161';
+import './map-grid.js?v=162';
 const G=globalThis.BoroughGrid;
-import './road-types.js?v=161';
-import './building-entities.js?v=161';
+import './road-types.js?v=162';
+import './building-entities.js?v=162';
 const Buildings=globalThis.BoroughBuildings;
 import * as THREE from './vendor/three.module.js';
-import {SIDEWALK_HEIGHT} from './road-profile.js?v=161';
+import {SIDEWALK_HEIGHT} from './road-profile.js?v=162';
 
 // Connect an owned parcel edge to its actual street sidewalk. This only builds
 // render geometry; occupancy, pedestrian routing and save data remain untouched.

@@ -1,4 +1,4 @@
-import {LandSelection} from './land-selection.js?v=161';
+import {LandSelection} from './land-selection.js?v=162';
 
 export function createLandPanel({document,engine,world,view,save,changed,toast}){
  const $=id=>document.getElementById(id),L=engine.Land,panel=$('landPanel'),controls=$('landTileControls'),selection=new LandSelection(view),selected=new Set();let hover=null,press=null,buttons=[];
@@ -12,7 +12,7 @@ export function createLandPanel({document,engine,world,view,save,changed,toast})
   $('landCost').textContent=selected.size*L.COST+' merits';$('buyLand').disabled=!q.ok;
   const next=engine.Progression.status(w,population??engine.analyze(w).population).next;
   $('landReason').textContent=!w.land?'This city owns all its original land.':!engine.Progression.active(w)?'Sandbox: every tile is already owned.':selected.size?(q.ok?'Road access is needed before development.':q.reason):'Select tiles on the landscape. Right-click to deselect.';
-  $('landEarn').textContent=w.land&&engine.Progression.active(w)&&next?'Next: '+next.population.toLocaleString()+' residents · +'+L.REWARDS[w.progression.level+1]+' merits':'';
+  $('landEarn').textContent=w.land&&engine.Progression.active(w)&&next?'Next: '+next.population.toLocaleString()+' residents · +'+L.reward(w,w.progression.level+1)+' merits':'';
   $('landMerits').title=$('landEarn').textContent;if(selected.size&&!q.ok&&next&&balance<selected.size*L.COST)$('landReason').textContent=$('landEarn').textContent;
   for(const [id,b] of buttons.entries()){const has=owned.includes(id);b.setAttribute('aria-label','Land tile '+name(w,id)+(has?' · Owned':' · 2 merits'));b.setAttribute('aria-pressed',String(selected.has(id)));b.classList.toggle('owned',has);}
   selection.update(selected,hover);positionButtons();
