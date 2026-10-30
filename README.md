@@ -1,6 +1,16 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 156 — Terrain loading optimization
+
+This is the scheduled optimization pass after feature updates 152–155. Terrain sampling skips the distant erosion field where its contribution is exactly zero, reuses the already computed shoreline wetness, and leaves coordinate scoping at public entry points instead of repeating it in private helpers. Terrain resolution, colors, slopes, normals, tree density, building models and independent simulation remain unchanged.
+
+In an alternating before/after browser comparison, generating the full Large River Valley terrain fell from 519.1 to 417.8 ms (19.5%), and Large Highland Pass from 582.4 to 411.9 ms (29.3%). These are median CPU geometry-generation measurements after one warm-up, with three measured samples per version. They do not establish overall load-time or FPS improvement. A separate six-case Node comparison measured 7–28% less generation time across River Valley, Highland Pass and Coastal Islands at both map sizes.
+
+All 894 automated checks pass. Six frozen Edition 155 fingerprints verify every terrain position, normal, UV, color and triangle index, including the distant landscape. Sculpting, cache isolation, mixed-size worlds, startup scenery and save/continue checks remain covered. Browser QA reopened the existing Large city with 222 residents and verified manual saving with its buildings and land retained. Asset requests initially timed out during concurrent heavy local testing and used the existing uncompressed fallback; the city subsequently loaded its models. No rendering exceptions were observed.
+
+The official [Maps & Themes terrain photos](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/maps-themes) were inspected again. The reference has much broader regional scale, more varied forest coverage, more natural bank profiles and different atmospheric lighting. The current land-purchase dialog also differs from its in-world tile view. This optimization preserves current visuals; it does not close those fidelity gaps or establish equivalence. New assets must be authored in Blender and compared with actual game photographs, per the user's updated requirement. The next scheduled optimization is after three subsequent feature updates.
+
 ## Edition 155 — Larger maps and merit-funded land expansion
 
 New game offers **Large** maps with a 72 × 72 construction grid, 2.25 times the area of the original 48 × 48 maps. Every landscape has a preview generated from its selected size. Building and road scale remain unchanged. Large maps are divided into nine 480 × 480 metre districts; Standard maps have four. New progression cities begin with one owned district and a west-edge road connection. Sandbox starts with all land available. Existing saved cities retain their original dimensions and unrestricted land.

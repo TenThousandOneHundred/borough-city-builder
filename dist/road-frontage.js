@@ -1,4 +1,4 @@
-import './map-grid.js?v=155';
+import './map-grid.js?v=156';
 const G=globalThis.BoroughGrid;
 // Legacy buildings search this local rectangle for their nearest road. Keep
 // invalidation in step with lotPlan; a distant road cannot change their facade.
