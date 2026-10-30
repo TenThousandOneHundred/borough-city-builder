@@ -50,10 +50,10 @@ test('deleting the last road restores natural terrain and releases copied pickin
 });
 
 test('bridge concrete cover survives batching and occupancy refresh, stays pickable and releases with its road',()=>{
- const w=world();w.tiles[24*48+24].ground='water';const v=harness(w),r=v.roadworks,originals=[],capture=r.captureEarthworkSurfaces;
+ const w=world();w.tiles[24*48+24].ground='water';const v=harness(w),r=v.roadworks,originals=[],capture=r.captureEarthworkSurfacesSteps;
  // Observe the real bridge meshes immediately before the real static batch
  // consumes them. Their later disposal cannot invalidate retained cover.
- r.captureEarthworkSurfaces=function(){this.group.traverse(mesh=>{if(mesh.userData.earthworkCover){const item={mesh,releases:0};mesh.geometry.addEventListener('dispose',()=>item.releases++);originals.push(item);}});return capture.call(this);};
+ r.captureEarthworkSurfacesSteps=function*(){this.group.traverse(mesh=>{if(mesh.userData.earthworkCover){const item={mesh,releases:0};mesh.geometry.addEventListener('dispose',()=>item.releases++);originals.push(item);}});return yield* capture.call(this);};
  try{
   v.refresh(true);assert.ok(r.bridgeStats.spans>0);assert.ok(originals.length>0);assert.ok(originals.every(o=>o.releases===1),'static batching releases the original concrete buffers');
   const copies=r.earthworkStructures,initial=r.earthworks,revision=r.heightRevision,snapshot=structuredClone(initial.structuralSnapshot);assert.equal(initial.stats.fallback,false);assert.equal(copies.length,originals.length);assert.ok(snapshot.length>20);

@@ -1,18 +1,18 @@
-import {loadBinary} from './asset-transfer.js?v=167';
-import {treeElevation,elevationTreeMaterial,elevationTreeDepthMaterial} from './tree-impostor.js?v=167';
-import {TreeSelection} from './tree-selection.js?v=167';
+import {loadBinary} from './asset-transfer.js?v=168';
+import {treeElevation,elevationTreeMaterial,elevationTreeDepthMaterial} from './tree-impostor.js?v=168';
+import {TreeSelection} from './tree-selection.js?v=168';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 export class Vegetation{
  constructor(view){this.v=view;this.prototypes=[];this.impostors=[];this.broadleaf=[];this.ready=this.load()}
- async load(){try{const loader=new THREE.TextureLoader();const atlas=await loader.loadAsync(new URL('./assets/trees/broadleaf-elevations.png?v=117',import.meta.url).href);atlas.colorSpace=THREE.SRGBColorSpace;atlas.anisotropy=4;const broadStyle={material:elevationTreeMaterial(atlas),broad:true};this.broadleaf=Array(4).fill(broadStyle);const broadUrl=new URL('./assets/trees/broadleaf.glb?v=117',import.meta.url),broad=await new GLTFLoader().parseAsync(await loadBinary(broadUrl),new URL('.',broadUrl).href);this.broadPrototype=new THREE.Group();const source=broad.scene;this.broadPrototype.add(source);source.updateMatrixWorld(true);const bounds=new THREE.Box3().setFromObject(source),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());source.position.set(-center.x,-bounds.min.y,-center.z);this.broadPrototype.scale.setScalar(1/size.y);this.broadPrototype.traverse(o=>{if(o.isMesh){o.userData.sharedAsset=true;o.castShadow=true;o.receiveShadow=true;o.material.envMapIntensity=.2;}});const coniferUrl=new URL('./assets/trees/mature-conifers.glb?v=167',import.meta.url),conifers=await new GLTFLoader().parseAsync(await loadBinary(coniferUrl),new URL('.',coniferUrl).href);
+ async load(){try{const loader=new THREE.TextureLoader();const atlas=await loader.loadAsync(new URL('./assets/trees/broadleaf-elevations.png?v=117',import.meta.url).href);atlas.colorSpace=THREE.SRGBColorSpace;atlas.anisotropy=4;const broadStyle={material:elevationTreeMaterial(atlas),broad:true};this.broadleaf=Array(4).fill(broadStyle);const broadUrl=new URL('./assets/trees/broadleaf.glb?v=117',import.meta.url),broad=await new GLTFLoader().parseAsync(await loadBinary(broadUrl),new URL('.',broadUrl).href);this.broadPrototype=new THREE.Group();const source=broad.scene;this.broadPrototype.add(source);source.updateMatrixWorld(true);const bounds=new THREE.Box3().setFromObject(source),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());source.position.set(-center.x,-bounds.min.y,-center.z);this.broadPrototype.scale.setScalar(1/size.y);this.broadPrototype.traverse(o=>{if(o.isMesh){o.userData.sharedAsset=true;o.castShadow=true;o.receiveShadow=true;o.material.envMapIntensity=.2;}});const coniferUrl=new URL('./assets/trees/mature-conifers.glb?v=168',import.meta.url),conifers=await new GLTFLoader().parseAsync(await loadBinary(coniferUrl),new URL('.',coniferUrl).href);
 for(const [name,atlasName]of [['MatureSpruce','spruce'],['MaturePine','pine']]){
  const source=conifers.scene.getObjectByName(name);if(!source)throw Error('Missing mature conifer '+name);
  const root=new THREE.Group();root.add(source);root.updateMatrixWorld(true);
  const bounds=new THREE.Box3().setFromObject(root),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());
  source.position.set(-center.x,-bounds.min.y,-center.z);root.scale.setScalar(1/size.y);root.updateMatrixWorld(true);
  root.traverse(o=>{if(o.isMesh){o.userData.sharedAsset=true;o.castShadow=true;o.receiveShadow=true;o.material.roughness=.9;o.material.envMapIntensity=.25;}});
- const atlas=await loader.loadAsync(new URL('./assets/trees/mature-'+atlasName+'-atlas.png?v=167',import.meta.url).href);atlas.colorSpace=THREE.SRGBColorSpace;atlas.anisotropy=4;
+ const atlas=await loader.loadAsync(new URL('./assets/trees/mature-'+atlasName+'-atlas.png?v=168',import.meta.url).href);atlas.colorSpace=THREE.SRGBColorSpace;atlas.anisotropy=4;
  this.prototypes.push(root);this.impostors.push({material:elevationTreeMaterial(atlas,{azimuths:8,panelSize:384}),ratio:size.x/size.y});
 }}catch(e){console.warn('Vegetation fallback:',e.message)}}
  populate(group,positions,heightAt){

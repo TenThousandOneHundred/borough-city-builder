@@ -1,6 +1,18 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 168 — Smaller road-preparation stalls
+
+Road foundations, boundary scans, surface copies and vegetation clearance now yield during preparation, including long connected boundaries and extra-large maps. Cancellation can interrupt those passes without replacing the visible city. At the final swap, traffic reuses the already prepared junction plan after checking the complete road signature, map size and engine identity; later road edits invalidate it normally. No buildings, textures, vegetation density, geometry resolution or simulation frequency were reduced.
+
+A deterministic long-sidewalk check reduces the maximum uninterrupted quantization work from 6,156 operations to 768 while retaining all 97,436 operations in the same order. Frozen road/terrain fingerprints and plant-layout fingerprints protect the visible output. New checks cover partial-copy disposal, cancelled clearance, mixed-size interleaved jobs and safe junction-plan reuse.
+
+Browser comparisons used the same 72-cell road-grid fixture and camera. Three baseline preparation peaks were 51.4 / 63.1 / 55.5 ms; the final candidate measured 28.3 / 28.7 / 78.3 ms. Final swaps were 156.8 / 150.1 / 161.0 ms versus 120.6 / 129.8 / 680.8 ms. The third candidate run was substantially slower across the scene, and frame-time outliers remain. These results support reduced duplicate work and finer scheduling, not a reliable overall FPS or lag-free claim. The remaining traffic rebuild is still a significant synchronous cost. Settled scenes retained 933k displayed triangles and 481 draw calls.
+
+Browser QA also covered a connected street built through the normal controls, the land-ownership restriction, manual saving, return home and Continue after reload. The saved road and funds persisted, with no browser warnings or errors. Syntax, existing model/texture assets and compressed-asset verification pass. The release workflow runs all 985 checks before publication.
+
+The actual [Cities: Skylines II road screenshot](https://www.galaxus.at/Files/7/5/3/3/5/2/9/1/CSll_BuildingRoad-2_png_jpgcopy.jpg) was inspected before and after. This optimization preserves the present artwork; the broader differences in buildings, terrain, lighting and simulation remain unfinished. No new asset was authored. This is the scheduled optimization after updates 165–167; the next scheduled pass follows three further feature updates.
+
 ## Edition 167 — Reference-based zoning tray
 
 The zoning panel now uses a shallow density tray, colored category icons and a separate painting box. Eleven original icons were modeled and rendered in Blender, including six distinct housing forms. The editable Blender scene and authoring script are included. Tool mode, road-following depth and brush size remain reachable; narrow screens fold them into Zoning options. Names, lot dimensions and unlock requirements remain available in the detail row and tooltips.

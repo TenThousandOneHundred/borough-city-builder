@@ -1,5 +1,5 @@
-import {TerrainPartitionIndex} from './terrain-partition-index.js?v=167';
-import {finishBuild} from './build-scheduler.js?v=167';
+import {TerrainPartitionIndex} from './terrain-partition-index.js?v=168';
+import {finishBuild} from './build-scheduler.js?v=168';
 import * as THREE from './vendor/three.module.js';
 import clipping from './vendor/polygon-clipping.umd.min.js';
 
@@ -156,12 +156,14 @@ export function* createRoadEarthworksSteps(options){
 }
 function* buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePlan,groundHeight,wetness=()=>0,protectedParcels=[],regionCache=null}){
  const surfaceSnapshot=yield* snapshotSurfacesSteps(surfaces),structuralSnapshot=yield* snapshotSurfacesSteps(structuralSurfaces,'structure'),natural=(x,z)=>groundHeight(world,x,z),wet=(x,z)=>wetness(world,x,z)>.08;
- const hasLotSurfaces=surfaceSnapshot.some(t=>t.kind==='lot');
+ // Bound the scans between scheduler checkpoints too, not only the visible
+ // triangle-building loops. Large connected boundaries can contain thousands.
+ const hasLotSurfaces=surfaceSnapshot.some(t=>t.kind==='lot');let checkpoint=0;
  const exclusions=new Index(),protectedIndex=new Index(),roadIndex=new Index(),structureIndex=new Index(),patches=new Index(),wallIndex=new Index(),perimeterIndex=new Index(),regions=new Index();
  // The actual concrete tops are opaque covers. Soffits and buried pier faces
  // must not remove visible ground merely because they project over it.
- for(const {vertices}of structuralSnapshot)if(cross(...vertices)<-EPS)structureIndex.add(record(vertices,{foundation:vertices.map(p=>[p[0],p[1]-.02,p[2]])}));
- for(const parcel of protectedParcels)for(const t of polygonTriangles(parcel.polygon||parcel)){exclusions.add({...t});protectedIndex.add({...t});}
+ for(const {vertices}of structuralSnapshot){if(checkpoint++%128===0)yield;if(cross(...vertices)<-EPS)structureIndex.add(record(vertices,{foundation:vertices.map(p=>[p[0],p[1]-.02,p[2]])}));}
+ for(const parcel of protectedParcels){yield;for(const t of polygonTriangles(parcel.polygon||parcel)){exclusions.add({...t});protectedIndex.add({...t});}}
  // Bridge plans include dry approaches. Only the wet interval is excluded;
  // padding prevents shoulders from extending laterally into the water channel.
  for(const span of bridgePlan?.spans||[]){if(!span.points?.length)continue;
@@ -171,7 +173,7 @@ function* buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePla
   }
  }
  const minimum=new Map(),edges=new Map();
- for(const {kind,vertices}of surfaceSnapshot){if(kind==='sidewalk')for(const p of vertices){const k=key(p);minimum.set(k,Math.min(minimum.get(k)??Infinity,p[1]));}}
+ for(const {kind,vertices}of surfaceSnapshot){if(checkpoint++%128===0)yield;if(kind==='sidewalk')for(const p of vertices){const k=key(p);minimum.set(k,Math.min(minimum.get(k)??Infinity,p[1]));}}
  for(const {kind,vertices}of surfaceSnapshot){yield;let p=vertices.map(v=>v.slice());if(Math.abs(cross(...p))<EPS)continue;if(cross(...p)<0)p=[p[0],p[2],p[1]];
   roadIndex.add(record(p,{kind}));
   for(let i=0;i<3;i++){const a=p[i],b=p[(i+1)%3],ka=key(a),kb=key(b),sign=ka<kb?1:-1,k=ka<kb?ka+'|'+kb:kb+'|'+ka,entry=edges.get(k);if(entry)entry.balance+=sign;else edges.set(k,{a,b,kind,sign,balance:sign});}
@@ -192,7 +194,7 @@ function* buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePla
  }
  // Beneath asphalt/footways the replacement is a road-shaped solid platform.
  // A footway's vertical back face supplies the exact bottom at its outer edge.
- for(const t of roadIndex.items)t.foundation=t.p.map(v=>[v[0],t.kind==='sidewalk'?Math.min(v[1]-.015,minimum.get(key(v))??v[1]-.05):v[1]-.02,v[2],1]);
+ for(const t of roadIndex.items){if(checkpoint++%128===0)yield;t.foundation=t.p.map(v=>[v[0],t.kind==='sidewalk'?Math.min(v[1]-.015,minimum.get(key(v))??v[1]-.05):v[1]-.02,v[2],1]);}
  const shoulderRaw=[],shoulderFootprints=[],joins=new Map(),boundary=[];
  const support=(p,kind)=>kind==='sidewalk'?(minimum.get(key(p))??p[1]-.05):p[1]-.02;
  function addWall(a,b,nx,nz,u0,u1){let intervals=[[0,1]];for(const e of [...exclusions.query(bounds([a,b])),...roadIndex.query(bounds([a,b]))]){const cut=lineInterval(a,b,e);if(cut)intervals=intervals.flatMap(interval=>removeIntervals(interval,[cut]));}
@@ -206,17 +208,17 @@ function* buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePla
   for(const t of roadIndex.query(bounds([probeA,probeB]))){const cut=lineInterval(probeA,probeB,t);if(cut)intervals=intervals.flatMap(interval=>removeIntervals(interval,[cut]));}
   for(const [lo,hi]of intervals)boundary.push({...edge,a:mix(a,b,lo),b:mix(a,b,hi),length:length*(hi-lo),nx,nz});
  }
- const starts=new Map(),visited=new Set();for(const edge of boundary){const k=key(edge.a);if(!starts.has(k))starts.set(k,[]);starts.get(k).push(edge);}
- for(const edge of boundary)perimeterIndex.add({a:edge.a,b:edge.b,bounds:bounds([edge.a,edge.b])});
- for(const t of exclusions.items)for(let i=0;i<3;i++){const a=t.p[i],b=t.p[(i+1)%3];perimeterIndex.add({a,b,bounds:bounds([a,b])});}
+ const starts=new Map(),visited=new Set();for(const edge of boundary){if(checkpoint++%128===0)yield;const k=key(edge.a);if(!starts.has(k))starts.set(k,[]);starts.get(k).push(edge);}
+ for(const edge of boundary){if(checkpoint++%128===0)yield;perimeterIndex.add({a:edge.a,b:edge.b,bounds:bounds([edge.a,edge.b])});}
+ for(const t of exclusions.items)for(let i=0;i<3;i++){if(checkpoint++%128===0)yield;const a=t.p[i],b=t.p[(i+1)%3];perimeterIndex.add({a,b,bounds:bounds([a,b])});}
  // Texture distance follows a continuous boundary chain, including curved
  // sections. Water/protection cuts do not restart the wall's texture phase.
- for(const seed of boundary){yield;let edge=seed,distance=0;while(edge&&!visited.has(edge)){visited.add(edge);edge.distance=distance;distance+=edge.length;edge=starts.get(key(edge.b))?.find(next=>!visited.has(next));}}
+ for(const seed of boundary){yield;let edge=seed,distance=0;while(edge&&!visited.has(edge)){if(checkpoint++%128===0)yield;visited.add(edge);edge.distance=distance;distance+=edge.length;edge=starts.get(key(edge.b))?.find(next=>!visited.has(next));}}
  let nextGroup=0;
  for(const edge of boundary){yield;
   const {a,b,kind,length,nx,nz}=edge;
   const count=Math.max(1,Math.ceil(length/1.25));
-  for(let i=0;i<count;i++){
+  for(let i=0;i<count;i++){if(checkpoint++%32===0)yield;
    const aa=mix(a,b,i/count),bb=mix(a,b,(i+1)/count);aa[1]=support(aa,kind);bb[1]=support(bb,kind);
    if(wet(aa[0],aa[2])||wet(bb[0],bb[2])||excludedPoint((aa[0]+bb[0])/2,(aa[2]+bb[2])/2))continue;
    const delta=Math.max(Math.abs(aa[1]-natural(aa[0],aa[2])),Math.abs(bb[1]-natural(bb[0],bb[2]))),width=Math.min(MAX_SHOULDER,Math.max(.4,.4+delta*2.5));
@@ -281,8 +283,8 @@ function* buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePla
   const nx=dz/length,nz=-dx/length,x=(a[0]+b[0])/2,z=(a[2]+b[2])/2,probe=Math.min(.0002,Math.max(.00002,length*.01)),right=constructionAt(x+nx*probe,z+nz*probe),left=constructionAt(x-nx*probe,z-nz*probe);if(right===left)continue;if(right)[a,b]=[b,a];
   const ka=key(a),kb=key(b),id=ka<kb?ka+'|'+kb:kb+'|'+ka;if(perimeterKeys.has(id))continue;perimeterKeys.add(id);perimeter.push({a,b,ka,kb,id,length,bounds:bounds([a,b])});
  }
- const perimeterStarts=new Map(),perimeterVisited=new Set();for(const edge of perimeter){if(!perimeterStarts.has(edge.ka))perimeterStarts.set(edge.ka,[]);perimeterStarts.get(edge.ka).push(edge);}
- for(const seed of perimeter){let edge=seed,distance=0;while(edge&&!perimeterVisited.has(edge)){perimeterVisited.add(edge);edge.u0=distance;distance+=edge.length;edge.u1=distance;edge=perimeterStarts.get(edge.kb)?.find(next=>!perimeterVisited.has(next));}}
+ const perimeterStarts=new Map(),perimeterVisited=new Set();for(const edge of perimeter){if(checkpoint++%128===0)yield;if(!perimeterStarts.has(edge.ka))perimeterStarts.set(edge.ka,[]);perimeterStarts.get(edge.ka).push(edge);}
+ for(const seed of perimeter){let edge=seed,distance=0;while(edge&&!perimeterVisited.has(edge)){if(checkpoint++%128===0)yield;perimeterVisited.add(edge);edge.u0=distance;distance+=edge.length;edge.u1=distance;edge=perimeterStarts.get(edge.kb)?.find(next=>!perimeterVisited.has(next));}}
  function field(x,z,base){
   // This is evaluated only for clipped construction vertices. At a protected
   // boundary the construction side retains its elevation; the preserved side

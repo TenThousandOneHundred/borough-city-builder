@@ -1,13 +1,14 @@
-import {borrowRoadsForTerrain} from './terrain-refresh-plan.js?v=167';
-import {lotGradingKey} from './lot-grading.js?v=167';
-import {geometryUploadSteps} from './geometry-upload.js?v=167';
-import {constructionGridSteps} from './construction-grid.js?v=167';
-import {groundCoverSteps} from './ground-cover.js?v=167';
-import {groundHeight,wetness} from './landscape.js?v=167';
+import {borrowRoadsForTerrain} from './terrain-refresh-plan.js?v=168';
+import {lotGradingKey} from './lot-grading.js?v=168';
+import {geometryUploadSteps} from './geometry-upload.js?v=168';
+import {constructionGridSteps} from './construction-grid.js?v=168';
+import {groundCoverSteps} from './ground-cover.js?v=168';
+import {groundHeight,wetness} from './landscape.js?v=168';
 import * as THREE from './vendor/three.module.js';
-import {changedRoadCells} from './road-frontage.js?v=167';
-import {Roadworks} from './roadworks.js?v=167';
-import {scheduleBuild} from './build-scheduler.js?v=167';
+import {changedRoadCells} from './road-frontage.js?v=168';
+import {Roadworks} from './roadworks.js?v=168';
+import {reuseRoadGeometry} from './road-junction-plan.js?v=168';
+import {scheduleBuild} from './build-scheduler.js?v=168';
 
 // Build an invisible replacement. The visible city and its traffic remain live
 // until both road meshes and fitted terrain are ready for one synchronous swap.
@@ -66,6 +67,7 @@ export function prepareRoadRefresh(view,{schedule=scheduleBuild,reason='roads'}=
    if(!borrowed){if(next.asphalt===old.asphalt)old.asphalt=null;old.dispose();}
    const accessMatches=buildings=>buildings.size===buildingInputs.size&&[...buildings].every(([id,root])=>{const input=buildingInputs.get(id);return input?.root===root&&input.plan===root.userData.plan&&input.position===root.position.toArray().join(',');});
    if(treePlan&&treesKey===treeKey(world))view.landscape.preparedTreePlan=treePlan;
+   stats.reusedJunctionPlan=reuseRoadGeometry(snapshot,world,globalThis.CityEngine);
    view.refresh(job.force,{roads:view.roadworks,terrain,cover,grid,accessMatches,lotGradingKey:lotGradingKey(snapshot)});
    view.landscape.preparedTreePlan=null;next.accessGroup.visible=true;
    view.roadworks.night(view.night);stats.swapMs=performance.now()-swapStart;stats.totalMs=performance.now()-started;view.lastRoadBuildStats=stats;

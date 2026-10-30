@@ -35,6 +35,7 @@ test('interactive placement keeps the old scene visible then adopts exact synchr
   const schedule=async steps=>{let result;do{assert.equal(interactive.roadworks,old);assert.equal(old.group.visible,true);assert.equal(roadHash(old),originalRoads);assert.equal(digest(interactive.landscape),originalTerrain);checkpoints++;for(let i=0;i<300;i++){result=steps.next();if(result.done)break;}}while(!result.done);return result.value;};
   assert.equal(await prepareRoadRefresh(interactive,{schedule}),true);assert.ok(checkpoints>2);assert.notEqual(interactive.roadworks,old);assert.equal(old.group.parent,null);assert.equal(roadHash(interactive.roadworks),roadHash(sync.roadworks));assert.equal(digest(interactive.landscape),digest(sync.landscape));assert.equal(JSON.stringify(b),saved);assert.equal(interactive.roadRefreshJob,null);
   assert.equal(interactive.scene.children.filter(g=>g===old.group||g===old.signalGroup).length,0);
+  assert.equal(interactive.lastRoadBuildStats.reusedJunctionPlan,true,'adopt the prepared plan before traffic rebuilds');
  }finally{sync.cleanup();interactive.roadworks.dispose();interactive.cleanup();}
 });
 

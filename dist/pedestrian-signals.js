@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.js';
-import {crossingPhase} from './crossing-control.js?v=167';
-import {SIDEWALK_HEIGHT} from './road-profile.js?v=167';
+import {crossingPhase} from './crossing-control.js?v=168';
+import {SIDEWALK_HEIGHT} from './road-profile.js?v=168';
 // Original, small signal silhouettes share two instanced meshes city-wide.
 function symbol(walking){const vertices=[],triangle=(a,b,c)=>vertices.push(...a,0,...b,0,...c,0),bar=(x,y,u,v,width)=>{const d=Math.hypot(u-x,v-y),nx=-(v-y)/d*width/2,ny=(u-x)/d*width/2,a=[x+nx,y+ny],b=[u+nx,v+ny],c=[u-nx,v-ny],e=[x-nx,y-ny];triangle(a,b,c);triangle(a,c,e);};
  const head=[walking?.07:0,.32];for(let i=0;i<10;i++){const a=i*Math.PI/5,b=(i+1)*Math.PI/5;triangle(head,[head[0]+Math.cos(a)*.095,head[1]+Math.sin(a)*.095],[head[0]+Math.cos(b)*.095,head[1]+Math.sin(b)*.095]);}

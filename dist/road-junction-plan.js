@@ -1,8 +1,8 @@
-import './map-grid.js?v=167';
+import './map-grid.js?v=168';
 const G=globalThis.BoroughGrid;
-import './road-types.js?v=167';
-import {roundaboutCorners} from './roundabout-geometry.js?v=167';
-import {streetStations,atDistance,distanceSection} from './street-geometry.js?v=167';
+import './road-types.js?v=168';
+import {roundaboutCorners} from './roundabout-geometry.js?v=168';
+import {streetStations,atDistance,distanceSection} from './street-geometry.js?v=168';
 const cross=(a,b)=>a.x*b.z-a.z*b.x;
 const point=(j,a,d,offset=0)=>({x:j.x+a.tx*d-a.tz*offset,z:j.z+a.tz*d+a.tx*offset});
 
@@ -10,8 +10,16 @@ const point=(j,a,d,offset=0)=>({x:j.x+a.tx*d-a.tz*offset,z:j.z+a.tz*d+a.tx*offse
 // terrain heights do not alter centerline intersections. Inspect road values so
 // in-place edits and imported worlds cannot reuse stale controls.
 const geometryCache=new WeakMap();
+const geometrySignature=world=>JSON.stringify([G.size(world),world.roundabouts||{},world.roadPaths||[],world.tiles.map((t,i)=>t.type==='road'?[i,t.roadType,t.roadWidth,t.legacyRoad,t.pathIds]:null).filter(Boolean)]);
+// Interactive construction computes this immutable plan on a snapshot. Reuse
+// it for live traffic only after validating all centerline inputs at adoption.
+export function reuseRoadGeometry(source,target,engine){
+ const cached=geometryCache.get(source);
+ if(!cached||cached.engine!==engine||cached.signature!==geometrySignature(target))return false;
+ geometryCache.set(target,cached);return true;
+}
 export function roadGeometry(world,engine){
- const signature=JSON.stringify([world.roundabouts||{},world.roadPaths||[],world.tiles.map((t,i)=>t.type==='road'?[i,t.roadType,t.roadWidth,t.legacyRoad,t.pathIds]:null).filter(Boolean)]),cached=geometryCache.get(world);
+ const signature=geometrySignature(world),cached=geometryCache.get(world);
  if(cached?.engine===engine&&cached.signature===signature)return cached.value;
  const roads=roadDescriptors(world,engine),value={roads,...planJunctions(roads)};for(const j of value.junctions){const saved=world.roundabouts?.[globalThis.BoroughRoundabouts.key(j)];if(saved&&j.arms.length>=3){j.roundabout={...saved,island:globalThis.BoroughRoundabouts.SIZES[saved.size].island,ring:(globalThis.BoroughRoundabouts.SIZES[saved.size].island+.3+saved.outer)/2,radius:saved.outer+1.05};j.radius=j.roundabout.radius;}}value.tapers=planWidthTransitions(roads,value.junctions);geometryCache.set(world,{engine,signature,value});return value;
 }
