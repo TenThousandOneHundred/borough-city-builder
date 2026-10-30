@@ -1,19 +1,33 @@
-import {loadBinary} from './asset-transfer.js?v=162';
-import {treeElevation,elevationTreeMaterial,elevationTreeDepthMaterial} from './tree-impostor.js?v=162';
-import {TreeSelection} from './tree-selection.js?v=162';
+import {loadBinary} from './asset-transfer.js?v=163';
+import {treeElevation,elevationTreeMaterial,elevationTreeDepthMaterial} from './tree-impostor.js?v=163';
+import {TreeSelection} from './tree-selection.js?v=163';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 export class Vegetation{
  constructor(view){this.v=view;this.prototypes=[];this.impostors=[];this.broadleaf=[];this.ready=this.load()}
- async load(){try{const loader=new THREE.TextureLoader();const atlas=await loader.loadAsync(new URL('./assets/trees/broadleaf-elevations.png?v=117',import.meta.url).href);atlas.colorSpace=THREE.SRGBColorSpace;atlas.anisotropy=4;this.broadleaf=Array.from({length:4},()=>({material:elevationTreeMaterial(atlas),broad:true}));const broadUrl=new URL('./assets/trees/broadleaf.glb?v=117',import.meta.url),broad=await new GLTFLoader().parseAsync(await loadBinary(broadUrl),new URL('.',broadUrl).href);this.broadPrototype=new THREE.Group();const source=broad.scene;this.broadPrototype.add(source);source.updateMatrixWorld(true);const bounds=new THREE.Box3().setFromObject(source),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());source.position.set(-center.x,-bounds.min.y,-center.z);this.broadPrototype.scale.setScalar(1/size.y);this.broadPrototype.traverse(o=>{if(o.isMesh){o.userData.sharedAsset=true;o.castShadow=true;o.receiveShadow=true;o.material.envMapIntensity=.2;}});const gltf=await new GLTFLoader().loadAsync(new URL('./assets/pine/source.gltf',import.meta.url).href);for(const source of gltf.scene.children){const root=new THREE.Group(),mesh=source.clone(true);mesh.position.set(0,0,0);root.add(mesh);root.updateMatrixWorld(true);const bounds=new THREE.Box3().setFromObject(root),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());mesh.position.set(-center.x,-bounds.min.y,-center.z);root.scale.setScalar(1/size.y);root.updateMatrixWorld(true);root.traverse(o=>{if(o.isMesh){o.userData.sharedAsset=true;o.castShadow=true;o.receiveShadow=true;o.material.roughness=.9;o.material.envMapIntensity=.35}});this.prototypes.push(root);this.impostors.push(this.bake(root,size.x/size.y));}}catch(e){console.warn('Vegetation fallback:',e.message)}}
- bake(source,ratio){const r=this.v.renderer,scene=new THREE.Scene(),tree=source.clone(true);scene.add(tree,new THREE.HemisphereLight('#e8eef1','#737b57',2));const sun=new THREE.DirectionalLight('#fff1da',2.5);sun.position.set(-3,5,4);scene.add(sun);const camera=new THREE.OrthographicCamera(-.65,.65,.58,-.58,.1,20);camera.position.set(2,.54,4);camera.lookAt(0,.54,0);const target=new THREE.WebGLRenderTarget(384,384,{minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter,type:THREE.UnsignedByteType});const old=r.getRenderTarget(),alpha=r.getClearAlpha(),clear=r.getClearColor(new THREE.Color());r.setRenderTarget(target);r.setClearColor(0,0);r.clear();r.render(scene,camera);r.setRenderTarget(old);r.setClearColor(clear,alpha);const material=new THREE.MeshBasicMaterial({map:target.texture,alphaTest:.35,side:THREE.DoubleSide,color:'#dce2cf',fog:true});return{target,material,ratio}}
+ async load(){try{const loader=new THREE.TextureLoader();const atlas=await loader.loadAsync(new URL('./assets/trees/broadleaf-elevations.png?v=117',import.meta.url).href);atlas.colorSpace=THREE.SRGBColorSpace;atlas.anisotropy=4;this.broadleaf=Array.from({length:4},()=>({material:elevationTreeMaterial(atlas),broad:true}));const broadUrl=new URL('./assets/trees/broadleaf.glb?v=117',import.meta.url),broad=await new GLTFLoader().parseAsync(await loadBinary(broadUrl),new URL('.',broadUrl).href);this.broadPrototype=new THREE.Group();const source=broad.scene;this.broadPrototype.add(source);source.updateMatrixWorld(true);const bounds=new THREE.Box3().setFromObject(source),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());source.position.set(-center.x,-bounds.min.y,-center.z);this.broadPrototype.scale.setScalar(1/size.y);this.broadPrototype.traverse(o=>{if(o.isMesh){o.userData.sharedAsset=true;o.castShadow=true;o.receiveShadow=true;o.material.envMapIntensity=.2;}});const coniferUrl=new URL('./assets/trees/mature-conifers.glb?v=163',import.meta.url),conifers=await new GLTFLoader().parseAsync(await loadBinary(coniferUrl),new URL('.',coniferUrl).href);
+for(const [name,atlasName]of [['MatureSpruce','spruce'],['MaturePine','pine']]){
+ const source=conifers.scene.getObjectByName(name);if(!source)throw Error('Missing mature conifer '+name);
+ const root=new THREE.Group();root.add(source);root.updateMatrixWorld(true);
+ const bounds=new THREE.Box3().setFromObject(root),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());
+ source.position.set(-center.x,-bounds.min.y,-center.z);root.scale.setScalar(1/size.y);root.updateMatrixWorld(true);
+ root.traverse(o=>{if(o.isMesh){o.userData.sharedAsset=true;o.castShadow=true;o.receiveShadow=true;o.material.roughness=.9;o.material.envMapIntensity=.25;}});
+ const atlas=await loader.loadAsync(new URL('./assets/trees/mature-'+atlasName+'-atlas.png?v=163',import.meta.url).href);atlas.colorSpace=THREE.SRGBColorSpace;atlas.anisotropy=4;
+ this.prototypes.push(root);this.impostors.push({material:elevationTreeMaterial(atlas,{azimuths:8,panelSize:384}),ratio:size.x/size.y});
+}}catch(e){console.warn('Vegetation fallback:',e.message)}}
  populate(group,positions,heightAt){
   if(!this.impostors.length)return null;
   const styles=[...this.broadleaf,...this.broadleaf,...this.impostors],objects=[],records=[],meshes=[];
   const styleFor=i=>positions[i][5]==='pine'?this.broadleaf.length*2+i%this.impostors.length:positions[i][5]==='broadleaf'&&this.broadleaf.length?i%(this.broadleaf.length*2):i%styles.length;
   for(let style=0;style<styles.length;style++){
-   const indices=positions.map((_,i)=>i).filter(i=>styleFor(i)===style),mesh=new THREE.InstancedMesh(new THREE.PlaneGeometry(1.28,1.2),styles[style].material,indices.length);
-   if(mesh.material.userData.elevationAtlas){this.treeDepth ||= new Map();if(!this.treeDepth.has(mesh.material))this.treeDepth.set(mesh.material,elevationTreeDepthMaterial(mesh.material.map));mesh.customDepthMaterial=this.treeDepth.get(mesh.material);}
+   const indices=positions.map((_,i)=>i).filter(i=>styleFor(i)===style),mesh=new THREE.InstancedMesh(new THREE.PlaneGeometry(styles[style].material.userData.azimuthViews>1?.6:1.28,1.2),styles[style].material,indices.length);
+   if(mesh.material.userData.azimuthViews>1){
+    // Blender's eight views fit inside the middle half of every panel.
+    // Crop only transparent margins, halving canopy fragment work.
+    const uv=mesh.geometry.attributes.uv;for(let i=0;i<uv.count;i++)uv.setX(i,.25+uv.getX(i)*.5);
+    mesh.geometry.setAttribute('treeRotation',new THREE.InstancedBufferAttribute(Float32Array.from(indices,i=>i*2.399),1));
+   }
+   if(mesh.material.userData.elevationAtlas){this.treeDepth ||= new Map();if(!this.treeDepth.has(mesh.material))this.treeDepth.set(mesh.material,elevationTreeDepthMaterial(mesh.material.map,{azimuths:mesh.material.userData.azimuthViews||1,panelSize:mesh.material.userData.atlasPanelSize||512}));mesh.customDepthMaterial=this.treeDepth.get(mesh.material);}
    mesh.userData.sharedMaterial=true;mesh.castShadow=true;mesh.receiveShadow=true;group.add(mesh);objects.push(mesh);meshes.push(mesh);
    const bounds=new THREE.Box3();
    for(let slot=0;slot<indices.length;slot++){const i=indices[slot],[x,z,h]=positions[i],y=heightAt(x,z);bounds.expandByPoint(new THREE.Vector3(x-h*.9,y-h*.1,z-h*.9));bounds.expandByPoint(new THREE.Vector3(x+h*.9,y+h*1.2,z+h*.9));records.push({i,x,z,h,y,slot,mesh,angle:NaN,elevation:NaN,hidden:false,source:style<this.broadleaf.length*2?this.broadPrototype:this.prototypes[style-this.broadleaf.length*2]});}

@@ -1,6 +1,20 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 163 — Blender-authored mature conifers
+
+The enlarged sapling used for conifer stands is replaced by two original Blender assets: a tapered spruce with layered branches and a raised, asymmetric pine crown. The shapes were built against the actual [Cities: Skylines II tree photograph in City Corner #11](https://www.paradoxinteractive.com/games/cities-skylines-ii/news/autumn-breeze). The initial regular pine was rebuilt into separate crown masses after comparison, and the distant lighting and viewing angles were revised after inspecting the game renderer. Editable Blender source and the authoring/baking script are included.
+
+Nearby trees use actual bark, branch and needle geometry. Distant trees use Blender-baked views from four elevations and eight directions, with tree rotation shared by the detailed models, canopy cards and shadows. This replaces the old startup-time sapling bake. The existing ten-tree close-model cap, stationary-camera skip, saved tree positions, clearance rules and simulation behavior remain unchanged. Spruce has 54,156 triangles and pine 26,280, compared with the former sapling's 122,235. The new compressed model plus two atlases total 8,704,121 bytes versus 9,569,091 bytes across the former eight runtime files. Uncompressed fallback downloads remain available.
+
+A fixed ten-conifer close view reduced drawn triangles from 1,254,806 to 782,615 and median GPU time from 12.69 to 10.54 ms. Four wider views ranged from 3.6% lower to 3.7% higher GPU time; median frames were 16.6–18.6 ms. These are scoped local measurements, not a general FPS guarantee. Cropping proven-transparent atlas margins preserved every visible branch while halving card width. Early measurements with competing renderers were discarded.
+
+All 966 release checks pass, along with syntax, 91 building-asset checks and lossless-compression verification.
+
+Validation and browser measurements are recorded in `references/edition163-reference-audit.md` in the working checkout. The assets have checked geometry, 64 unclipped atlas views, matching instance rotations, bounded close detail and exact compression round trips. Browser side and overhead comparisons still show differences in fine canopy coverage and lighting between the full model and distant views. Overall game fidelity remains incomplete; these assets are not an exact match to the commercial game.
+
+This is feature three after optimization 160. Edition 164 is the next optimization pass.
+
 ## Edition 162 — Extra Large regions and merit-funded expansion
 
 All seven landscapes now offer Extra Large maps: 96 × 96 build cells, sixteen purchasable districts and four times the area of Standard (78% more than Large). Each starts with one west-edge district in Progression mode. The first 100 residents award two merits, enough to purchase one more district through the Land button. Extra Large milestone rewards total thirty merits, covering all fifteen remaining districts by Great City. Standard and Large reward receipts are unchanged. Sandbox owns the whole region from the beginning.

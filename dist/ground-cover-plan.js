@@ -1,10 +1,10 @@
-import './map-grid.js?v=162';
+import './map-grid.js?v=163';
 const G=globalThis.BoroughGrid;
-import {finishBuild} from './build-scheduler.js?v=162';
-import {roadGeometry,transitionWidth} from './road-junction-plan.js?v=162';
-import './building-entities.js?v=162';
-import './roundabout-state.js?v=162';
-import {terrainNoise} from './terrain-field.js?v=162';
+import {finishBuild} from './build-scheduler.js?v=163';
+import {roadGeometry,transitionWidth} from './road-junction-plan.js?v=163';
+import './building-entities.js?v=163';
+import './roundabout-state.js?v=163';
+import {terrainNoise} from './terrain-field.js?v=163';
 const Buildings=globalThis.BoroughBuildings;
 export function coverRandom(seed,index){let s=(Math.imul(index+1,2654435761)^(seed>>>0))>>>0;return()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296;};}
 // This mask follows the same sampled road widths, tapers and path centre lines
