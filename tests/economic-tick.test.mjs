@@ -11,7 +11,7 @@ import {economicOracle} from './economic-oracle.mjs';
 const oracle=JSON.parse(fs.readFileSync(new URL('./fixtures/economic-tick-134.json',import.meta.url),'utf8'));
 const enginePath=fileURLToPath(new URL('../dist/engine.js',import.meta.url));
 for(const [name,expected]of Object.entries(oracle.fixtures))test('economic tick preserves Edition 134 state and random sequence: '+name,()=>{
- const w=economicFixture(E,name),input=JSON.stringify(w);
+ const w=economicFixture(E,name);w.landformVersion=2;const input=JSON.stringify(w);
  const actual=economicOracle(enginePath,w,oracle.ticks,name==='mixed_edits'?editEconomy:undefined);
  assert.deepEqual(actual,expected);
  assert.equal(JSON.stringify(w),input,'reference fixture remains unchanged');

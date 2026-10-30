@@ -25,7 +25,7 @@ export function makePavementFixture(name){
   return {strips:[strip,shared,duplicate,far,covered],patches:[rectangle(-1,-1,1,1,(x,z)=>1+x*.1-z*.04),rectangle(.6,-.7,2,.7,()=>.4)]};
  }
  if(name==='boundaries')return {strips:[rectangle(254.5,-.23,256.3,.23,()=>0),rectangle(255.5,-.23,257,.23,()=>-.2),rectangle(-8,-8,-4,-4)],patches:[rectangle(255.1,-.7,255.8,.7,(x,z)=>3+x*.003+z*.2)]};
- const terrain=['river','islands'].includes(name)?name:'plains',w=E.createWorld('Pavement fixture '+name,terrain,name==='starter'||name==='district'?431:23);w.money=1e8;
+ const terrain=['river','islands'].includes(name)?name:'plains',w=E.createWorld('Pavement fixture '+name,terrain,name==='starter'||name==='district'?431:23);w.landformVersion=2;w.money=1e8;
  if(name!=='starter'){
   for(const t of w.tiles)Object.assign(t,{type:null,level:0,construction:undefined,zone:null,tree:false});w.roadPaths=[];
   const paths=name==='district'?[['avenue',[[0,24],[47,24]]],['street',[[24,5],[24,40]]],['street',[[8,24],[8,8],[24,8]]],['avenue',[[36,10],[36,40]]],['boulevard',[[24,40],[36,40]]]]:[['avenue',[[10,24],[22,18],[40,24]]],['street',[[32,10],[32,35]]]];

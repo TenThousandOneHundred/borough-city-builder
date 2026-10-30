@@ -12,7 +12,7 @@ import {finishBuild} from '../dist/build-scheduler.js';
 import {SIDEWALK_HEIGHT} from '../dist/road-profile.js';
 
 function city(){
- const w=E.createWorld('Hillside lots','river',427,{mapSize:72,progression:'milestones',expansion:true});
+ const w=E.createWorld('Hillside lots','river',427,{mapSize:72,progression:'milestones',expansion:true});w.landformVersion=2;
  for(const x of [5,11,17,21])assert.ok(E.buildRoadPath(w,[{x,y:27},{x,y:45}],'street').ok);
  E.place(w,1,35,'power',{building:'coal'});E.place(w,3,35,'water',{building:'watertower'});
  const layout=E.fineZoningLayout(w);

@@ -1,16 +1,16 @@
-import {applyResidentialFinish,configureResidentialBrick} from './residential-finishes.js?v=158';
-import {IndustrialSurfaces,configureIndustrialPaint} from './industrial-surfaces.js?v=158';
-import {lotMaterials} from './lot-surfaces.js?v=158';
-import {bakeRoofFinish} from './roof-finishes.js?v=158';
-import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=158';
-import {loadBinary} from './asset-transfer.js?v=158';
-import {SiteDetails} from './site-details.js?v=158';
-import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=158';
+import {applyResidentialFinish,configureResidentialBrick} from './residential-finishes.js?v=159';
+import {IndustrialSurfaces,configureIndustrialPaint} from './industrial-surfaces.js?v=159';
+import {lotMaterials} from './lot-surfaces.js?v=159';
+import {bakeRoofFinish} from './roof-finishes.js?v=159';
+import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=159';
+import {loadBinary} from './asset-transfer.js?v=159';
+import {SiteDetails} from './site-details.js?v=159';
+import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=159';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {lotPlan} from './building-plan.js?v=158';
-import {floorHeight} from './landscape.js?v=158';
+import {lotPlan} from './building-plan.js?v=159';
+import {floorHeight} from './landscape.js?v=159';
 const IDENTITY=new THREE.Matrix4();
 const civicDefaults={hospital:'clinic',school:'elementary',police:'police',fire:'fire'};
 // Complete textured assets are loaded once, batched per material, and instanced.
@@ -20,7 +20,7 @@ export class ModelLibrary {
   const loader=new GLTFLoader();
   // Fetch the distant indices alongside the models instead of adding another
   // large download after all three catalogues have finished.
-  const distant=Promise.all([fetch(new URL('./assets/buildings/lod.json?v=158-homes',import.meta.url)).then(r=>{if(!r.ok)throw Error(r.status);return r.json()}),loadBinary(new URL('./assets/buildings/lod.bin?v=158-homes',import.meta.url))]).then(value=>({value}),error=>({error}));
+  const distant=Promise.all([fetch(new URL('./assets/buildings/lod.json?v=159-homes',import.meta.url)).then(r=>{if(!r.ok)throw Error(r.status);return r.json()}),loadBinary(new URL('./assets/buildings/lod.bin?v=159-homes',import.meta.url))]).then(value=>({value}),error=>({error}));
   await Promise.all(['urban','industry','modern'].map(async file=>{
    try{const url=new URL(`./assets/buildings/${file}.glb?v=${file==='modern'?'149-homes':21}`,import.meta.url),{scene}=await loader.parseAsync(await loadBinary(url),new URL('.',url).href);
     this.ingest(scene);
@@ -137,7 +137,7 @@ export class ModelLibrary {
   root.add(this.siteDetails.buildGardens(asset.gardens,asset.origin,scale,setback));
   const footprintX=buildingWidth/2,footprintZ=asset.size.z*scale/2;let base=floorHeight(world,p.cx,p.cz);
   for(const x of [-footprintX,footprintX])for(const z of [-footprintZ,footprintZ])base=Math.max(base,floorHeight(world,p.cx+x*Math.cos(p.angle)+(z+setback)*Math.sin(p.angle),p.cz-x*Math.sin(p.angle)+(z+setback)*Math.cos(p.angle)));
-  if([1,2].includes(world.landformVersion))for(const point of lotPerimeter(p))base=Math.max(base,floorHeight(world,p.cx+point.x,p.cz+point.z));
+  if([1,2,3].includes(world.landformVersion))for(const point of lotPerimeter(p))base=Math.max(base,floorHeight(world,p.cx+point.x,p.cz+point.z));
   const foundation=lotFoundation(world,p,base+.04,floorHeight);if(foundation){if(!this.foundationMaterial){const material=this.view.landscape.material('brick',1,'#9b9e94');material.onBeforeCompile=shader=>{shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`#ifdef USE_MAP
 vec3 sampleColor=texture2D(map,vMapUv).rgb;float grain=dot(sampleColor,vec3(.3,.59,.11));diffuseColor.rgb*=.55+grain*.9;
 #endif`);};material.customProgramCacheKey=()=> 'borough-retaining-masonry-28';this.foundationMaterial=material;}const wall=new THREE.Mesh(foundation,this.foundationMaterial);wall.userData.lotFoundation=true;wall.rotation.y=-p.angle;wall.castShadow=wall.receiveShadow=true;root.add(wall);}

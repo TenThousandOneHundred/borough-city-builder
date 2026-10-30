@@ -28,7 +28,7 @@ function digest(r){const hash=createHash('sha256');r.group.traverse(o=>{if(!o.ge
 const EDITION143={starter:'a8b89bab1c2fe5a1dec560923b2b778d3894ba3245da0f2c981c95bbad316b3f',district:'97630d851b4839a3d0485b65bd6d68fb1e2f77b01f3bb6e92e9a4b65fecdbc0c',river:'4fb9c5aa91417fff0d9a9bbf930d59bcbf788fa6e02355c7da50cf7126cf9d7b',islands:'a5cdcf81ccd063ddfbc86de09a2b4313e404fedbbc0b70cdad8c90b2a8b2f6a8'};
 for(const [name,expected]of Object.entries(EDITION143))test('smaller construction steps retain released '+name+' road geometry byte for byte',()=>{
  const originalDocument=globalThis.document;globalThis.document={createElement:()=>({getContext:()=>({fillRect(){},strokeRect(){},fillText(){}})})};
- const w=E.createWorld('Unchanged geometry',name==='river'||name==='islands'?name:'plains',431);w.money=1e8;
+ const w=E.createWorld('Unchanged geometry',name==='river'||name==='islands'?name:'plains',431);w.landformVersion=2;w.money=1e8;
  if(name!=='starter'){for(const t of w.tiles)Object.assign(t,{type:null,level:0,people:0,tree:false});w.roadPaths=[];for(const [kind,p]of [['avenue',[[6,24],[20,18],[42,24]]],['street',[[24,8],[24,40]]],['highway',[[8,36],[40,36]]]])assert.ok(E.buildRoadPath(w,p.map(([x,y])=>({x,y})),kind).ok);}
  const saved=JSON.stringify(w),v=harness(w),r=new Roadworks(v);
  try{r.build(w);assert.equal(digest(r),expected);assert.equal(JSON.stringify(w),saved);}finally{r.dispose();v.cleanup();globalThis.document=originalDocument;}

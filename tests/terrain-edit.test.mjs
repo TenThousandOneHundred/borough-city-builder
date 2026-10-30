@@ -12,8 +12,8 @@ test('sculpted terrain is smooth, bounded, persistent, and leaves old saves unch
 });
 test('lowering open land creates water and undo restores elevations, ground types, and funds',()=>{
  const w=world(),money=w.money,heights=[20,22,24].map(x=>groundHeight(w,x,20)),ground=w.tiles.map(t=>t.ground);
- const r=brush(w,'lower',{strength:4});assert.ok(r.ok);assert.ok(wetness(w,20,20)>.9);assert.ok(w.tiles.some(t=>t.ground==='water'));assert.ok(w.money<money);
- assert.ok(undoTerrain(w,r.undo).ok);assert.deepEqual([20,22,24].map(x=>groundHeight(w,x,20)),heights);assert.deepEqual(w.tiles.map(t=>t.ground),ground);assert.equal(w.money,money);
+ const r=brush(w,'lower',{strength:4});assert.ok(r.ok);const second=brush(w,'lower',{strength:4});assert.ok(second.ok);assert.ok(wetness(w,20,20)>.9);assert.ok(w.tiles.some(t=>t.ground==='water'));assert.ok(w.money<money);
+ assert.ok(undoTerrain(w,second.undo).ok);assert.ok(undoTerrain(w,r.undo).ok);assert.deepEqual([20,22,24].map(x=>groundHeight(w,x,20)),heights);assert.deepEqual(w.tiles.map(t=>t.ground),ground);assert.equal(w.money,money);
 });
 test('roads and buildings retain their foundations while adjacent open land can change',()=>{
  const w=world();w.tiles[29*48+29].type='office';w.tiles[29*48+29].level=1;const before=groundHeight(w,22,22);

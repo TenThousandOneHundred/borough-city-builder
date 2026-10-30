@@ -17,7 +17,7 @@ const released=[
  [72,'islands','ca39abbf3ac38e656bfe873d65f446fbe7973f11cfc79d695740a775bec3c73d']
 ];
 for(const [size,terrain,expected] of released)test(`${size}-cell ${terrain} retains every released terrain buffer`,()=>{
- const w=E.createWorld('Terrain parity',terrain,427,{mapSize:size});
+ const w=E.createWorld('Terrain parity',terrain,427,{mapSize:size});w.landformVersion=2;
  const mesh=terrainMeshes(w,groundHeight,terrainColor),hash=createHash('sha256');
  try{
   for(const g of [mesh.ground,mesh.far])for(const a of [...Object.values(g.attributes),g.index])hash.update(new Uint8Array(a.array.buffer,a.array.byteOffset,a.array.byteLength));

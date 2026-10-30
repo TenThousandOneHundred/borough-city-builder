@@ -15,7 +15,7 @@ const instant=async steps=>finishBuild(steps);
 const golden={plains:'7b9cf0e4aa6ac6462697add0fbcc48da01ad9ce64b38facaffaeea32bf7d4563',river:'eef11b177fa9cd9ff069b77e01b314b61c0b639d8a21cdadcc1d7cea42719ea7',islands:'2f2f218df6da67ac221fb55ecd3a72288730aa82b82aecb87a13990d942edaf6'};
 test('sliced tree planning preserves every existing tree and elevation across all terrains',()=>{
  for(const [terrain,expected]of Object.entries(golden)){
-  const w=E.createWorld('Trees',terrain,431),land=Object.create(Landscape.prototype);
+  const w=E.createWorld('Trees',terrain,431),land=Object.create(Landscape.prototype);w.landformVersion=2;
   land.world=w;land.earthworks={sample:(x,z)=>Math.abs(x)<5&&Math.abs(z)<5?3:null,excluded:(x,z)=>Math.abs(x)<1&&Math.abs(z)<1};land.view={roadworks:{surfaceHeight:()=>2,surfaces:{heightAt:()=>null}}};
   const steps=land.treePlanSteps(w);let count=0,result;do{result=steps.next();count++;}while(!result.done);
   assert.ok(count>200);const {positions,heights}=result.value,records=positions.map(p=>[...p,heights.get(p[0]+':'+p[1])]);

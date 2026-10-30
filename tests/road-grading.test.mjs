@@ -16,8 +16,8 @@ function view(){const materials=new Map();return {scene:new T.Scene(),unitBox:ne
  box(group,x,y,z,w,h,d,c){const m=new T.Mesh(this.unitBox,this.mat(c));m.position.set(x,y,z);m.scale.set(w,h,d);group.add(m);return m;},
  landscape:{assets:{},material:()=>new T.MeshStandardMaterial()}};}
 
-function fixture(terrain){
- const world=E.createWorld('Road grading',terrain,23);
+function fixture(terrain,version=2){
+ const world=E.createWorld('Road grading',terrain,23);world.landformVersion=version;
  for(const tile of world.tiles)Object.assign(tile,{type:null,level:0,construction:undefined});
  world.roadPaths=[];world.money=1e8;
  E.buildRoadPath(world,[{x:10,y:24},{x:22,y:18},{x:40,y:24}],'avenue');
@@ -104,9 +104,9 @@ test('real bridge profiles preserve terrain clearance and distinguish constraine
  }
 });
 
-test('whole bridge plans fit final asphalt planes while retaining their soffits and exposed railings',()=>{
+for(const version of [2,3])test('terrain '+version+' whole bridge plans fit final asphalt planes while retaining their soffits and exposed railings',()=>{
  for(const terrain of ['islands','river']){
-  const {world}=fixture(terrain),r=new Roadworks(view());r.outsideSteps=function*(){};let pavement;
+  const {world}=fixture(terrain,version),r=new Roadworks(view());r.outsideSteps=function*(){};let pavement;
   r.buildBridges=function(w){pavement=this.group.children.filter(m=>m.userData.roadSurface==='asphalt').map(m=>m.geometry.clone());Roadworks.prototype.buildBridges.call(this,w);};
   const saved=JSON.stringify(world);r.build(world);assert.equal(JSON.stringify(world),saved);
   const args=[r.bridgePlan,(x,z)=>r.height(world,x,z),(x,z)=>groundHeight(world,x,z),r.junctionPlan.junctions];
@@ -120,10 +120,10 @@ test('whole bridge plans fit final asphalt planes while retaining their soffits 
    for(let i=0;i<count;i+=3)for(const weights of [[1/3,1/3,1/3],[.6,.2,.2],[.2,.6,.2],[.2,.2,.6]]){
     let x=0,y=0,z=0;for(let k=0;k<3;k++){const n=index?index.getX(i+k):i+k;x+=p.getX(n)*weights[k];y+=p.getY(n)*weights[k];z+=p.getZ(n)*weights[k];}
     if(before.sample(x,z)===null)continue;const deck=after.sample(x,z);assert.notEqual(deck,null,'fitting cannot open a hole in existing bridge coverage');assert.ok(deck-y<-.01998,'all bridge concrete remains beneath the actual final asphalt, including junctions and abutments');checked++;
-    if(checked%180===0){const ray=new T.Raycaster(new T.Vector3(x,-10,z),new T.Vector3(0,1,0)),oldHit=ray.intersectObject(oldMesh)[0],newHit=ray.intersectObject(newMesh)[0];assert.ok(oldHit&&newHit,'undersides remain closed');assert.ok(Math.abs(oldHit.point.y-newHit.point.y)<1e-5,'contact fitting leaves the original supporting soffit in place');underneath++;}
+    if(checked%80===0){const ray=new T.Raycaster(new T.Vector3(x,-10,z),new T.Vector3(0,1,0)),oldHit=ray.intersectObject(oldMesh)[0],newHit=ray.intersectObject(newMesh)[0];assert.ok(oldHit&&newHit,'undersides remain closed');assert.ok(Math.abs(oldHit.point.y-newHit.point.y)<1e-5,'contact fitting leaves the original supporting soffit in place');underneath++;}
    }
   }
-  assert.ok(checked>2000);assert.ok(underneath>10);
+  assert.ok(checked>(version===2?2000:800));assert.ok(underneath>10);
   for(const g of [...pavement,...Object.values(original.geometries),...Object.values(fitted.geometries)])g.dispose();
  }
 });

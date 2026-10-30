@@ -1,9 +1,9 @@
-import './map-grid.js?v=158';
+import './map-grid.js?v=159';
 const G=globalThis.BoroughGrid;
 import * as THREE from './vendor/three.module.js';
-import {streetStations,streetSurface,pavementMaterial} from './street-geometry.js?v=158';
-import {floorHeight} from './landscape.js?v=158';
-import {batchStatic} from './static-batch.js?v=158';
+import {streetStations,streetSurface,pavementMaterial} from './street-geometry.js?v=159';
+import {floorHeight} from './landscape.js?v=159';
+import {batchStatic} from './static-batch.js?v=159';
 const material=pavementMaterial();
 export function buildFootpaths(world,group,height=floorHeight){
  for(const path of world.walkPaths||[]){const points=CityEngine.sampleRoad(path.controls).map(p=>({x:(p.x+.5)*4-G.half,z:(p.y+.5)*4-G.half}));

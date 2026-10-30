@@ -35,7 +35,7 @@ test('version-one saved landforms create usable inland terraces while preserving
   assert.ok(raised>100,terrain+' contains real inland relief');
   for(let x=-94;x<-16;x+=4)assert.equal(groundHeight(w,x,2),groundHeight(legacy,x,2),'outside road remains unchanged');
   assert.equal(groundHeight(w,0,0),groundHeight(legacy,0,0),'starter valley stays flat');
-  const copy=JSON.parse(JSON.stringify(w));assert.equal(groundHeight(copy,-70,60),groundHeight(w,-70,60));assert.ok(E.valid(copy));copy.landformVersion=3;assert.equal(E.valid(copy),false);
+  const copy=JSON.parse(JSON.stringify(w));assert.equal(groundHeight(copy,-70,60),groundHeight(w,-70,60));assert.ok(E.valid(copy));copy.landformVersion=4;assert.equal(E.valid(copy),false);
  }
 });
 
@@ -82,7 +82,7 @@ test('new terrace terrain preserves historical world heights and saves its own v
  const {default:E}=await import('../dist/engine.js'),{readFile}=await import('node:fs/promises');
  const samples=JSON.parse(await readFile(new URL('./fixtures/landform-legacy.json',import.meta.url),'utf8'));
  for(const p of samples){const w=E.createWorld('Legacy terrain',p.terrain,427);if(p.version)w.landformVersion=p.version;else delete w.landformVersion;assert.ok(E.valid(w));assert.ok(Math.abs(groundHeight(w,p.x,p.z)-p.height)<1e-10,'old cities retain '+JSON.stringify(p));}
- for(const terrain of ['river','islands']){const w=E.createWorld('Terraced terrain',terrain,427);assert.equal(w.landformVersion,2);const old={...w,landformVersion:1};let difference=0,buildable=0;for(let x=-90;x<=90;x+=3)for(let z=-90;z<=90;z+=3){const h=groundHeight(w,x,z);if(h>groundHeight(old,x,z)+2)difference++;const slope=Math.hypot(groundHeight(w,x+1,z)-h,groundHeight(w,x,z+1)-h);if(h>3&&slope<.12)buildable++;}assert.ok(difference>200,terrain+' gains distinct upper terraces');assert.ok(buildable>100,terrain+' retains broad gentle development shelves');const saved=JSON.parse(JSON.stringify(w));assert.ok(E.valid(saved));assert.equal(groundHeight(w,70,-70),groundHeight(saved,70,-70));}
+ for(const terrain of ['river','islands']){const w=E.createWorld('Terraced terrain',terrain,427);w.landformVersion=2;assert.equal(w.landformVersion,2);const old={...w,landformVersion:1};let difference=0,buildable=0;for(let x=-90;x<=90;x+=3)for(let z=-90;z<=90;z+=3){const h=groundHeight(w,x,z);if(h>groundHeight(old,x,z)+2)difference++;const slope=Math.hypot(groundHeight(w,x+1,z)-h,groundHeight(w,x,z+1)-h);if(h>3&&slope<.12)buildable++;}assert.ok(difference>200,terrain+' gains distinct upper terraces');assert.ok(buildable>100,terrain+' retains broad gentle development shelves');const saved=JSON.parse(JSON.stringify(w));assert.ok(E.valid(saved));assert.equal(groundHeight(w,70,-70),groundHeight(saved,70,-70));}
 });
 
 test('coastal worlds have connected mainland access, offshore islands and consistent rendered water',async()=>{
@@ -99,7 +99,7 @@ test('distant coastal hills taper into the sea without moving saved city terrain
  const previous=JSON.parse(await readFile(new URL('./fixtures/coastal-elevations-100.json',import.meta.url),'utf8'));
  const digest=heights=>createHash('sha256').update(new Uint8Array(new Float64Array(heights).buffer)).digest('hex');
  for(const row of previous){
-  const w=E.createWorld('Coastal continuity','islands',row.seed),heights=[],approach=[];
+  const w=E.createWorld('Coastal continuity','islands',row.seed),heights=[],approach=[];w.landformVersion=2;
   for(let x=-96;x<=96;x+=2)for(let z=-96;z<=96;z+=2)heights.push(groundHeight(w,x,z));
   assert.equal(digest(heights),row.cityHash,'every saved elevation sample remains identical');
   for(let x=-500;x<-96;x+=2)approach.push(groundHeight(w,x,2));

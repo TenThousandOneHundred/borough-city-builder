@@ -59,7 +59,7 @@ const ORACLES={
 const hash=value=>createHash('sha256').update(value).digest('hex');
 function geometryHash(result){const digest=createHash('sha256');digest.update(JSON.stringify({piers:result.piers,contact:result.contact}));for(const [name,g]of Object.entries(result.geometries)){if(name==='metal')continue;digest.update(name);for(const key of Object.keys(g.attributes).sort()){const a=g.attributes[key];digest.update(key);digest.update(Buffer.from(a.array.buffer,a.array.byteOffset,a.array.byteLength));}if(g.index){const a=g.index.array;digest.update(Buffer.from(a.buffer,a.byteOffset,a.byteLength));}}return digest.digest('hex');}
 function fixture(terrain,type,seed){
- const w=E.createWorld('Bridge optimization',terrain,seed);for(const tile of w.tiles)Object.assign(tile,{type:null,level:0,construction:undefined});w.roadPaths=[];w.money=1e8;
+ const w=E.createWorld('Bridge optimization',terrain,seed);w.landformVersion=2;for(const tile of w.tiles)Object.assign(tile,{type:null,level:0,construction:undefined});w.roadPaths=[];w.money=1e8;
  const controls=seed===23?[[{x:10,y:24},{x:22,y:18},{x:40,y:24}],[{x:32,y:10},{x:32,y:35}]]:[[{x:20,y:24},{x:32,y:18},{x:44,y:24}]];
  controls.forEach((points,i)=>E.buildRoadPath(w,points,i?'street':type));
  w.roadPaths.forEach((path,i)=>{const old=path.id;path.id='fixture-'+i;for(const tile of w.tiles)if(tile.pathIds)tile.pathIds=tile.pathIds.map(id=>id===old?path.id:id);});

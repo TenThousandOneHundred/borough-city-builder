@@ -1,6 +1,18 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 159 — Broad regional valleys
+
+New cities use continuous regional terrain instead of narrow stepped shelves and the artificial trench around the starting road. River Valley has broad lowlands, lakes and coastal maps have low rolling hills, and Highland Pass keeps tall bordering ridges with a usable central valley. Distant riverbanks on the newer map types also descend over a wider transition. All fourteen map previews were resampled from the actual selected-size terrain.
+
+The official [Waterway Pass and Mountain Village photographs](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/maps-themes) were inspected before implementation and compared afterward. In the same 294-resident test neighborhood with identical roads, houses and camera, the cliff-like shelves disappear. The first pass still left a sharp scenic Highland river cut; it was revised to widen the bank. Region scale, mountain detail, forest distribution, lighting and buildings still differ substantially. This is not exact visual parity. No new model asset was authored; new building assets continue to require Blender.
+
+Only newly created worlds use terrain version 3. Existing saved cities retain their original terrain, including sculpted elevations, roads and fitted lots. The terrain mesh resolution and existing building models are unchanged. Versioned geometry caching still provides separate buffers for each renderer. Land purchases, progression, manual saving, five-minute autosave, multiple worlds and independent traffic/walking simulation remain available.
+
+All 913 release checks pass. Historical height, road, vegetation and economic-state fingerprints explicitly retain their original terrain version. New checks cover both map sizes, finite continuous slopes, submerged water, dry starter neighborhoods, usable lowlands, distinct mountain relief, sculpted mixed-version saves, land balances, unchanged mesh resolution, cache isolation and final bridge/pavement contact on new terrain. Model and compressed-asset verification passes. Browser QA created a Large progression city, manually saved, returned home, reloaded and continued with its day, funds and one owned tile retained. A full pre-existing local test storage correctly rejected saving; verification continued on a separate empty test origin without deleting saved cities.
+
+Alternating CPU terrain-generation measurements (one warm-up, three measured samples per version) gave medians of 497→468 ms for Large River Valley, 554→661 ms for Highland Pass and 858→848 ms for Coastal Islands. These are generation timings, not FPS measurements; Highland adds preparation cost. This is feature update three after optimization 156. The next release is an optimization pass, with no reduction in terrain or building detail.
+
 ## Edition 158 — Street-level hillside lots
 
 Completed roadside zoning parcels on steep ground now use cut-and-fill terrain at the street entrance. The former rule raised the entire yard to its highest natural point, producing enormous foundation blocks in the Large River Valley test city. The new plan removes buried terrain underneath the actual rotated parcel, fits the existing house and grounds to the sidewalk datum, and blends unconstrained garden edges into soil slopes. Property constraints and street edges retain solid retaining walls. Flat parcels, legacy tile buildings and civic sites retain their existing placement. Saved elevation data, road controls, building identities and models remain unchanged.

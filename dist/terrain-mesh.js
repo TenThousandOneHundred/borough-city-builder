@@ -1,4 +1,4 @@
-import './map-grid.js?v=158';
+import './map-grid.js?v=159';
 const G=globalThis.BoroughGrid;
 import * as THREE from './vendor/three.module.js';
 // Cache CPU geometry only. Callers receive independent copies so overlays and

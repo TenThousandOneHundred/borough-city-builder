@@ -32,6 +32,8 @@ function concreteTop(x,z){
 
 before(()=>{
  world=E.createWorld('Bridge junction grade regression','river',23);
+ // Preserve the photographed Edition 132 crossing lengths and probe locations.
+ world.landformVersion=2;
  for(const tile of world.tiles)Object.assign(tile,{type:null,level:0,tree:false});world.roadPaths=[];world.money=1e7;
  for(const [type,controls]of [['avenue',[{x:10,y:24},{x:22,y:18},{x:40,y:24}]],['street',[{x:32,y:10},{x:32,y:35}]]])assert.equal(E.buildRoadPath(world,controls,type).ok,true);
  world.roadPaths.forEach((p,i)=>{const old=p.id;p.id='junction-regression-'+i;for(const tile of world.tiles)if(tile.pathIds)tile.pathIds=tile.pathIds.map(id=>id===old?p.id:id);});
