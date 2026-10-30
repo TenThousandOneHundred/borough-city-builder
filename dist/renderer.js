@@ -1,34 +1,35 @@
-import {fitGradedLots,lotGradingKey} from './lot-grading.js?v=168';
-import {updateLandBoundary} from './land-boundary.js?v=168';
-import './map-grid.js?v=168';
+import {fitGradedLots,lotGradingKey} from './lot-grading.js?v=169';
+import {updateLandBoundary} from './land-boundary.js?v=169';
+import './map-grid.js?v=169';
 const G=globalThis.BoroughGrid;
-import {constructionGrid} from './construction-grid.js?v=168';
-import {prepareRoadRefresh} from './road-build-job.js?v=168';
-import {RoadGuidePreview} from './road-guide-preview.js?v=168';
-import {SIDEWALK_HEIGHT} from './road-profile.js?v=168';
-import './building-entities.js?v=168';
+import {constructionGrid} from './construction-grid.js?v=169';
+import {finishBuild} from './build-scheduler.js?v=169';
+import {prepareRoadRefresh} from './road-build-job.js?v=169';
+import {RoadGuidePreview} from './road-guide-preview.js?v=169';
+import {SIDEWALK_HEIGHT} from './road-profile.js?v=169';
+import './building-entities.js?v=169';
 const Buildings=globalThis.BoroughBuildings;
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {ZonePlaneBatch} from './zoning-render-batch.js?v=168';
-import {trackAssetGroups} from './asset-transfer.js?v=168';
-import {buildFootpaths} from './footpaths.js?v=168';
-import {Transit,transitLeg,stopPosition} from './transit.js?v=168';
-import {SimulationClock} from './simulation-clock.js?v=168';
-import {Residents} from './residents.js?v=168';
-import {Traffic,carCapacity} from './traffic.js?v=168';
-import {Vehicles} from './vehicles.js?v=168';
-import {BuildingFactory} from './building-factory.js?v=168';
-import {StreetLife} from './street-life.js?v=168';
-import {changedRoadCells,frontageTouches} from './road-frontage.js?v=168';
-import {visualParcels} from './parcels.js?v=168';
-import {Graphics} from './graphics.js?v=168';
-import {Vegetation} from './vegetation.js?v=168';
+import {ZonePlaneBatch} from './zoning-render-batch.js?v=169';
+import {trackAssetGroups} from './asset-transfer.js?v=169';
+import {buildFootpaths} from './footpaths.js?v=169';
+import {Transit,transitLeg,stopPosition} from './transit.js?v=169';
+import {SimulationClock} from './simulation-clock.js?v=169';
+import {Residents} from './residents.js?v=169';
+import {Traffic,carCapacity} from './traffic.js?v=169';
+import {Vehicles} from './vehicles.js?v=169';
+import {BuildingFactory} from './building-factory.js?v=169';
+import {StreetLife} from './street-life.js?v=169';
+import {changedRoadCells,frontageTouches} from './road-frontage.js?v=169';
+import {visualParcels} from './parcels.js?v=169';
+import {Graphics} from './graphics.js?v=169';
+import {Vegetation} from './vegetation.js?v=169';
 import {RGBELoader} from './vendor/RGBELoader.js';
 import * as THREE from './vendor/three.module.js';
 import {OrbitControls} from './vendor/OrbitControls.js';
-import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=168';
-import {Architecture} from './architecture.js?v=168';
-import {Roadworks} from './roadworks.js?v=168';
+import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=169';
+import {Architecture} from './architecture.js?v=169';
+import {Roadworks} from './roadworks.js?v=169';
 const N=48,T=4,HALF=96,zoneColors={residential:'#54b663',commercial:'#5bb1d8',industrial:'#cdb268',office:'#aa87c9'};
 export class CityView{
 constructor(canvas){this.assetsReady=false;this.loadingElement=document.getElementById('sceneLoading');this.canvas=canvas;this.scene=new THREE.Scene();this.scene.background=new THREE.Color('#aebfca');this.scene.fog=new THREE.FogExp2('#b7c6cc',.00105);
@@ -104,7 +105,7 @@ if(roads&&prepared?.roads!==this.roadworks)this.roadworks.build(this.world);
 if(prepared?.lotGradingKey!==undefined&&prepared.lotGradingKey!==lotGradingKey(this.world)){
  this.roadworks.syncEarthworks(this.world);
  for(const {result}of prepared.terrain||[]){result.replacement?.dispose();result.walls?.dispose();}
- prepared.cover?.userData.dispose?.();prepared.grid?.dispose();prepared={...prepared,terrain:null,cover:null,grid:null};this.landscape.preparedTreePlan=null;
+ prepared.cover?.userData.dispose?.();prepared.grid?.dispose();if(prepared.zones)this.disposeZoneOverlay(prepared.zones);prepared={...prepared,terrain:null,cover:null,grid:null,zones:null};this.landscape.preparedTreePlan=null;
 }
 let earthworksChanged=false;if(roads||occupancy||force){if(!roads)this.roadworks.syncEarthworks?.(this.world);earthworksChanged=this.landscape.applyRoadEarthworks?.(this.world,this.roadworks.earthworks,{prepared:prepared?.terrain,preparedCover:prepared?.cover})||false;}
 if(fitGradedLots(this))models=true;
@@ -119,7 +120,7 @@ if((trees||roadReplaced)&&!force&&!fineChanged&&!earthworksChanged)this.landscap
 if(occupancy||roads||earthworksChanged||force)this.streetLife.build(this.world);
 if(models||roads||trees||force)this.renderer.shadowMap.needsUpdate=true;
 if(this.overlay!=='none'&&(models||roads||zones||earthworksChanged||force))this.updateOverlay();
-if(zones||roads||earthworksChanged||force)this.updateZones();if(this.roadZoningTarget&&(zones||roads||earthworksChanged))this.showRoadZoning(this.roadZoningTarget);}
+if(zones||roads||earthworksChanged||force)this.updateZones(prepared?.zones);if(this.roadZoningTarget&&(zones||roads||earthworksChanged))this.showRoadZoning(this.roadZoningTarget);}
 
 drawFootpaths(){if(!this.pathGroup){if(!(this.world.walkPaths?.length))return;this.pathGroup=new THREE.Group();this.scene.add(this.pathGroup);}this.disposeGroup(this.pathGroup);buildFootpaths(this.world,this.pathGroup,(w,x,z)=>this.renderFloor(w,x,z));}
 renderFloor(w,x,z){return Math.max(.2,this.landscape?.renderHeight?.(w,x,z)??groundHeight(w,x,z));}
@@ -128,29 +129,41 @@ showRoundabout(q){this.clearLine();if(!q.shape)return;const s=q.shape;for(const 
 showTerrainBrush(x,z,radius){this.clearLine();const points=[];for(let i=0;i<=64;i++){const a=i/64*Math.PI*2,px=x+Math.cos(a)*radius,pz=z+Math.sin(a)*radius;points.push(new THREE.Vector3(px,Math.max(.05,this.landscape?.renderHeight?.(this.world,px,pz)??groundHeight(this.world,px,pz))+.2,pz));}const geometry=new THREE.BufferGeometry().setFromPoints(points);this.previewGroup.add(new THREE.Line(geometry,new THREE.LineBasicMaterial({color:'#7edcea',depthTest:false,transparent:true,opacity:.9})));}
 setZoning(on){this.zoning=on;this.updateZones()}
 zonePlane(x,y,color,opacity=.3,frame=null){const geo=new THREE.PlaneGeometry((frame?.width||4)-.18,(frame?.depth||4)-.18,2,2);geo.rotateX(-Math.PI/2);const a=geo.attributes.position;for(let j=0;j<a.count;j++){const c=Math.cos(frame?.angle||0),s=Math.sin(frame?.angle||0),xx=(frame?.cx??((x+.5)*4-G.half))+a.getX(j)*c+a.getZ(j)*s,zz=(frame?.cz??((y+.5)*4-G.half))-a.getX(j)*s+a.getZ(j)*c;a.setXYZ(j,xx,this.renderFloor(this.world,xx,zz)+.12,zz)}geo.computeVertexNormals();return new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color,transparent:true,opacity,depthWrite:false,side:THREE.DoubleSide}))}
-updateZones(){
- this.zoneGroup.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose()});this.zoneGroup.clear();if(!this.world||this.menu||!this.zoning&&this.overlay!=='zones')return;
- const showLots=this.zoning||this.overlay==='zones',layout=CityEngine.zoningLayout(this.world),batch=new ZonePlaneBatch(this.world,(w,x,z)=>this.renderFloor(w,x,z));
- this.world.tiles.forEach((t,i)=>{const z=CityEngine.ZONES[t.zone];if(!z||t.type==='road'||t.ground==='water')return;
+disposeZoneOverlay(group){group.traverse(o=>{o.geometry?.dispose();o.material?.dispose();});group.clear()}
+zoneOverlayMode(){return [!!this.zoning,!!this.roadZoning,this.overlay].join('|')}
+zoneOverlayInputs(world){return JSON.stringify([world.mapSize,world.land?.owned,world.elevationRevision,world.development,world.tiles.map(t=>[t.type,t.ground,t.zone,t.zoneOwner,t.zoneSite,t.construction])])}
+updateZones(prepared=null){
+ this.disposeZoneOverlay(this.zoneGroup);
+ if(!this.world||this.menu||!this.zoning&&!this.roadZoning&&this.overlay!=='zones'){if(prepared)this.disposeZoneOverlay(prepared);return;}
+ const group=prepared||finishBuild(this.zoneOverlaySteps(this.world));this.zoneGroup.add(...group.children);
+}
+*zoneOverlaySteps(world,{zoning=this.zoning,roadZoning=this.roadZoning,overlay=this.overlay,height=(x,z)=>this.renderFloor(world,x,z)}={}){
+ const group=new THREE.Group();let complete=false;
+ try{
+ const showLots=zoning||roadZoning||overlay==='zones',batch=new ZonePlaneBatch(world,(_w,x,z)=>height(x,z));let layout;
+ world.tiles.forEach((t,i)=>{const z=CityEngine.ZONES[t.zone];if(!z||t.type==='road'||t.ground==='water')return;
   if(t.zoneOwner!==undefined){if(t.zoneOwner===i&&showLots&&t.zoneSite)batch.add(0,0,z.color,.32,t.zoneSite.oriented);return;}
-  if((t.type||layout.has(i))&&(!t.type||showLots))batch.add(i%G.n,Math.floor(i/G.n),z.color,this.zoning?.44:.28,layout.get(i));
+  layout ||= CityEngine.zoningLayout(world);
+  if((t.type||layout.has(i))&&(!t.type||showLots))batch.add(i%G.n,Math.floor(i/G.n),z.color,zoning?.44:.28,layout.get(i));
  });
- const fine=CityEngine.fineZoningLayout(this.world);
- for(const [id,p]of fine){const cell=this.world.development?.cells[id],zone=CityEngine.ZONES[cell?.zone];if(cell?.owner)continue;
-  if(zone)batch.add(0,0,zone.color,this.zoning?.44:.28,p);else if(this.zoning)batch.add(0,0,'#b1d3d7',.12,p);
+ const fine=CityEngine.fineZoningLayout(world);
+ let count=0;for(const [id,p]of fine){if(count++%128===0)yield;const cell=world.development?.cells[id],zone=CityEngine.ZONES[cell?.zone];if(cell?.owner)continue;
+  if(zone)batch.add(0,0,zone.color,zoning?.44:.28,p,.055);else if(zoning||roadZoning)batch.add(0,0,'#d3dddd',.5,p,.055);
  }
  // A developed building is one lot, not a checkerboard of tiny houses.
  // Use saved parcel geometry even if its original road has been removed.
- if(showLots)for(const p of Object.values(this.world.development?.parcels||{})){const zone=CityEngine.ZONES[p.zone];if(zone)batch.add(0,0,zone.color,.32,p.frame);}
- batch.finish(this.zoneGroup);
- this.zoneLotOutlines([...CityEngine.fineZonePlan(this.world),...Object.values(this.world.development?.parcels||{})].map(p=>p.frame));
+ if(showLots)for(const p of Object.values(world.development?.parcels||{})){const zone=CityEngine.ZONES[p.zone];if(zone)batch.add(0,0,zone.color,.32,p.frame);}
+ yield* batch.finishSteps(group);
+ this.zoneLotOutlines([...CityEngine.fineZonePlan(world,undefined,fine),...Object.values(world.development?.parcels||{})].map(p=>p.frame),group,height);
+ complete=true;return group;
+ }finally{if(!complete)this.disposeZoneOverlay(group);}
 }
-zoneLotOutlines(frames,group=this.zoneGroup){
+zoneLotOutlines(frames,group=this.zoneGroup,height=(x,z)=>this.renderFloor(this.world,x,z)){
  if(!frames.length)return;
  const positions=[];
  for(const f of frames){
   const c=Math.cos(f.angle),s=Math.sin(f.angle),points=[[-1,-1],[1,-1],[1,1],[-1,1]].map(([x,z])=>({x:f.cx+x*f.width/2*c+z*f.depth/2*s,z:f.cz-x*f.width/2*s+z*f.depth/2*c}));
-  for(let i=0;i<4;i++){const a=points[i],b=points[(i+1)%4],steps=Math.max(1,Math.ceil(Math.hypot(b.x-a.x,b.z-a.z)/1.6));for(let n=0;n<steps;n++)for(const t of [n/steps,(n+1)/steps]){const x=a.x+(b.x-a.x)*t,z=a.z+(b.z-a.z)*t;positions.push(x,this.renderFloor(this.world,x,z)+.19,z);}}
+  for(let i=0;i<4;i++){const a=points[i],b=points[(i+1)%4],steps=Math.max(1,Math.ceil(Math.hypot(b.x-a.x,b.z-a.z)/1.6));for(let n=0;n<steps;n++)for(const t of [n/steps,(n+1)/steps]){const x=a.x+(b.x-a.x)*t,z=a.z+(b.z-a.z)*t;positions.push(x,height(x,z)+.19,z);}}
  }
  const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
  // One terrain-following line batch for every lot, independent of cell count.
@@ -231,7 +244,7 @@ showFacilityPreview(q,remove=false){
 hover(tile,remove=false){if(tile?.entityId){this.clearLine();this.cursor.visible=false;const p=Buildings.parcel(this.world,tile.entityId);if(p)this.previewGroup.add(this.zonePlane(0,0,remove?'#ff7959':'#62cbff',.3,p.frame));this.facilityPreviewKey='fine/'+tile.entityId;return;}if(tile?.id&&this.zoning){this.clearLine();this.cursor.visible=false;const p=CityEngine.fineZoningLayout(this.world).get(tile.id);if(p)this.previewGroup.add(this.zonePlane(0,0,'#62cbff',.4,p));this.facilityPreviewKey='fine-cell/'+tile.id;return;}if(remove&&tile){const i=tile.y*G.n+tile.x,owner=CityEngine.facilityOwner(this.world,i),site=this.world.tiles[owner].facilitySite,lot=this.world.tiles[owner].zoneSite;if(lot){this.clearLine();this.cursor.visible=false;this.previewGroup.add(this.zonePlane(0,0,'#ff7959',.48,lot.oriented));this.facilityPreviewKey='lot/'+owner;return;}if(site){this.showFacilityPreview({ok:true,owner,site,cells:CityEngine.facilityCells(this.world,i)},true);return;}}if(this.facilityPreviewKey)this.clearLine();this.cursor.visible=!!tile;if(tile){const frame=this.zoning?CityEngine.zoningLayout(this.world).get(tile.y*G.n+tile.x):null;let x=frame?.cx??((tile.x+.5)*4-G.half),z=frame?.cz??((tile.y+.5)*4-G.half);this.cursor.rotation.z=frame?.angle||0;this.cursor.material.color.set(remove?'#ff7959':'#62cbff');this.cursor.position.set(x,this.renderFloor(this.world,x,z)+.3,z)}}
 showLine(a,b){this.clearLine();if(!a||!b)return;for(let t of CityEngine.lineTiles(a,b)){let p=new THREE.Mesh(new THREE.PlaneGeometry(3.65,3.65),new THREE.MeshBasicMaterial({color:'#65cfff',transparent:true,opacity:.5,side:THREE.DoubleSide}));p.rotation.x=-Math.PI/2;let x=(t.x+.5)*4-G.half,z=(t.y+.5)*4-G.half;p.position.set(x,this.roadworks.height(this.world,x,z)+.25,z);this.previewGroup.add(p)}}
 clearLine(){this.roadGuidePreview?.clear();this.facilityPreviewKey=null;this.previewGroup.children.forEach(o=>{o.geometry.dispose();o.material.dispose()});this.previewGroup.clear()}
-setBuild(v){this.grid.visible=v&&!this.zoning;this.controls.touches.ONE=v?null:THREE.TOUCH.ROTATE}
+setBuild(v,mode='grid'){const before=this.roadZoning;this.roadZoning=!!v&&['road','path'].includes(mode);this.grid.visible=v&&!this.zoning&&!this.roadZoning;this.controls.touches.ONE=v?null:THREE.TOUCH.ROTATE;if(before!==this.roadZoning)this.updateZones()}
 pan(dx,dz){this.controls.target.x+=dx;this.controls.target.z+=dz;this.camera.position.x+=dx;this.camera.position.z+=dz}
 center(){this.focusWorld(false)}
 zoom(f){this.camera.position.sub(this.controls.target).multiplyScalar(f).add(this.controls.target)}

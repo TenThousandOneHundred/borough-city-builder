@@ -1,6 +1,18 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 169 — Roadside construction cells
+
+Road and pedestrian-path tools now show pale buildable cells beside existing roads, leaving open terrain clear. The six-cell-deep bands use the actual zoning layout, following straight and curved roads, chosen zoning sides, ownership limits and junction exclusions. Painted cells retain their zone colors, and developed buildings remain single multi-cell parcels. Closing construction hides the guides; photo mode also hides them.
+
+The view was compared with the actual crossing-roads image in the [official Cities: Skylines II Road Tools feature](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/road-tools). The pale roadside bands and clear surrounding terrain are closer to that reference. Curve segmentation, junction layout, rendering and the broader game still differ; this is not visual parity.
+
+Cells share meshes by material rather than adding a mesh per cell. Road edits prepare their replacement overlay in short steps, upload it with the prepared road, and adopt it at the final swap. Changed paint, ownership, tool state or terrain invalidates a stale overlay. Tests cover height fitting, curved-road orientation, single-sided roads, highways, owned land, multi-cell parcels, cancellation disposal and painting while a road is preparing. No building detail, save format or simulation behavior was reduced.
+
+All 994 release tests pass, along with module syntax, existing asset validation and compressed-asset checks. Browser QA covers straight and curved roadside bands, guide visibility, switching to zoning, a completed road update using the prepared overlay and normal game road placement.
+
+This is feature update one after optimization 168; the next scheduled optimization follows updates 169–171. No new art asset was authored.
+
 ## Edition 168 — Smaller road-preparation stalls
 
 Road foundations, boundary scans, surface copies and vegetation clearance now yield during preparation, including long connected boundaries and extra-large maps. Cancellation can interrupt those passes without replacing the visible city. At the final swap, traffic reuses the already prepared junction plan after checking the complete road signature, map size and engine identity; later road edits invalidate it normally. No buildings, textures, vegetation density, geometry resolution or simulation frequency were reduced.

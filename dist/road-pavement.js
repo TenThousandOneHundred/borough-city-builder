@@ -1,4 +1,4 @@
-import {finishBuild} from './build-scheduler.js?v=168';
+import {finishBuild} from './build-scheduler.js?v=169';
 import * as THREE from './vendor/three.module.js';
 
 const CELL=4,MAX_CELLS=4096,AREA_EPS=1e-12;

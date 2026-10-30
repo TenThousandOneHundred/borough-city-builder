@@ -29,7 +29,7 @@ function harness(type='street'){
  const view={getRoadPoint:(x,y)=>({x,y}),clearLine(){previews.length=0;},
   showRoadPreview(controls,type,ok,details){previews.push({controls:plain(controls),type,ok,details:plain(details)});},
   showRoadGridPreview(plan,type,ok,details){previews.push({plan:plain(plan),type,ok,details:plain(details)});},
-  hover(){},clearRoadZoning(){},setBuild(){},setZoning(){},setOverlay(){},setNight(){},setWorld(){},cursor:{visible:true},grid:{visible:true}};
+  hover(){},clearRoadZoning(){},setBuild(){},setZoning(){},setOverlay(){},setNight(){},setWorld(){},cursor:{visible:true},grid:{visible:true},zoneGroup:{visible:true}};
  const session={screen:'game',world,paused:false,start(){this.world=E.createWorld('Other world','plains',9);}};
  const state={E,P:E.Progression,visibleProgression:null,planRoadGrid,quoteRoadGrid,buildRoadGrid,createRoadSnapIndex,resolveRoadSnap,$,view,session,document,
   tool:'road',toolOptions:{roadType:type},roadMode:'grid',curvePoints:[],gridPoints:[],gridWorld:null,roadGridSize:96,roadParallel:false,roadParallelGap:8,roadParallelSide:1,roadParallelReverse:true,newRoadSides:'both',newRoadSelect:$('newRoadSides'),

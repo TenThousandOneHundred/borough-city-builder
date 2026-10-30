@@ -1,14 +1,14 @@
-import {borrowRoadsForTerrain} from './terrain-refresh-plan.js?v=168';
-import {lotGradingKey} from './lot-grading.js?v=168';
-import {geometryUploadSteps} from './geometry-upload.js?v=168';
-import {constructionGridSteps} from './construction-grid.js?v=168';
-import {groundCoverSteps} from './ground-cover.js?v=168';
-import {groundHeight,wetness} from './landscape.js?v=168';
+import {borrowRoadsForTerrain} from './terrain-refresh-plan.js?v=169';
+import {lotGradingKey} from './lot-grading.js?v=169';
+import {geometryUploadSteps} from './geometry-upload.js?v=169';
+import {constructionGridSteps} from './construction-grid.js?v=169';
+import {groundCoverSteps} from './ground-cover.js?v=169';
+import {groundHeight,wetness} from './landscape.js?v=169';
 import * as THREE from './vendor/three.module.js';
-import {changedRoadCells} from './road-frontage.js?v=168';
-import {Roadworks} from './roadworks.js?v=168';
-import {reuseRoadGeometry} from './road-junction-plan.js?v=168';
-import {scheduleBuild} from './build-scheduler.js?v=168';
+import {changedRoadCells} from './road-frontage.js?v=169';
+import {Roadworks} from './roadworks.js?v=169';
+import {reuseRoadGeometry} from './road-junction-plan.js?v=169';
+import {scheduleBuild} from './build-scheduler.js?v=169';
 
 // Build an invisible replacement. The visible city and its traffic remain live
 // until both road meshes and fitted terrain are ready for one synchronous swap.
@@ -32,7 +32,8 @@ export function prepareRoadRefresh(view,{schedule=scheduleBuild,reason='roads'}=
  // Only reuse scenery when occupancy and tree inputs still match the snapshot.
  const treeKey=w=>[w.elevationRevision,w.development?.revision,w.tiles.map(t=>[t.type,t.zone,t.tree,t.ground].join('/')).join(';'),JSON.stringify(w.development?.parcels)].join('|');
  const treesKey=treeKey(snapshot),buildingInputs=new Map([...view.buildings].map(([id,root])=>[id,{root,plan:root.userData.plan,position:root.position.toArray().join(',')}]));
- let adopted=false,cover=null,grid=null,treePlan=null;
+ const zoneMode=view.zoneOverlayMode?.(),zoneInputs=view.roadZoning||view.zoning||view.overlay==='zones'?view.zoneOverlayInputs?.(snapshot):null;
+ let adopted=false,cover=null,grid=null,treePlan=null,zones=null;
  job.promise=(async()=>{
   try{
    await schedule(borrowed?next.syncEarthworksSteps(snapshot):next.buildSteps(snapshot),sliceOptions);
@@ -46,6 +47,7 @@ export function prepareRoadRefresh(view,{schedule=scheduleBuild,reason='roads'}=
    }
    if(view.landscape.cover||view.landscape.developmentPending){const wet=(w,x,z)=>plan?.excluded(x,z)?1:wetness(w,x,z,height);cover=await schedule(groundCoverSteps(view,snapshot,height,wet),sliceOptions);}
    if(view.landscape.treePlanSteps)treePlan=await schedule(view.landscape.treePlanSteps(snapshot,{roads:next,earthworks:!!plan,height,excluded:(x,z)=>!!plan?.excluded(x,z)}),sliceOptions);
+   if(zoneInputs!==null&&view.zoneOverlaySteps)zones=await schedule(view.zoneOverlaySteps(snapshot,{height:(x,z)=>Math.max(.2,height(snapshot,x,z))}),sliceOptions);
    await schedule(next.buildAccessSteps(snapshot,new Map([...buildingInputs].map(([id,input])=>[id,input.root])),{hidden:true,height:(w,x,z)=>Math.max(.2,height(w,x,z))}),sliceOptions);
    grid=await schedule(constructionGridSteps((x,z)=>Math.max(.2,height(snapshot,x,z))),sliceOptions);
    // Retain the live materials until replacement programs have acquired their
@@ -54,11 +56,11 @@ export function prepareRoadRefresh(view,{schedule=scheduleBuild,reason='roads'}=
    if(view.renderer?.compileAsync){
     const target=view.renderer.getRenderTarget(),programStart=performance.now();
     let ready;
-    try{if(view.graphics?.enabled)view.renderer.setRenderTarget(view.graphics.target);const objects=new THREE.Group();objects.children=[next.group,next.accessGroup,...(cover?[cover]:[])];ready=view.renderer.compileAsync(objects,view.camera,view.scene);}
+    try{if(view.graphics?.enabled)view.renderer.setRenderTarget(view.graphics.target);const objects=new THREE.Group();objects.children=[next.group,next.accessGroup,...(cover?[cover]:[]),...(zones?[zones]:[])];ready=view.renderer.compileAsync(objects,view.camera,view.scene);}
     finally{view.renderer.setRenderTarget(target);}
     await ready;stats.programMs=performance.now()-programStart;
    }
-   const uploads=[];for(const group of [next.group,next.accessGroup,cover])group?.traverse(o=>{if(o.geometry)uploads.push(o);});
+   const uploads=[];for(const group of [next.group,next.accessGroup,cover,zones])group?.traverse(o=>{if(o.geometry)uploads.push(o);});
    for(const {base,result}of terrain){uploads.push({geometry:result.replacement,material:base.mesh.material});if(result.walls)uploads.push({geometry:result.walls,material:view.landscape.retainingMaterial()});}
    await schedule(geometryUploadSteps(view.renderer,uploads,view.scene),sliceOptions);
    await schedule((function*(){})(),sliceOptions);
@@ -68,12 +70,15 @@ export function prepareRoadRefresh(view,{schedule=scheduleBuild,reason='roads'}=
    const accessMatches=buildings=>buildings.size===buildingInputs.size&&[...buildings].every(([id,root])=>{const input=buildingInputs.get(id);return input?.root===root&&input.plan===root.userData.plan&&input.position===root.position.toArray().join(',');});
    if(treePlan&&treesKey===treeKey(world))view.landscape.preparedTreePlan=treePlan;
    stats.reusedJunctionPlan=reuseRoadGeometry(snapshot,world,globalThis.CityEngine);
-   view.refresh(job.force,{roads:view.roadworks,terrain,cover,grid,accessMatches,lotGradingKey:lotGradingKey(snapshot)});
+   if(zones&&(zoneMode!==view.zoneOverlayMode()||zoneInputs!==view.zoneOverlayInputs(world))){view.disposeZoneOverlay(zones);zones=null;}
+   stats.preparedZoneOverlay=!!zones;
+   view.refresh(job.force,{roads:view.roadworks,terrain,cover,grid,zones,accessMatches,lotGradingKey:lotGradingKey(snapshot)});
    view.landscape.preparedTreePlan=null;next.accessGroup.visible=true;
    view.roadworks.night(view.night);stats.swapMs=performance.now()-swapStart;stats.totalMs=performance.now()-started;view.lastRoadBuildStats=stats;
    return true;
   }catch(error){if(error.name!=='AbortError')throw error;return false;}
   finally{
+   if(zones)view.disposeZoneOverlay(zones);
    if(view.landscape.preparedTreePlan===treePlan)view.landscape.preparedTreePlan=null;
    if(!adopted){grid?.dispose();cover?.userData.dispose?.();if(borrowed)borrowed.dispose();else{if(next.asphalt===sharedAsphalt)next.asphalt=null;next.dispose();}for(const {result}of terrain){result.replacement?.dispose();result.walls?.dispose();}}
    if(view.roadRefreshJob===job)view.roadRefreshJob=null;
