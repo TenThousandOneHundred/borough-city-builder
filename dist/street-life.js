@@ -1,6 +1,6 @@
-import './map-grid.js?v=157';
+import './map-grid.js?v=158';
 const G=globalThis.BoroughGrid;
-import {floorHeight} from './landscape.js?v=157';
+import {floorHeight} from './landscape.js?v=158';
 import * as THREE from './vendor/three.module.js';
 // Gameplay pedestrians mirror saved simulation agents. Only the menu uses ambient walkers.
 export class StreetLife{

@@ -1,15 +1,16 @@
-import {geometryUploadSteps} from './geometry-upload.js?v=157';
-import {constructionGridSteps} from './construction-grid.js?v=157';
-import {groundCoverSteps} from './ground-cover.js?v=157';
-import {groundHeight,wetness} from './landscape.js?v=157';
+import {lotGradingKey} from './lot-grading.js?v=158';
+import {geometryUploadSteps} from './geometry-upload.js?v=158';
+import {constructionGridSteps} from './construction-grid.js?v=158';
+import {groundCoverSteps} from './ground-cover.js?v=158';
+import {groundHeight,wetness} from './landscape.js?v=158';
 import * as THREE from './vendor/three.module.js';
-import {changedRoadCells} from './road-frontage.js?v=157';
-import {Roadworks} from './roadworks.js?v=157';
-import {scheduleBuild} from './build-scheduler.js?v=157';
+import {changedRoadCells} from './road-frontage.js?v=158';
+import {Roadworks} from './roadworks.js?v=158';
+import {scheduleBuild} from './build-scheduler.js?v=158';
 
 // Build an invisible replacement. The visible city and its traffic remain live
 // until both road meshes and fitted terrain are ready for one synchronous swap.
-export function prepareRoadRefresh(view,{schedule=scheduleBuild}={}){
+export function prepareRoadRefresh(view,{schedule=scheduleBuild,reason='roads'}={}){
  if(view.roadRefreshJob)return view.roadRefreshJob.promise;
  const world=view.world,revision=world.roadEditRevision||0,snapshot=structuredClone(world),old=view.roadworks,next=new Roadworks(view),terrain=[],bases=view.landscape.terrainBases||[];
  // Retain the already uploaded asphalt textures through the atomic swap.
@@ -19,7 +20,7 @@ export function prepareRoadRefresh(view,{schedule=scheduleBuild}={}){
  next.earthworkRegionCache={cells:old.earthworkRegionCache?.cells||new Map()};
  next.group.visible=false;next.signalGroup.visible=false;
  const stats={slices:0,maxSliceMs:0,swapMs:0},started=performance.now();
- const job={force:false,promise:null};view.roadRefreshJob=job;view.onRoadBuildStatus?.(true);
+ const job={force:false,promise:null};view.roadRefreshJob=job;view.onRoadBuildStatus?.(true,reason);
  const cancelled=()=>view.roadRefreshJob!==job||view.world!==world||(world.roadEditRevision||0)!==revision||view.landscape.terrainBases!==bases;
  const onSlice=ms=>{stats.slices++;stats.maxSliceMs=Math.max(stats.maxSliceMs,ms);};
  // Separate short phases too: otherwise their last and first slices stack
@@ -64,7 +65,7 @@ export function prepareRoadRefresh(view,{schedule=scheduleBuild}={}){
    const swapStart=performance.now();if(next.asphalt===old.asphalt)old.asphalt=null;old.dispose();
    const accessMatches=buildings=>buildings.size===buildingInputs.size&&[...buildings].every(([id,root])=>{const input=buildingInputs.get(id);return input?.root===root&&input.plan===root.userData.plan&&input.position===root.position.toArray().join(',');});
    if(treePlan&&treesKey===treeKey(world))view.landscape.preparedTreePlan=treePlan;
-   view.refresh(job.force,{roads:next,terrain,cover,grid,accessMatches});
+   view.refresh(job.force,{roads:next,terrain,cover,grid,accessMatches,lotGradingKey:lotGradingKey(snapshot)});
    view.landscape.preparedTreePlan=null;next.accessGroup.visible=true;
    next.night(view.night);stats.swapMs=performance.now()-swapStart;stats.totalMs=performance.now()-started;view.lastRoadBuildStats=stats;
    return true;

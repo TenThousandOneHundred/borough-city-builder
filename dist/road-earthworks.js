@@ -1,5 +1,5 @@
-import {TerrainPartitionIndex} from './terrain-partition-index.js?v=157';
-import {finishBuild} from './build-scheduler.js?v=157';
+import {TerrainPartitionIndex} from './terrain-partition-index.js?v=158';
+import {finishBuild} from './build-scheduler.js?v=158';
 import * as THREE from './vendor/three.module.js';
 import clipping from './vendor/polygon-clipping.umd.min.js';
 
@@ -156,6 +156,7 @@ export function* createRoadEarthworksSteps(options){
 }
 function* buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePlan,groundHeight,wetness=()=>0,protectedParcels=[],regionCache=null}){
  const surfaceSnapshot=yield* snapshotSurfacesSteps(surfaces),structuralSnapshot=yield* snapshotSurfacesSteps(structuralSurfaces,'structure'),natural=(x,z)=>groundHeight(world,x,z),wet=(x,z)=>wetness(world,x,z)>.08;
+ const hasLotSurfaces=surfaceSnapshot.some(t=>t.kind==='lot');
  const exclusions=new Index(),protectedIndex=new Index(),roadIndex=new Index(),structureIndex=new Index(),patches=new Index(),wallIndex=new Index(),perimeterIndex=new Index(),regions=new Index();
  // The actual concrete tops are opaque covers. Soffits and buried pier faces
  // must not remove visible ground merely because they project over it.
@@ -221,7 +222,9 @@ function* buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePla
    const delta=Math.max(Math.abs(aa[1]-natural(aa[0],aa[2])),Math.abs(bb[1]-natural(bb[0],bb[2]))),width=Math.min(MAX_SHOULDER,Math.max(.4,.4+delta*2.5));
    const toeA=[aa[0]+nx*width,aa[1],aa[2]+nz*width],toeB=[bb[0]+nx*width,bb[1],bb[2]+nz*width],sweep=[aa,bb,toeB,toeA];
    const constrained=protectedIndex.query(bounds(sweep)).some(t=>partition(sweep,t));
-   const transition=p=>{const d=Math.abs(p[1]-natural(p[0],p[2])),retain=constrained?1:smooth(Math.max(0,Math.min(1,(d-.3)/.3))),soil=Math.min(MAX_SHOULDER,Math.max(.4,.4+d*2.5));return {retain,reach:soil*(1-retain)+.12*retain};};
+   // Unconstrained gardens meet natural ground with a soil slope. Streets
+   // and property boundaries retain their narrow, engineered retaining edge.
+   const transition=p=>{const d=Math.abs(p[1]-natural(p[0],p[2])),retain=constrained?1:kind==='lot'?0:smooth(Math.max(0,Math.min(1,(d-.3)/.3))),soil=Math.min(MAX_SHOULDER,Math.max(.4,.4+d*2.5));return {retain,reach:soil*(1-retain)+.12*retain};};
    const ta=transition(aa),tb=transition(bb),wall=ta.retain>0||tb.retain>0;
    // A retaining shelf meets the full footway support. Blending a tall dirt
    // slope above a partial wall creates a ragged floating retaining face.
@@ -305,7 +308,7 @@ function* buildRoadEarthworks({world,surfaces=[],structuralSurfaces=[],bridgePla
   // Any endpoint above the .3 cut/fill threshold forces BOTH endpoints to
   // .12 retaining caps regardless of occupancy. Otherwise the widest possible
   // unconstrained sweep is .4+.3*2.5=1.15. Include the full wall thickness.
-  const reach=Math.min(MAX_SHOULDER,.4+.3*2.5)+.061,b=bounds(p),query={minX:b.minX-reach,maxX:b.maxX+reach,minZ:b.minZ-reach,maxZ:b.maxZ+reach},ring=p.map(v=>[v[0],v[2]]),distance2=reach*reach;
+  const reach=(hasLotSurfaces?MAX_SHOULDER:Math.min(MAX_SHOULDER,.4+.3*2.5))+.061,b=bounds(p),query={minX:b.minX-reach,maxX:b.maxX+reach,minZ:b.minZ-reach,maxZ:b.maxZ+reach},ring=p.map(v=>[v[0],v[2]]),distance2=reach*reach;
   for(const road of roadIndex.query(query)){
    if(p.some(v=>pointIn(road,v[0],v[2]))||road.p.some(v=>inRing([v[0],v[2]],ring)))return true;
    for(let i=0;i<p.length;i++)for(let j=0;j<3;j++)if(segmentDistanceSquared(p[i],p[(i+1)%p.length],road.p[j],road.p[(j+1)%3])<=distance2)return true;

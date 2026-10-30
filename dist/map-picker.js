@@ -1,5 +1,5 @@
-import {MAPS} from './map-catalog.js?v=157';
-import {MAP_STATS} from './map-preview-stats.js?v=157';
+import {MAPS} from './map-catalog.js?v=158';
+import {MAP_STATS} from './map-preview-stats.js?v=158';
 
 export function createMapPicker(document){
  const $=id=>document.getElementById(id),choices=$('mapChoices');
