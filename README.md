@@ -1,6 +1,18 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 157 — Land selection over the actual city
+
+The centered land dialog is replaced by a landscape camera mode with terrain-following tile borders, cyan multi-selection and a compact purchase tray above the icon dock. The official [Maps & Themes purchase screenshot](https://www.paradoxinteractive.com/games/cities-skylines-ii/features/maps-themes) guided the composition. An initial larger tray and pale outlines were compared with that photo and revised. Buildable land area comes from each selected tile's terrain; there are no invented resource readouts. Select tiles by clicking the landscape, right-click to deselect, or use keyboard focus, arrow keys and Enter. Escape, Close or changing tools restores the previous city camera.
+
+Multiple tiles can be purchased together for two merits each, including separated tiles, as the reference allows purchasing land anywhere. Development still needs actual road access; unowned gaps remain protected. The batch purchase validates everything before mutation, saves immediately, and restores the ownership and merit balance if saving fails. Existing cities and Sandbox remain fully owned, and prior merit receipts stay valid.
+
+The view adds three drawing batches and at most 12,096 overlay triangles while open. Terrain geometry is prepared only on opening; selection changes reuse buffers, unchanged selections skip color uploads, and camera movement only updates accessible label positions. Closing disposes all six owned geometry/material resources. A narrow viewport fits the entire region and temporarily reduces distant fog, restoring the previous fog and camera limits afterward. Existing terrain and building assets, simulation timing, manual saving and five-minute autosave are retained. This is feature update one after optimization 156; another optimization is due after three feature releases.
+
+The release suite covers 899 checks. New checks exercise separated and atomic multi-tile purchases, merit persistence, all tile-center ray picks at both map sizes, camera restoration, bounded render batches, resource disposal, narrow-screen projection and save-failure rollback. Browser QA imported a naturally grown 294-resident city, observed its 300-resident milestone, selected C1 and C3 on the landscape, spent four merits, and verified 3/9 owned tiles with zero merits after Save & Exit, reload and Continue. Keyboard selection and a 390 × 844 embedded browser viewport were also checked.
+
+The reference comparison remains incomplete overall: the region is much smaller, landforms and forest patterns differ, and lighting, foundations and the broader HUD still differ. In particular, the river test city's close view exposes tall foundation/retaining faces that need further landscape integration. This update improves the purchase workflow and its composition, not full game equivalence. No building asset was created; future asset work must use Blender and actual game photos.
+
 ## Edition 156 — Terrain loading optimization
 
 This is the scheduled optimization pass after feature updates 152–155. Terrain sampling skips the distant erosion field where its contribution is exactly zero, reuses the already computed shoreline wetness, and leaves coordinate scoping at public entry points instead of repeating it in private helpers. Terrain resolution, colors, slopes, normals, tree density, building models and independent simulation remain unchanged.

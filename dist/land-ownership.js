@@ -13,14 +13,22 @@ function ownsFrame(w,f){const c=Math.abs(Math.cos(f.angle||0)),s=Math.abs(Math.s
  for(let yy=Math.floor((f.cz-z+h)/4);yy<=Math.floor((f.cz+z+h-.0001)/4);yy++)for(let xx=Math.floor((f.cx-x+h)/4);xx<=Math.floor((f.cx+x+h-.0001)/4);xx++)if(!ownsCell(w,xx,yy))return false;return true;
 }
 function adjacent(w,id){const n=columns(w),x=id%n,y=Math.floor(id/n);return [[x-1,y],[x+1,y],[x,y-1],[x,y+1]].some(([a,b])=>a>=0&&b>=0&&a<n&&b<n&&w.land.owned.includes(b*n+a));}
-function quote(w,id){if(!w.land)return {ok:false,reason:'This city already has all its land.'};const n=columns(w);if(!Number.isInteger(id)||id<0||id>=n*n)return {ok:false,reason:'Choose a district inside the map.'};if(w.land.owned.includes(id))return {ok:false,reason:'Already owned.'};if(!adjacent(w,id))return {ok:false,reason:'Buy a district beside land you already own.'};if(w.land.merits<COST)return {ok:false,reason:'Earn more merits by reaching city milestones.'};return {ok:true,cost:COST};}
-function buy(w,id){const q=quote(w,id);if(!q.ok)return q;w.land.owned.push(id);w.land.owned.sort((a,b)=>a-b);w.land.merits-=q.cost;return q;}
+function quoteMany(w,ids){
+ if(!w.land)return {ok:false,reason:'This city already owns all its land.'};
+ const n=columns(w);if(!Array.isArray(ids)||!ids.length)return {ok:false,reason:'Select land tiles on the map.'};
+ if(new Set(ids).size!==ids.length||!ids.every(id=>Number.isInteger(id)&&id>=0&&id<n*n))return {ok:false,reason:'Choose valid, distinct map tiles.'};
+ if(ids.some(id=>w.land.owned.includes(id)))return {ok:false,reason:'Already owned.'};
+ const cost=ids.length*COST;if(w.land.merits<cost)return {ok:false,cost,reason:'Earn more merits by reaching city milestones.'};return {ok:true,cost};
+}
+function quote(w,id){return quoteMany(w,[id]);}
+function buyMany(w,ids){const q=quoteMany(w,ids);if(!q.ok)return q;w.land.owned.push(...ids);w.land.owned.sort((a,b)=>a-b);w.land.merits-=q.cost;return q;}
+function buy(w,id){return buyMany(w,[id]);}
 function award(w){if(!w.land||!P.active(w))return 0;const level=w.progression.level,amount=earned(level)-earned(w.land.awarded);if(amount>0){w.land.merits+=amount;w.land.awarded=level;}return amount;}
 function valid(w){const l=w.land;if(l===undefined)return true;const n=columns(w);if(!l||l.version!==1||!Array.isArray(l.owned)||!l.owned.length||l.owned.length>n*n||new Set(l.owned).size!==l.owned.length||!l.owned.every(i=>Number.isInteger(i)&&i>=0&&i<n*n)||!l.owned.includes(start(w))||!Number.isSafeInteger(l.merits)||l.merits<0||!Number.isInteger(l.awarded)||l.awarded<0||l.awarded>6)return false;
  if(!Number.isInteger(l.free??0)||(l.free??0)<0||(l.free??0)>l.owned.length-1)return false;
  if(!P.active(w))return l.owned.length===n*n&&l.merits===0&&l.awarded===0;
  if(l.awarded>w.progression.level||l.merits!==earned(l.awarded)-COST*(l.owned.length-1-(l.free||0)))return false;
- const seen=new Set([start(w)]);let changed=true;while(changed){changed=false;for(const id of l.owned)if(!seen.has(id)&&adjacent({...w,land:{owned:[...seen]}},id)){seen.add(id);changed=true;}}return seen.size===l.owned.length;
+ return true;
 }
-const api={DISTRICT,COST,REWARDS,columns,start,earned,initialize,ownsCell,ownsPoint,ownsFrame,adjacent,quote,buy,award,valid};root.BoroughLand=api;if(typeof module!=='undefined')module.exports=api;
+const api={DISTRICT,COST,REWARDS,columns,start,earned,initialize,ownsCell,ownsPoint,ownsFrame,adjacent,quote,quoteMany,buy,buyMany,award,valid};root.BoroughLand=api;if(typeof module!=='undefined')module.exports=api;
 })(globalThis);

@@ -23,10 +23,10 @@ test('Large maps contain 2.25 times the cells, start owned at the west edge, and
   for(let i=0;i<90;i++)E.tick(w);assert.ok(E.analyze(w).population>0,m.name);assert.ok(E.valid(w),m.name+' remains valid after development');
  }
 });
-test('merits are awarded once, buy only adjacent districts, and survive save/home/reload',()=>{
+test('merits are awarded once, buy any selected district, and survive save/home/reload',()=>{
  const w=create(),db=new E.WorldStore(storage());assert.equal(L.buy(w,4).ok,false);
  E.Progression.advance(w,100);assert.equal(w.land.merits,2);const money=w.money;E.Progression.advance(w,100);assert.equal(w.land.merits,2);assert.equal(w.money,money);
- assert.equal(L.buy(w,8).ok,false);assert.ok(L.buy(w,4).ok);assert.equal(w.land.merits,0);assert.equal(L.buy(w,4).ok,false);assert.ok(E.valid(w));
+ assert.ok(L.quote(w,8).ok);assert.ok(L.buy(w,4).ok);assert.equal(w.land.merits,0);assert.equal(L.buy(w,4).ok,false);assert.ok(E.valid(w));
  db.save(w,100);const session=new E.GameSession(db);session.start(w.id);E.Progression.advance(session.world,0);assert.equal(session.world.land.merits,0);session.exit(200);
  const restored=new E.WorldStore(db.storage).get(w.id);assert.deepEqual(restored.land,w.land);E.Progression.advance(restored,3500);assert.equal(restored.land.merits,16);
  for(const id of [0,1,2,5,6,7,8])assert.ok(L.buy(restored,id).ok);assert.equal(restored.land.owned.length,9);assert.equal(restored.land.merits,2);assert.ok(E.valid(restored));

@@ -1,6 +1,6 @@
-import './map-grid.js?v=156';
+import './map-grid.js?v=157';
 const G=globalThis.BoroughGrid;
-import {roadParcels} from './road-parcels.js?v=156';
+import {roadParcels} from './road-parcels.js?v=157';
 const cache=new WeakMap();
 // Visual consolidation only: every zoning cell, resident and save remains intact.
 // Never combine across a road, service, construction site or density boundary.
