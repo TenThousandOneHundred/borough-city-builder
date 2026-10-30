@@ -1,6 +1,16 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 167 — Reference-based zoning tray
+
+The zoning panel now uses a shallow density tray, colored category icons and a separate painting box. Eleven original icons were modeled and rendered in Blender, including six distinct housing forms. The editable Blender scene and authoring script are included. Tool mode, road-following depth and brush size remain reachable; narrow screens fold them into Zoning options. Names, lot dimensions and unlock requirements remain available in the detail row and tooltips.
+
+Compared before and after with the actual [official Cities: Skylines II zoning toolbar screenshot](https://images.ctfassets.net/u73tyf0fa8v1/RoDwM6O0tjoyKwLkWYQWZ/c57e1feaa1260b839eb469eea2d416a0/1_Zoning_toolbar.png?fm=webp&q=75&w=1920). The tray composition and isometric green/blue/yellow/purple icon language are closer; exact icon shapes, theme selection, signature-building controls and the broader game remain different. At 1280 × 720, the former 1040 × 337.39 panel becomes a 520 × 119 tray plus 220 × 106.19 controls, about 76% less combined panel area, excluding the dock and hints.
+
+All 980 release checks pass, plus syntax, existing 3D assets and lossless compression checks. All eleven PNGs are 128 × 128 RGBA with clear margins and unclipped bounds, totaling 182,537 bytes. Icons are pre-rendered images with no per-frame scene work. Browser QA covered every zoning family, progression locks, brush sizes, roadside depth, drawing-mode selection, category switching and 800 × 600 / 390 × 844 layouts. Painting and erasing four cells worked; a roadside drag created 36 cells in four multi-cell lots, and those lots remained after manual save/reload. Browser warning/error log was empty.
+
+This is feature update three after optimization 164. Edition 168 is the next optimization pass; the overall reference-fidelity goal remains unfinished.
+
 ## Edition 166 — Compact road picker
 
 Replaced the oversized road cards with a shallow thumbnail shelf grouped into Small, Medium, Large and Highways. All twelve road types remain available, with names, costs and unlock requirements shown in a shared detail row on hover or keyboard focus. Drawing modes, parallel settings, zoning sides and snapping live in a compact box beside the shelf. On smaller screens, Tool options expands beneath the shelf. The build dock becomes shorter while Roads is open.

@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.js';
-import './map-grid.js?v=166';
-import {groundHeight} from './landscape.js?v=166';
+import './map-grid.js?v=167';
+import {groundHeight} from './landscape.js?v=167';
 
 // Only built while purchasing land. One terrain-conforming color mesh, one
 // faint grid, and one selected-edge mesh; camera moves never resample terrain.
