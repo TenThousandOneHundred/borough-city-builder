@@ -1,6 +1,16 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 164 — Forest rendering optimization
+
+The eight broadleaf draw groups now share one material and one occupied instance batch. Tree setup assigns each tree to its existing species in a single pass instead of repeatedly copying and filtering the entire forest. Empty species groups are omitted. A normal mixed forest uses three canopy groups rather than ten, while retaining every saved position, height, species, rotation, atlas, shadow and close model. Different materials still remain separate, and camera movement retains the same buffers and nearest-ten-tree detail rule.
+
+Isolated warm CPU measurements for assembling 1,600 / 6,400 / 12,800 trees changed from 1.07 / 2.15 / 6.11 ms to 0.69 / 1.47 / 3.57 ms. These are setup measurements, not whole-game frame-rate claims. All building models, textures, terrain, simulation rules and save data are unchanged.
+
+In five matched 1280 × 720 browser views, median draw counts fell by seven (47→40 for region views, 28→21 for the neighborhood, 27→20 close up), with identical drawn triangle counts. GPU time ranged from 13.9% lower to 2.8% higher; frame times remained broadly similar. The initial comparison with differing viewport widths was discarded. Before/after woodland screenshots retain the same visible detail.
+
+The actual Cities: Skylines II tree photograph was inspected before and after this pass. This scheduled optimization preserves the current artwork; it does not resolve the remaining differences in canopy shape, lighting, terrain, buildings or simulation. The next optimization is due after three further feature updates.
+
 ## Edition 163 — Blender-authored mature conifers
 
 The enlarged sapling used for conifer stands is replaced by two original Blender assets: a tapered spruce with layered branches and a raised, asymmetric pine crown. The shapes were built against the actual [Cities: Skylines II tree photograph in City Corner #11](https://www.paradoxinteractive.com/games/cities-skylines-ii/news/autumn-breeze). The initial regular pine was rebuilt into separate crown masses after comparison, and the distant lighting and viewing angles were revised after inspecting the game renderer. Editable Blender source and the authoring/baking script are included.

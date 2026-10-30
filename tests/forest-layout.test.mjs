@@ -51,7 +51,7 @@ test('stand species use the same prototype for distant cards and close models wi
  const broad=new THREE.Group(),pineA=new THREE.Group(),pineB=new THREE.Group(),camera=new THREE.PerspectiveCamera();camera.position.set(0,3,8);
  const v=Object.assign(Object.create(Vegetation.prototype),{v:{camera,detailEnabled:true,night:false,renderer:{shadowMap:{}}},broadleaf:[{material:new THREE.MeshBasicMaterial()}],broadPrototype:broad,impostors:[{material:new THREE.MeshBasicMaterial()},{material:new THREE.MeshBasicMaterial()}],prototypes:[pineA,pineB]});
  const positions=[[0,0,5,0,false,'pine'],[4,0,5,0,false,'broadleaf'],[8,0,5,0,false,'pine']],group=new THREE.Group();v.populate(group,positions,()=>0);
- assert.equal(v.instances.length,4);assert.equal(v.population.records.find(r=>r.i===1).source,broad);
+ assert.equal(v.instances.length,2,'only the occupied broadleaf and pine A batches are needed');assert.equal(v.instances.reduce((sum,m)=>sum+m.count,0),positions.length);assert.equal(v.population.records.find(r=>r.i===1).source,broad);
  for(const r of v.population.records.filter(r=>r.i!==1)){assert.ok([pineA,pineB].includes(r.source));assert.equal(r.mesh.material,v.impostors[r.i%2].material);assert.ok(v.population.near.has(r.i));}
  assert.ok(v.population.near.size<=10);v.update();assert.equal(v.lastMatrixWrites,0);
  group.traverse(o=>o.geometry?.dispose());for(const m of [...v.broadleaf,...v.impostors])m.material.dispose();
