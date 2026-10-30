@@ -1,16 +1,16 @@
-import {applyResidentialFinish,configureResidentialBrick} from './residential-finishes.js?v=164';
-import {IndustrialSurfaces,configureIndustrialPaint} from './industrial-surfaces.js?v=164';
-import {lotMaterials} from './lot-surfaces.js?v=164';
-import {bakeRoofFinish} from './roof-finishes.js?v=164';
-import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=164';
-import {loadBinary} from './asset-transfer.js?v=164';
-import {SiteDetails} from './site-details.js?v=164';
-import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=164';
+import {applyResidentialFinish,configureResidentialBrick} from './residential-finishes.js?v=165';
+import {IndustrialSurfaces,configureIndustrialPaint} from './industrial-surfaces.js?v=165';
+import {lotMaterials} from './lot-surfaces.js?v=165';
+import {bakeRoofFinish} from './roof-finishes.js?v=165';
+import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=165';
+import {loadBinary} from './asset-transfer.js?v=165';
+import {SiteDetails} from './site-details.js?v=165';
+import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=165';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {lotPlan} from './building-plan.js?v=164';
-import {floorHeight} from './landscape.js?v=164';
+import {lotPlan} from './building-plan.js?v=165';
+import {floorHeight} from './landscape.js?v=165';
 const IDENTITY=new THREE.Matrix4();
 const civicDefaults={hospital:'clinic',school:'elementary',police:'police',fire:'fire'};
 // Complete textured assets are loaded once, batched per material, and instanced.
@@ -20,7 +20,7 @@ export class ModelLibrary {
   const loader=new GLTFLoader();
   // Fetch the distant indices alongside the models instead of adding another
   // large download after all three catalogues have finished.
-  const distant=Promise.all([fetch(new URL('./assets/buildings/lod.json?v=164-homes',import.meta.url)).then(r=>{if(!r.ok)throw Error(r.status);return r.json()}),loadBinary(new URL('./assets/buildings/lod.bin?v=164-homes',import.meta.url))]).then(value=>({value}),error=>({error}));
+  const distant=Promise.all([fetch(new URL('./assets/buildings/lod.json?v=165-homes',import.meta.url)).then(r=>{if(!r.ok)throw Error(r.status);return r.json()}),loadBinary(new URL('./assets/buildings/lod.bin?v=165-homes',import.meta.url))]).then(value=>({value}),error=>({error}));
   await Promise.all(['urban','industry','modern'].map(async file=>{
    try{const url=new URL(`./assets/buildings/${file}.glb?v=${file==='modern'?'149-homes':21}`,import.meta.url),{scene}=await loader.parseAsync(await loadBinary(url),new URL('.',url).href);
     this.ingest(scene);

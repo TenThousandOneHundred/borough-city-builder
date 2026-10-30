@@ -1,6 +1,14 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 165 — Camera-relative movement
+
+WASD and arrow keys now move continuously in the direction the camera is facing, rather than making seven-unit jumps along fixed map axes on keyboard repeats. Forward/back follow the ground-projected viewing direction, and left/right strafe across that view. The direction updates while rotating. Camera height, tilt and zoom remain unchanged during keyboard movement. Diagonals have the same speed as straight movement; a short acceleration ramp makes starting smooth, with an immediate stop on release. Speed scales with zoom and Shift doubles it. Middle-button panning stays on the ground plane.
+
+Held input clears on blur, tab visibility changes, text focus, dialogs, home, and system-key shortcuts. Ctrl/Cmd+S still saves. Existing right-drag rotation and construction controls are preserved. The settings help and game hints explain the new bindings.
+
+All 980 checks pass, plus syntax, building assets and compressed-asset checks. Direction tests cover eight headings, three pitches, overhead fallback, rotation during a held key, diagonal speed, 30/60/144 Hz timing, repeat events, release, modifiers, focus and menu guards. Native held-key tests in the real game verified forward before/after a 90-degree turn, sideways movement, Shift speed and zero movement while the game menu is open. No model, texture, terrain or simulation detail was changed. This is feature update one after optimization 164.
+
 ## Edition 164 — Forest rendering optimization
 
 The eight broadleaf draw groups now share one material and one occupied instance batch. Tree setup assigns each tree to its existing species in a single pass instead of repeatedly copying and filtering the entire forest. Empty species groups are omitted. A normal mixed forest uses three canopy groups rather than ten, while retaining every saved position, height, species, rotation, atlas, shadow and close model. Different materials still remain separate, and camera movement retains the same buffers and nearest-ten-tree detail rule.

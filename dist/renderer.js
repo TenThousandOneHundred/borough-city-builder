@@ -1,43 +1,43 @@
-import {fitGradedLots,lotGradingKey} from './lot-grading.js?v=164';
-import {updateLandBoundary} from './land-boundary.js?v=164';
-import './map-grid.js?v=164';
+import {fitGradedLots,lotGradingKey} from './lot-grading.js?v=165';
+import {updateLandBoundary} from './land-boundary.js?v=165';
+import './map-grid.js?v=165';
 const G=globalThis.BoroughGrid;
-import {constructionGrid} from './construction-grid.js?v=164';
-import {prepareRoadRefresh} from './road-build-job.js?v=164';
-import {RoadGuidePreview} from './road-guide-preview.js?v=164';
-import {SIDEWALK_HEIGHT} from './road-profile.js?v=164';
-import './building-entities.js?v=164';
+import {constructionGrid} from './construction-grid.js?v=165';
+import {prepareRoadRefresh} from './road-build-job.js?v=165';
+import {RoadGuidePreview} from './road-guide-preview.js?v=165';
+import {SIDEWALK_HEIGHT} from './road-profile.js?v=165';
+import './building-entities.js?v=165';
 const Buildings=globalThis.BoroughBuildings;
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {ZonePlaneBatch} from './zoning-render-batch.js?v=164';
-import {trackAssetGroups} from './asset-transfer.js?v=164';
-import {buildFootpaths} from './footpaths.js?v=164';
-import {Transit,transitLeg,stopPosition} from './transit.js?v=164';
-import {SimulationClock} from './simulation-clock.js?v=164';
-import {Residents} from './residents.js?v=164';
-import {Traffic,carCapacity} from './traffic.js?v=164';
-import {Vehicles} from './vehicles.js?v=164';
-import {BuildingFactory} from './building-factory.js?v=164';
-import {StreetLife} from './street-life.js?v=164';
-import {changedRoadCells,frontageTouches} from './road-frontage.js?v=164';
-import {visualParcels} from './parcels.js?v=164';
-import {Graphics} from './graphics.js?v=164';
-import {Vegetation} from './vegetation.js?v=164';
+import {ZonePlaneBatch} from './zoning-render-batch.js?v=165';
+import {trackAssetGroups} from './asset-transfer.js?v=165';
+import {buildFootpaths} from './footpaths.js?v=165';
+import {Transit,transitLeg,stopPosition} from './transit.js?v=165';
+import {SimulationClock} from './simulation-clock.js?v=165';
+import {Residents} from './residents.js?v=165';
+import {Traffic,carCapacity} from './traffic.js?v=165';
+import {Vehicles} from './vehicles.js?v=165';
+import {BuildingFactory} from './building-factory.js?v=165';
+import {StreetLife} from './street-life.js?v=165';
+import {changedRoadCells,frontageTouches} from './road-frontage.js?v=165';
+import {visualParcels} from './parcels.js?v=165';
+import {Graphics} from './graphics.js?v=165';
+import {Vegetation} from './vegetation.js?v=165';
 import {RGBELoader} from './vendor/RGBELoader.js';
 import * as THREE from './vendor/three.module.js';
 import {OrbitControls} from './vendor/OrbitControls.js';
-import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=164';
-import {Architecture} from './architecture.js?v=164';
-import {Roadworks} from './roadworks.js?v=164';
+import {Landscape,groundHeight,floorHeight,wetness,terrainColor} from './landscape.js?v=165';
+import {Architecture} from './architecture.js?v=165';
+import {Roadworks} from './roadworks.js?v=165';
 const N=48,T=4,HALF=96,zoneColors={residential:'#54b663',commercial:'#5bb1d8',industrial:'#cdb268',office:'#aa87c9'};
 export class CityView{
 constructor(canvas){this.assetsReady=false;this.loadingElement=document.getElementById('sceneLoading');this.canvas=canvas;this.scene=new THREE.Scene();this.scene.background=new THREE.Color('#aebfca');this.scene.fog=new THREE.FogExp2('#b7c6cc',.00105);
 this.renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'high-performance'});this.renderer.setPixelRatio(Math.min(devicePixelRatio,1.25));this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=THREE.PCFSoftShadowMap;this.renderer.shadowMap.autoUpdate=false;this.renderer.shadowMap.needsUpdate=true;this.renderer.outputColorSpace=THREE.SRGBColorSpace;this.renderer.toneMapping=THREE.ACESFilmicToneMapping;this.renderer.toneMappingExposure=.87;
-this.camera=new THREE.PerspectiveCamera(43,innerWidth/innerHeight,.2,1800);this.camera.position.set(-65,65,90);this.controls=new OrbitControls(this.camera,canvas);this.controls.target.set(-8,1,0);this.controls.enableDamping=true;this.controls.dampingFactor=.08;this.controls.maxPolarAngle=Math.PI*.48;this.controls.minPolarAngle=.13;this.controls.minDistance=12;this.controls.maxDistance=420;this.controls.mouseButtons={LEFT:null,MIDDLE:THREE.MOUSE.PAN,RIGHT:THREE.MOUSE.ROTATE};this.controls.touches={ONE:THREE.TOUCH.ROTATE,TWO:THREE.TOUCH.DOLLY_PAN};
+this.camera=new THREE.PerspectiveCamera(43,innerWidth/innerHeight,.2,1800);this.camera.position.set(-65,65,90);this.controls=new OrbitControls(this.camera,canvas);this.controls.target.set(-8,1,0);this.controls.enableDamping=true;this.controls.screenSpacePanning=false;this.controls.dampingFactor=.08;this.controls.maxPolarAngle=Math.PI*.48;this.controls.minPolarAngle=.13;this.controls.minDistance=12;this.controls.maxDistance=420;this.controls.mouseButtons={LEFT:null,MIDDLE:THREE.MOUSE.PAN,RIGHT:THREE.MOUSE.ROTATE};this.controls.touches={ONE:THREE.TOUCH.ROTATE,TWO:THREE.TOUCH.DOLLY_PAN};
 this.ambient=new THREE.HemisphereLight('#cbdcf0','#606c78',.55);this.scene.add(this.ambient);this.sun=new THREE.DirectionalLight('#fff6e9',3.0);this.sun.position.set(-65,95,70);this.sun.castShadow=true;this.sun.shadow.mapSize.set(2048,2048);Object.assign(this.sun.shadow.camera,{left:-105,right:105,top:105,bottom:-105,near:1,far:340});this.sun.shadow.bias=-.0002;this.sun.shadow.normalBias=.012;this.sun.shadow.radius=2;this.scene.add(this.sun);
 this.vehicles=new Vehicles();this.materials=new Map();this.unitBox=new THREE.BoxGeometry(1,1,1);this.tileGroup=new THREE.Group();this.carGroup=new THREE.Group();this.previewGroup=new THREE.Group();this.scene.add(this.tileGroup,this.carGroup,this.previewGroup);this.zoneGroup=new THREE.Group();this.scene.add(this.zoneGroup);this.zoning=false;this.buildings=new Map();this.cars=[];this.ray=new THREE.Raycaster();this.ndc=new THREE.Vector2();this.point=new THREE.Vector3();this.plane=new THREE.Plane(new THREE.Vector3(0,1,0),.1);this.clock=new THREE.Clock();this.time=0;this.overlay='none';this.night=false;
 this.cursor=new THREE.Mesh(new THREE.PlaneGeometry(T,T),new THREE.MeshBasicMaterial({color:'#63c9ff',transparent:true,opacity:.34,depthWrite:false,side:THREE.DoubleSide}));this.cursor.rotation.x=-Math.PI/2;this.cursor.visible=false;this.scene.add(this.cursor);this.grid=new THREE.Group();this.grid.visible=false;this.scene.add(this.grid);
-this.vegetation=new Vegetation(this);this.landscape=new Landscape(this);this.architecture=new Architecture(this);this.models=new BuildingFactory(this);this.roadworks=new Roadworks(this);this.streetLife=new StreetLife(this);this.ready=trackAssetGroups({Terrain:this.landscape.ready,Trees:this.vegetation.ready,Buildings:this.models.ready,Lighting:this.loadEnvironment()},({completed,total,pending})=>{if(this.loadingElement)this.loadingElement.textContent=`Loading city details ${completed}/${total} · ${pending.join(', ')||'Preparing scene'}`;}).then(()=>this.refreshAssets());this.environment();this.graphics=new Graphics(this);this.simulationClock=new SimulationClock(dt=>{if(!this.world||!this.traffic)return;for(const a of this.traffic.agents){a.previousX=a.x;a.previousZ=a.z;}this.traffic.update(dt);this.transit?.update(dt);this.residents?.update(dt);},{maxWorkMs:()=>document.hidden?Infinity:8});this.simulationTimer=setInterval(()=>this.simulationClock.pulse(),16);this.resize();window.addEventListener('resize',()=>this.resize());this.frame=()=>{requestAnimationFrame(this.frame);if(document.hidden){this.clock.getDelta();return}const elapsed=this.clock.getDelta(),dt=Math.min(.05,elapsed);this.time+=dt;this.controls.update();this.landscape.update(this.time,this.night);this.vegetation.update();this.streetLife.update(dt);if(this.world&&this.running){this.roadworks.updateSignals(this.traffic);for(let car of this.cars)this.moveCar(car);}if(this.world)this.vehicles.updateFleet(this.cars,this.camera);if(this.menu&&!document.querySelector('dialog[open]')){this.camera.position.sub(this.controls.target).applyAxisAngle(new THREE.Vector3(0,1,0),dt*.006).add(this.controls.target);this.controls.update()}if(this.world&&this.time-(this.lodTime||0)>.7){this.lodTime=this.time;if(!this.lodCamera||this.camera.position.distanceTo(this.lodCamera)>4){this.lodCamera=this.camera.position.clone();this.refresh()}}if(this.time-(this.visibilityTime||0)>.15){this.visibilityTime=this.time;this.models.updateVisibility()}this.renderer.info.autoReset=false;this.renderer.info.reset();this.roadGuidePreview?.updateLabels();this.graphics.render();this.performanceFrames=(this.performanceFrames||0)+1;this.performanceElapsed=(this.performanceElapsed||0)+elapsed;if(this.performanceElapsed>=1){const stats=document.getElementById('performanceStats');if(stats)stats.textContent=Math.round(this.performanceFrames/this.performanceElapsed)+' FPS · '+Math.round(this.renderer.info.render.triangles/1000)+'k triangles · '+this.renderer.info.render.calls+' draws';const live=document.getElementById('gamePerformance');if(live&&stats){live.textContent=stats.textContent.split(' · ')[0];live.title=stats.textContent;}this.performanceFrames=0;this.performanceElapsed=0;}};this.frame()}
+this.vegetation=new Vegetation(this);this.landscape=new Landscape(this);this.architecture=new Architecture(this);this.models=new BuildingFactory(this);this.roadworks=new Roadworks(this);this.streetLife=new StreetLife(this);this.ready=trackAssetGroups({Terrain:this.landscape.ready,Trees:this.vegetation.ready,Buildings:this.models.ready,Lighting:this.loadEnvironment()},({completed,total,pending})=>{if(this.loadingElement)this.loadingElement.textContent=`Loading city details ${completed}/${total} · ${pending.join(', ')||'Preparing scene'}`;}).then(()=>this.refreshAssets());this.environment();this.graphics=new Graphics(this);this.simulationClock=new SimulationClock(dt=>{if(!this.world||!this.traffic)return;for(const a of this.traffic.agents){a.previousX=a.x;a.previousZ=a.z;}this.traffic.update(dt);this.transit?.update(dt);this.residents?.update(dt);},{maxWorkMs:()=>document.hidden?Infinity:8});this.simulationTimer=setInterval(()=>this.simulationClock.pulse(),16);this.resize();window.addEventListener('resize',()=>this.resize());this.frame=()=>{requestAnimationFrame(this.frame);if(document.hidden){this.clock.getDelta();return}const elapsed=this.clock.getDelta(),dt=Math.min(.05,elapsed);this.time+=dt;this.cameraMovement?.update(dt);this.controls.update();this.landscape.update(this.time,this.night);this.vegetation.update();this.streetLife.update(dt);if(this.world&&this.running){this.roadworks.updateSignals(this.traffic);for(let car of this.cars)this.moveCar(car);}if(this.world)this.vehicles.updateFleet(this.cars,this.camera);if(this.menu&&!document.querySelector('dialog[open]')){this.camera.position.sub(this.controls.target).applyAxisAngle(new THREE.Vector3(0,1,0),dt*.006).add(this.controls.target);this.controls.update()}if(this.world&&this.time-(this.lodTime||0)>.7){this.lodTime=this.time;if(!this.lodCamera||this.camera.position.distanceTo(this.lodCamera)>4){this.lodCamera=this.camera.position.clone();this.refresh()}}if(this.time-(this.visibilityTime||0)>.15){this.visibilityTime=this.time;this.models.updateVisibility()}this.renderer.info.autoReset=false;this.renderer.info.reset();this.roadGuidePreview?.updateLabels();this.graphics.render();this.performanceFrames=(this.performanceFrames||0)+1;this.performanceElapsed=(this.performanceElapsed||0)+elapsed;if(this.performanceElapsed>=1){const stats=document.getElementById('performanceStats');if(stats)stats.textContent=Math.round(this.performanceFrames/this.performanceElapsed)+' FPS · '+Math.round(this.renderer.info.render.triangles/1000)+'k triangles · '+this.renderer.info.render.calls+' draws';const live=document.getElementById('gamePerformance');if(live&&stats){live.textContent=stats.textContent.split(' · ')[0];live.title=stats.textContent;}this.performanceFrames=0;this.performanceElapsed=0;}};this.frame()}
 get running(){return !!this._running;}
 set running(value){this.simulationClock?.setRunning(value);this._running=!!value;}
 get simSpeed(){return this._simSpeed||1;}
