@@ -51,8 +51,8 @@ test('parallel updates retain GPU pools and exactly preserve ordinary and grid g
  const geometry=guide.batches.map(b=>b.geometry),materials=guide.batches.map(b=>b.object.material),positions=guide.batches.map(b=>b.geometry.attributes.position),color=guide.fill.geometry.attributes.color;
  for(let i=0;i<20;i++)guide.showParallel(plan({curve:true,primaryCount:601,secondaryCount:701,shift:i*.002}),'street',i%2===0);
  guide.batches.forEach((b,i)=>{assert.equal(b.geometry,geometry[i]);assert.equal(b.object.material,materials[i]);assert.equal(b.geometry.attributes.position,positions[i]);});assert.equal(guide.fill.geometry.attributes.color,color);
- const control=[{x:8,y:18},{x:24,y:3},{x:40,y:18}];guide.update(control,'street',true);const original=guide.batches.map(vertices),material=guide.fill.object.material.toJSON();
- guide.showParallel(p,'street',true);guide.update(control,'street',true);guide.batches.forEach((b,i)=>assert.deepEqual(vertices(b),original[i]));assert.deepEqual(guide.fill.object.material.toJSON(),material);assert.ok(guide.fill.colorArray.every(v=>v===1));
+ const control=[{x:8,y:18},{x:24,y:3},{x:40,y:18}];guide.update(control,'street',true);const original=guide.batches.map(vertices),originalColors=colors(guide.fill),material=guide.fill.object.material.toJSON();
+ guide.showParallel(p,'street',true);guide.update(control,'street',true);guide.batches.forEach((b,i)=>assert.deepEqual(vertices(b),original[i]));assert.deepEqual(guide.fill.object.material.toJSON(),material);assert.deepEqual(colors(guide.fill),originalColors);
  const corners=[{x:8,y:8},{x:20,y:8},{x:20,y:20},{x:8,y:20}],grid={paths:corners.map((p,i)=>[p,corners[(i+1)%4]]),corners,columns:1,rows:1};guide.showGrid(grid,'street',true);const gridPositions=guide.batches.map(vertices),gridColors=colors(guide.fill);
  guide.showParallel(p,'street',false);guide.showGrid(grid,'street',true);guide.batches.forEach((b,i)=>assert.deepEqual(vertices(b),gridPositions[i]));assert.deepEqual(colors(guide.fill),gridColors);
  guide.clear();assert.equal(guide.group.visible,false);guide.showParallel(p,'street',true);assert.equal(guide.group.visible,true);guide.dispose();

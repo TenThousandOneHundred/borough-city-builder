@@ -100,7 +100,7 @@ test('nearby badges separate and a secondary badge hides when the map has no fre
 test('active previews have broad alignment rings and legible road-width-scaled center dashes',()=>{
  const {guide}=fixture(),controls=[{x:10,y:20},{x:20,y:20}],width=E.ROADS.street.width+.8;
  guide.update(controls,'street',true,{referenceTangent:{x:0,y:1}});
- const dashes=activeVertices(guide.dashes),zs=[];for(let i=2;i<dashes.length;i+=3)zs.push(dashes[i]);
+ const dashes=activeVertices(guide.dashes).slice(0,-guide.metrics.arrows.length*27),zs=[];for(let i=2;i<dashes.length;i+=3)zs.push(dashes[i]);
  assert.ok(Math.abs(Math.max(...zs)-Math.min(...zs)-width*.1)<1e-5);
  const alignment=activeVertices(guide.guides),radii=[];for(let i=0;i<alignment.length;i+=3)radii.push(Math.hypot(alignment[i]+54,alignment[i+2]+14));
  assert.ok(Math.max(...radii)>width*2.49);assert.ok(Math.max(...radii)<width*2.51);
@@ -193,8 +193,8 @@ test('grid labels show actual dimensions and cost and avoid the build panel, the
   }assert.ok(visible.length>=3,'room permits the primary cost and both dimensions');
   guide.clear();assert.equal(guide.labelRoot.hidden,true);
   guide.update([{x:8,y:8},{x:16,y:8}],'street',true,{cost:200});assert.equal(guide.labelRoot.hidden,false);
-  assert.ok(guide.labels.slice(2).every(label=>!label.textContent&&label.style.display==='none'));
-  assert.match(guide.labels[0].textContent,/Endpoint grade ~/);
+  assert.ok(guide.labels.slice(3).every(label=>!label.textContent&&label.style.display==='none'));
+  assert.equal(guide.labels[0].textContent,'₡200');assert.equal(guide.labels[1].textContent,'↔ 160 m');assert.match(guide.labels[2].textContent,/^◿ [+-][\d.]+%$/);
  }finally{guide?.dispose();if(previousDocument===undefined)delete globalThis.document;else globalThis.document=previousDocument;}
 });
 
@@ -263,9 +263,9 @@ test('badge updates batch layout writes, reuse unchanged sizes, and invalidate t
   guide.showGrid(plan,'street',false,{cost:1888,reason:'Not enough funds for the whole grid.'});
   assert.equal(guide.labels[0].textContent,'₡1,888\nNot enough funds for the whole grid.\n3 × 2 · 6 blocks');assert.equal(reads,priorReads+5);priorReads=reads;
   guide.showGrid(plan,'street',false,{reason:'Road blocked by an existing lot'});assert.equal(guide.labels[0].textContent,'Road blocked by an existing lot');assert.equal(reads,priorReads+5);priorReads=reads;
-  guide.update([{x:8,y:8},{x:16,y:8}],'street',true,{cost:200});assert.equal(reads,priorReads+1,'empty snap/extra grid badges are not measured');priorReads=reads;
+  guide.update([{x:8,y:8},{x:16,y:8}],'street',true,{cost:200});assert.equal(reads,priorReads+3,'only price, length and grade badges are measured');priorReads=reads;
   const edge={paths:[[{x:8,y:8},{x:16,y:8}]],corners:[{x:8,y:8},{x:16,y:8}],stage:2};guide.showGrid(edge,'street',true);
-  assert.equal(reads,priorReads+1,'edge mode measures once rather than rendering an intermediate ordinary-road badge');priorReads=reads;
+  assert.equal(reads,priorReads+2,'edge mode measures price and width without an intermediate ordinary-road badge');priorReads=reads;
   guide.showGrid(edge,'street',true);assert.equal(reads,priorReads,'unchanged edge previews reuse badge size');
   guide.dispose();guide=null;assert.equal(fontEvents.size,0,'font invalidation listeners are removed on disposal');
  }finally{guide?.dispose();if(previousDocument===undefined)delete globalThis.document;else globalThis.document=previousDocument;}
@@ -273,17 +273,17 @@ test('badge updates batch layout writes, reuse unchanged sizes, and invalidate t
 
 test('ghost road colors and inner ribbon stay pooled and ordinary road colors reset to their exact appearance',()=>{
  const {guide}=fixture(),controls=[{x:10,y:20},{x:20,y:24},{x:30,y:20}],plan=gridPlan({width:32,depth:32,columns:8,rows:8});
- guide.update(controls,'street',true);const ordinaryMaterial=guide.fill.object.material.toJSON(),ordinaryPositions=activeVertices(guide.fill),materials=guide.batches.map(b=>b.object.material);
+ guide.update(controls,'street',true);const ordinaryMaterial=guide.fill.object.material.toJSON(),ordinaryPositions=activeVertices(guide.fill),ordinaryColors=Array.from(guide.fill.colorArray.subarray(0,guide.fill.geometry.drawRange.count*4)),materials=guide.batches.map(b=>b.object.material);
  guide.showGrid(plan,'street',true,{cost:9000});
  const geometry=guide.fill.geometry,color=geometry.attributes.color,position=geometry.attributes.position,active=color.array.subarray(0,geometry.drawRange.count*4);
  assert.equal(color.itemSize,4);assert.equal(color.count,position.count);assert.ok(active.every(Number.isFinite));
  assert.ok(Array.from(active).every((value,i)=>i%4!==3||value>=0&&value<=1));
- const alpha=new Set();for(let i=3;i<active.length;i+=4)alpha.add(active[i].toFixed(2));assert.deepEqual([...alpha].sort(),['0.22','0.42']);
+ const alpha=new Set();for(let i=3;i<active.length;i+=4)alpha.add(active[i].toFixed(2));assert.deepEqual([...alpha].sort(),['0.36','0.56']);
  assert.equal(guide.fill.object.material.vertexColors,true);assert.equal(guide.fill.object.material.color.getHexString(),'ffffff');assert.equal(guide.fill.object.material.opacity,1);
  let colorDisposals=0;geometry.addEventListener('dispose',()=>colorDisposals++);
  for(let i=0;i<10;i++)guide.showGrid(gridPlan({width:31,depth:31,columns:8,rows:8,angle:i*.002}),'street',i%2===0);
  assert.equal(geometry.attributes.color,color);assert.equal(geometry.attributes.position,position);assert.equal(colorDisposals,0);
- guide.update(controls,'street',true);assert.equal(geometry.attributes.color,color);assert.ok(color.array.every(value=>value===1),'inactive tint/alpha pool resets completely to white');
+ guide.update(controls,'street',true);assert.equal(geometry.attributes.color,color);assert.deepEqual(Array.from(color.array.subarray(0,geometry.drawRange.count*4)),ordinaryColors,'switching from a grid restores the original road tint and opacity');
  assert.deepEqual(guide.fill.object.material.toJSON(),ordinaryMaterial);assert.deepEqual(activeVertices(guide.fill),ordinaryPositions);
  guide.batches.forEach((batch,i)=>assert.equal(batch.object.material,materials[i]));assert.equal(guide.group.children.length,4);guide.dispose();
 });
@@ -291,11 +291,57 @@ test('ghost road colors and inner ribbon stay pooled and ordinary road colors re
 test('ghost inner road surface preserves the cyan sidewalk band and interpolates its height',()=>{
  const {guide,view}=fixture(),height=view.roadworks.height,probes=[];view.roadworks.height=(...args)=>{probes.push([args[1],args[2]]);return height(...args);};
  const plan=gridPlan();guide.showGrid(plan,'street',true);const position=guide.fill.geometry.attributes.position,color=guide.fill.geometry.attributes.color,vertices=guide.fill.geometry.drawRange.count;
- const asphalt=[],outer=[];for(let i=0;i<vertices;i++){const target=color.getW(i)>.3?asphalt:outer;target.push(position.getX(i),position.getY(i),position.getZ(i));}
+ const asphalt=[],outer=[];for(let i=0;i<vertices;i++){const target=color.getW(i)>.45?asphalt:outer;target.push(position.getX(i),position.getY(i),position.getZ(i));}
  const a=plan.paths[0][0],x=(a.x+.5)*4-96+10,z=(a.y+.5)*4-96,asphaltHalf=E.ROADS.street.width/2,fullHalf=(E.ROADS.street.width+.8)/2;
  assert.ok(covers(asphalt,x,z));assert.equal(covers(asphalt,x,z+(asphaltHalf+fullHalf)/2),false);assert.ok(covers(outer,x,z+(asphaltHalf+fullHalf)/2),'full road width retains its cyan sidewalk band');
  let found=false;for(let i=0;i<asphalt.length;i+=3)if(Math.hypot(asphalt[i]-x,asphalt[i+2]-(z+asphaltHalf))<1e-5){found=true;assert.ok(Math.abs(asphalt[i+1]-(3+x*.02+(z+asphaltHalf)*.01+.23))<1e-5);}
  assert.ok(found,'inner road keeps the sampled cross-section height');
  assert.equal(probes.some(([px,pz])=>Math.hypot(px-x,pz-(z+asphaltHalf))<1e-6),false,'the inner road vertex did not trigger another terrain query');
  guide.showGrid(plan,'highway',true);assert.equal(guide.group.children.length,4);guide.dispose();
+});
+
+test('single-road preview includes the carriageway and sidewalk bands without extra height samples per lane',()=>{
+ const {guide,view}=fixture(),controls=[{x:10,y:20},{x:30,y:20}],oldHeight=view.roadworks.height;let calls=0;
+ view.roadworks.height=(...args)=>{calls++;return oldHeight(...args)};
+ guide.update(controls,'street',true,{cost:1000});const first=calls;
+ const colors=guide.fill.geometry.attributes.color,position=guide.fill.geometry.attributes.position,alphas=new Set();
+ for(let i=0;i<guide.fill.geometry.drawRange.count;i++){alphas.add(colors.getW(i).toFixed(2));assert.ok(Math.abs(position.getY(i)-(3+position.getX(i)*.02+position.getZ(i)*.01+.23))<1e-5);}
+ assert.deepEqual([...alphas].sort(),['0.36','0.56']);
+ calls=0;guide.update(controls,'boulevard',true);assert.equal(calls,first,'lane dividers and arrows interpolate the already sampled ribbon');
+ assert.equal(guide.metrics.arrows.length,6);assert.equal(guide.group.children.length,4);
+ guide.dispose();
+});
+
+test('preview lane arrows follow authored one-way direction and oppose on a two-way carriageway',()=>{
+ const {guide}=fixture();
+ for(const [dx,dy]of [[1,0],[0,1],[-1,0],[.6,-.8]]){
+  const controls=[{x:24,y:24},{x:24+dx*10,y:24+dy*10}];
+  guide.update(controls,'motorway',true);assert.equal(guide.metrics.arrows.length,3);
+  for(const a of guide.metrics.arrows)assert.ok((a.to.x-a.from.x)*dx+(a.to.z-a.from.z)*dy>0);
+  guide.update(controls,'avenue',true);const directions=guide.metrics.arrows.map(a=>Math.sign((a.to.x-a.from.x)*dx+(a.to.z-a.from.z)*dy));assert.equal(directions.filter(x=>x>0).length,2);assert.equal(directions.filter(x=>x<0).length,2);
+ }
+ guide.update([{x:20,y:20},{x:40,y:20}],'path',true);assert.equal(guide.metrics.arrows.length,0);
+ guide.update([{x:20,y:20},{x:20,y:20}],'street',true,{anchorOnly:true});assert.equal(guide.metrics.arrows.length,0);assert.equal(guide.dashes.geometry.drawRange.count,0);guide.dispose();
+});
+
+test('road badges separate price, true curved length, endpoint grade, angle and placement errors',()=>{
+ const previous=globalThis.document,element=()=>({style:{},dataset:{},children:[],textContent:'',append(child){this.children.push(child)},remove(){}});
+ globalThis.document={createElement:element,body:element()};let guide;
+ try{
+  guide=fixture().guide;
+  const c=[{x:10,y:20},{x:20,y:20}];guide.update(c,'street',true,{cost:500,referenceTangent:{x:0,y:1}});
+  assert.deepEqual(guide.labels.map(l=>l.textContent),['₡500','↔ 200 m','◿ +2.0%','∟ 90°','']);assert.equal(guide.labels[0].dataset.roadGuide,'cost');assert.equal(guide.labels[2].dataset.roadGuide,'grade');
+  assert.deepEqual([guide.labelPoints[0].x,guide.labelPoints[1].x,guide.labelPoints[3].x],[-14,-34,-54]);
+  assert.match(guide.labels[2].title,/estimate/i);
+  guide.update(c,'street',false,{cost:500,reason:'Outside owned land',snap:{label:'Road connection'}});assert.equal(guide.labels[0].textContent,'Outside owned land');assert.equal(guide.labels[0].style.color,'#ffb3a2');assert.equal(guide.labels[3].textContent,'');assert.equal(guide.labels[4].textContent,'Road connection');
+  guide.update([{x:10,y:20},{x:20,y:10},{x:30,y:20}],'street',true,{cost:900});assert.ok(guide.metrics.lengthMeters>400);assert.equal(guide.labels[1].textContent,`↔ ${Math.round(guide.metrics.lengthMeters).toLocaleString()} m`);
+  guide.update([c[0],c[0]],'street',true,{anchorOnly:true});assert.deepEqual(guide.labels.map(l=>l.textContent),['','','','','Choose start']);
+  guide.clear();assert.equal(guide.labelRoot.hidden,true);
+ }finally{guide?.dispose();if(previous===undefined)delete globalThis.document;else globalThis.document=previous;}
+});
+
+test('colliding badges move beside their own anchor instead of jumping to an unrelated endpoint',()=>{
+ const point={x:780,y:316},size={width:60,height:23},bounds={left:0,right:1280,top:65,bottom:625};
+ const cost={left:1015,right:1059,top:480,bottom:503},length={left:752,right:815,top:263,bottom:286};
+ const result=placeRoadGuideBadge(point,size,bounds,[],[cost,length]);assert.ok(result);assert.ok(Math.hypot(result.x-point.x,result.y-point.y)<70,'the nearest free local position is preferred over a far-away cost badge');
 });

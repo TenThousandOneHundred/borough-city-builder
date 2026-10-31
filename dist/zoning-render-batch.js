@@ -1,7 +1,7 @@
-import './map-grid.js?v=169';
+import './map-grid.js?v=170';
 const G=globalThis.BoroughGrid;
 import * as THREE from './vendor/three.module.js';
-import {finishBuild} from './build-scheduler.js?v=169';
+import {finishBuild} from './build-scheduler.js?v=170';
 
 // Write terrain-following cells straight into their final colour batches.
 // Preserve PlaneGeometry(…, …, 2, 2)'s topology and Float32 local coordinates.

@@ -5,7 +5,7 @@ export function createZoneShelf(panel, options){
  const familyIcons={residential:'residential_low',commercial:'commercial_low',industrial:'industrial',office:'office'};
  for(const b of families.children){
   const name=b.textContent;b.title=name;b.setAttribute('aria-label',name);
-  b.innerHTML=`<img src="assets/ui/zones/${familyIcons[b.dataset.zoneFamily]}.png?v=169" alt=""><span>${name}</span>`;
+  b.innerHTML=`<img src="assets/ui/zones/${familyIcons[b.dataset.zoneFamily]}.png?v=170" alt=""><span>${name}</span>`;
  }
  const controls=document.getElementById('zoneControls'),toolbox=document.createElement('details');
  toolbox.id='zoneToolbox';toolbox.className='zone-toolbox';toolbox.hidden=true;
@@ -45,7 +45,7 @@ export function createZoneShelf(panel, options){
     b.setAttribute('aria-label',b.dataset.zoneName);
     b.title=b.dataset.zoneSummary+(b.getAttribute('aria-disabled')==='true'?' · '+b.querySelector('.unlock-note').textContent:'');
     const icon=b.querySelector('.model-icon');
-    icon.innerHTML=b.dataset.zone==='erase'?'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 14 10-10 8 8-8 8H9zM8 9l8 8M12 20h10"/></svg>':`<img src="assets/ui/zones/${b.dataset.zone}.png?v=169" alt="">`;
+    icon.innerHTML=b.dataset.zone==='erase'?'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 14 10-10 8 8-8 8H9zM8 9l8 8M12 20h10"/></svg>':`<img src="assets/ui/zones/${b.dataset.zone}.png?v=170" alt="">`;
     b.addEventListener('pointerenter',()=>{hovered=b;describe(b);});b.addEventListener('focus',()=>{hovered=b;describe(b);});b.addEventListener('click',()=>describe(b));
    }
    describe(selected());

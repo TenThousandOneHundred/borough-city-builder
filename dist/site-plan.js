@@ -1,6 +1,6 @@
-import './map-grid.js?v=169';
+import './map-grid.js?v=170';
 const G=globalThis.BoroughGrid;
-import {industrialSitePlan} from './industrial-site-plan.js?v=169';
+import {industrialSitePlan} from './industrial-site-plan.js?v=170';
 // Layout in the building's local coordinates. Features stay inside the owned
 // rotated envelope and outside the complete model bounds, including balconies.
 export function sitePlan(plan,footprint){

@@ -1,7 +1,7 @@
-import './map-grid.js?v=169';
+import './map-grid.js?v=170';
 const G=globalThis.BoroughGrid;
 import * as THREE from './vendor/three.module.js';
-import {finishBuild} from './build-scheduler.js?v=169';
+import {finishBuild} from './build-scheduler.js?v=170';
 
 export function constructionGrid(height){return finishBuild(constructionGridSteps(height));}
 export function* constructionGridSteps(height){

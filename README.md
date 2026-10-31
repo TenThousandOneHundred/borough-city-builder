@@ -1,6 +1,16 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 170 — Reference-based road previews
+
+Single-road previews now show a blue edge band and a separate carriageway, fine dividers for wider roads and arrows following each lane direction. Length, estimated endpoint grade, alignment angle and construction cost have separate compact badges. Invalid placement displays its reason at the endpoint. Badge placement prefers the nearest free position and avoids both the road shelf and its controls; cancellation removes the preview. Shared grid and parallel previews use the same stronger blue shading and smaller badge styling.
+
+The actual [Cities: Skylines II grid-building screenshot](https://images.ctfassets.net/u73tyf0fa8v1/4x625wGPgn9o4yZjRgtvxk/752569991f27c46173591520b2fa4cab/cities-skylines-ii-road-tools-Grid_mode_narrow.jpg?fm=webp&q=75&w=1920) was inspected before and after. The first candidate was too faint; its tint was revised. A collision between the length and grade badges also exposed a distant-label placement issue, which was corrected. Blue corridors, lane detail and small separate measurements are closer to the reference. Exact road materials, joining geometry, icon shapes and the broader city presentation still differ.
+
+All 998 release tests pass, plus module syntax, existing model/texture validation and compressed-asset checks. Browser QA covered straight, curved, avenue, grid, invalid and cleared previews. In the normal game, a curved road preview showed a 126 m path and ₡450 cost; Escape cancelled it, and confirming the same road deducted exactly ₡450 and produced the finished street with roadside zoning. Browser warning/error logs were empty.
+
+The preview retains four GPU drawing objects and bounded sampling. Lane arrows and inner surfaces interpolate already sampled terrain; tests verify that wider lane counts add no height queries. A 200-update warm CPU microbenchmark for a maximum-sample curved boulevard measured median/p95 0.86/1.40 ms before and 2.25/3.51 ms after; maximums were 3.91/7.54 ms. The richer preview adds work during pointer movement; these measurements are not an overall frame-rate or lag-free claim. No new art asset was authored. This is feature update two after optimization 168; the scheduled optimization follows update171.
+
 ## Edition 169 — Roadside construction cells
 
 Road and pedestrian-path tools now show pale buildable cells beside existing roads, leaving open terrain clear. The six-cell-deep bands use the actual zoning layout, following straight and curved roads, chosen zoning sides, ownership limits and junction exclusions. Painted cells retain their zone colors, and developed buildings remain single multi-cell parcels. Closing construction hides the guides; photo mode also hides them.
