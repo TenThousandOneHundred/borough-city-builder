@@ -182,7 +182,7 @@ test('grid labels show actual dimensions and cost and avoid the build panel, the
   view.canvas={getBoundingClientRect:()=>({left:0,top:0,width:1280,height:720})};
   guide.showGrid(gridPlan(),'street',true,{cost:1888});
   assert.equal(guide.labels[0].textContent,'₡1,888\n3 × 2 · 6 blocks');assert.equal(guide.labels[1].textContent,'↔ 480 m');assert.equal(guide.labels[2].textContent,'↔ 320 m');
-  assert.equal(guide.labels[3].textContent,'∟ 90°');assert.equal(guide.labels[4].textContent,'∟ 90°');
+  assert.equal(guide.labels[3].textContent,'∟ 90°');assert.equal(guide.labels[4].textContent,'∟ 90°');assert.equal(guide.labels[2].title,'Grid depth');
   assert.deepEqual(guide.labelPoints.slice(1).map(p=>[p.x,p.z]),[[-14,-62],[34,-30],[-62,-62],[34,-62]],'dimensions and angles follow the first edge then the depth drawing edge');
   const visible=[];
   for(const label of guide.labels){if(label.style.display==='none')continue;const {width,height}=label.getBoundingClientRect(),x=parseFloat(label.style.left),y=parseFloat(label.style.top),box={left:x-width/2,right:x+width/2,top:y-height,bottom:y};
