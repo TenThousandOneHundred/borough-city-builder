@@ -1,9 +1,9 @@
-import {lotPlan} from './building-plan.js?v=170';
-import {lotPerimeter,lotFoundation} from './lot-foundation.js?v=170';
-import {floorHeight,wetness} from './landscape.js?v=170';
-import {SIDEWALK_HEIGHT} from './road-profile.js?v=170';
-import {finishBuild} from './build-scheduler.js?v=170';
-import './building-entities.js?v=170';
+import {lotPlan} from './building-plan.js?v=171';
+import {lotPerimeter,lotFoundation} from './lot-foundation.js?v=171';
+import {floorHeight,wetness} from './landscape.js?v=171';
+import {SIDEWALK_HEIGHT} from './road-profile.js?v=171';
+import {finishBuild} from './build-scheduler.js?v=171';
+import './building-entities.js?v=171';
 import * as THREE from './vendor/three.module.js';
 const Buildings=globalThis.BoroughBuildings;
 

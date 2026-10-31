@@ -1,4 +1,4 @@
-import {LandSelection} from './land-selection.js?v=170';
+import {LandSelection} from './land-selection.js?v=171';
 
 export function createLandPanel({document,engine,world,view,save,changed,toast}){
  const $=id=>document.getElementById(id),L=engine.Land,panel=$('landPanel'),controls=$('landTileControls'),selection=new LandSelection(view),selected=new Set();let hover=null,press=null,buttons=[];

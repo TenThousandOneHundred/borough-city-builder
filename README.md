@@ -1,6 +1,16 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 171 — Blender apartment-over-shop buildings
+
+Two new mixed-use buildings grow through normal residential mixed-use zoning: a nine-storey rose-brick block and an eight-storey sage block. Both have recessed paired windows, open balcony rails, separate residential entrances, visible shop interiors and retail windows wrapping the front corners. The brick building uses narrower ground-floor openings in a stone frontage. Existing lot fitting, deterministic selection, saved residents and room lighting remain in use; the new models are excluded from commercial-only malls.
+
+The actual [Cities: Skylines II mixed-use screenshot](https://images.ctfassets.net/u73tyf0fa8v1/6hxkmLpCK8YFmCE7JdecpV/2475f2f3e512f2de35d227928b9c34b8/4_Mixed_use.png?fm=webp&q=75&w=1920) was inspected before and after. Comparisons led to revisions of blank shop glazing, the balcony recess material, the stone storefront, corner windows and masonry color. Window proportions, exact storefront layout, weathering, lighting and the surrounding city still differ. This is progress toward the reference, not visual parity.
+
+The editable Blender project is `source-assets/buildings/mixed-use.blend`, generated with `scripts/build-mixed-use.py`. Geometry, materials and packed masonry images are authored in Blender. The two models share eleven material batches each. Brick uses 14,589 triangles nearby and 8,342 at a distance; sage uses 11,214 and 5,974. Distant geometry shares the vertex buffers and retains every apartment pane, window frame, main balcony rail and shop opening. Fine railing bars, small signs, shelf goods and AC details are nearby-only. The additional losslessly compressed download is 922,622 bytes.
+
+Verification includes actual zoning growth of both forms in a 216-resident fixture, save round trips, lot bounds, entrances, outward-facing corner glazing, stone piers, near/far openings and stable night lighting. Browser comparisons cover daytime, night, both models and the distant view. The release workflow runs all 1,002 checks, module syntax, 93 building assets and compressed-asset validation before deployment. This is feature update three after optimization 168; **172 is the scheduled optimization pass**.
+
 ## Edition 170 — Reference-based road previews
 
 Single-road previews now show a blue edge band and a separate carriageway, fine dividers for wider roads and arrows following each lane direction. Length, estimated endpoint grade, alignment angle and construction cost have separate compact badges. Invalid placement displays its reason at the endpoint. Badge placement prefers the nearest free position and avoids both the road shelf and its controls; cancellation removes the preview. Shared grid and parallel previews use the same stronger blue shading and smaller badge styling.

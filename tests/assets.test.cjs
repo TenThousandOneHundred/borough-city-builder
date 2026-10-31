@@ -22,7 +22,7 @@ assert.ok(tree.length<4*1024*1024,'nearby tree stays within download budget');
 for(const file of ['rock-color.jpg','rock-normal.jpg']){const b=fs.readFileSync(path.join(root,'assets',file));assert.equal(b.readUInt16BE(0),0xffd8);assert.ok(b.length>10000&&b.length<2*1024*1024);}
 
 let buildingCount=0;
-for(const file of ['buildings/urban.glb','buildings/industry.glb','buildings/modern.glb','coast.glb']){
+for(const file of ['buildings/urban.glb','buildings/industry.glb','buildings/modern.glb','buildings/mixed-use.glb','coast.glb']){
  const data=fs.readFileSync(path.join(root,'assets',file));
  assert.equal(data.toString('utf8',0,4),'glTF');assert.equal(data.readUInt32LE(4),2);assert.equal(data.readUInt32LE(8),data.length);
  const gltf=JSON.parse(data.toString('utf8',20,20+data.readUInt32LE(12)));
@@ -46,8 +46,8 @@ for(const file of ['buildings/urban.glb','buildings/industry.glb','buildings/mod
   for(const index of roots){assert.ok(gltf.nodes[index].extras.category);assert.ok(triangles(index)<200000,'complete building triangle budget');}
  }
 }
-assert.equal(buildingCount,91);assert.ok(fs.statSync(path.join(root,'assets/buildings/modern.glb.gz')).size<3.2*1024*1024,'modern catalogue including metre-scale industrial UVs stays below 3.2 MiB');
-console.log('91 complete GLB buildings and scanned coast verified');
+assert.equal(buildingCount,93);assert.ok(fs.statSync(path.join(root,'assets/buildings/modern.glb.gz')).size<3.2*1024*1024,'modern catalogue including metre-scale industrial UVs stays below 3.2 MiB');
+console.log('93 complete GLB buildings and scanned coast verified');
 const coastData=fs.readFileSync(path.join(root,'assets/coast.glb')),coast=JSON.parse(coastData.toString('utf8',20,20+coastData.readUInt32LE(12)));
 assert.ok(coast.meshes.reduce((total,m)=>total+m.primitives.reduce((n,p)=>n+coast.accessors[p.indices??p.attributes.POSITION].count/3,0),0)<5000,'coastal patch triangle budget');
 assert.ok(fs.statSync(path.join(root,'assets/buildings/lod.bin')).size<10*1024*1024,'distant geometry download budget');

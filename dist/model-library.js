@@ -1,16 +1,16 @@
-import {applyResidentialFinish,configureResidentialBrick} from './residential-finishes.js?v=170';
-import {IndustrialSurfaces,configureIndustrialPaint} from './industrial-surfaces.js?v=170';
-import {lotMaterials} from './lot-surfaces.js?v=170';
-import {bakeRoofFinish} from './roof-finishes.js?v=170';
-import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=170';
-import {loadBinary} from './asset-transfer.js?v=170';
-import {SiteDetails} from './site-details.js?v=170';
-import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=170';
+import {applyResidentialFinish,configureResidentialBrick} from './residential-finishes.js?v=171';
+import {IndustrialSurfaces,configureIndustrialPaint} from './industrial-surfaces.js?v=171';
+import {lotMaterials} from './lot-surfaces.js?v=171';
+import {bakeRoofFinish} from './roof-finishes.js?v=171';
+import {addWindowRooms,configureWindowLighting} from './window-lighting.js?v=171';
+import {loadBinary} from './asset-transfer.js?v=171';
+import {SiteDetails} from './site-details.js?v=171';
+import {lotFoundation,lotPerimeter} from './lot-foundation.js?v=171';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {lotPlan} from './building-plan.js?v=170';
-import {floorHeight} from './landscape.js?v=170';
+import {lotPlan} from './building-plan.js?v=171';
+import {floorHeight} from './landscape.js?v=171';
 const IDENTITY=new THREE.Matrix4();
 const civicDefaults={hospital:'clinic',school:'elementary',police:'police',fire:'fire'};
 // Complete textured assets are loaded once, batched per material, and instanced.
@@ -19,10 +19,10 @@ export class ModelLibrary {
  async load(){
   const loader=new GLTFLoader();
   // Fetch the distant indices alongside the models instead of adding another
-  // large download after all three catalogues have finished.
-  const distant=Promise.all([fetch(new URL('./assets/buildings/lod.json?v=170-homes',import.meta.url)).then(r=>{if(!r.ok)throw Error(r.status);return r.json()}),loadBinary(new URL('./assets/buildings/lod.bin?v=170-homes',import.meta.url))]).then(value=>({value}),error=>({error}));
-  await Promise.all(['urban','industry','modern'].map(async file=>{
-   try{const url=new URL(`./assets/buildings/${file}.glb?v=${file==='modern'?'149-homes':21}`,import.meta.url),{scene}=await loader.parseAsync(await loadBinary(url),new URL('.',url).href);
+  // large download after the catalogues have finished.
+  const distant=Promise.all([fetch(new URL('./assets/buildings/lod.json?v=171-homes',import.meta.url)).then(r=>{if(!r.ok)throw Error(r.status);return r.json()}),loadBinary(new URL('./assets/buildings/lod.bin?v=171-homes',import.meta.url))]).then(value=>({value}),error=>({error}));
+  await Promise.all(['urban','industry','modern','mixed-use'].map(async file=>{
+   try{const url=new URL(`./assets/buildings/${file}.glb?v=${file==='mixed-use'?'171-blender':file==='modern'?'149-homes':21}`,import.meta.url),{scene}=await loader.parseAsync(await loadBinary(url),new URL('.',url).href);
     this.ingest(scene);
    }catch(error){console.warn('Building model fallback:',file,error.message);}
   }));
@@ -57,12 +57,15 @@ export class ModelLibrary {
       }if(modern)bakeRoofFinish(geometry,material);this.materials.add(material);material.envMapIntensity=.55;material.roughness=Math.max(.24,material.roughness);material.userData.modelAsset=true;
       if(material.name.includes('glass')){if(!modern){material.metalness=.38;material.roughness=.24;}else material.envMapIntensity=.85;material.userData.glass=true;if(modern&&['modern-glass','modern-glass-occupied'].includes(material.name))configureWindowLighting(material);}
       for(const key of ['map','normalMap','roughnessMap','metalnessMap','aoMap'])if(material[key])material[key].anisotropy=Math.min(material.userData.industrialSurface?4:8,this.view.renderer.capabilities.getMaxAnisotropy());
-      if(!batches.has(material))batches.set(material,[]);batches.get(material).push(geometry);
+      geometry.userData.authoredDetail=!!o.userData.lodDetail;if(!batches.has(material))batches.set(material,[]);batches.get(material).push(geometry);
      });
      const root=new THREE.Group();root.name=source.name;
-     for(const [material,parts]of batches){const geometry=mergeGeometries(parts,false);parts.forEach(g=>g.dispose());if(!geometry)continue;geometry.computeBoundingSphere();const mesh=new THREE.Mesh(geometry,material);mesh.userData.sharedAsset=true;mesh.castShadow=mesh.receiveShadow=true;root.add(mesh);}
+     for(const [material,parts]of batches){
+      let distant=null;if(source.userData.authoredLod){distant=[];let offset=0;for(const part of parts){if(!part.userData.authoredDetail)for(const index of part.index.array)distant.push(index+offset);offset+=part.attributes.position.count;}}
+      const geometry=mergeGeometries(parts,false);parts.forEach(g=>g.dispose());if(!geometry)continue;if(distant)geometry.userData.authoredLodIndices=new Uint32Array(distant);geometry.computeBoundingSphere();const mesh=new THREE.Mesh(geometry,material);mesh.userData.sharedAsset=true;mesh.castShadow=mesh.receiveShadow=true;root.add(mesh);}
      const bounds=new THREE.Box3().setFromObject(root),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());
-     for(const child of root.children){child.geometry.translate(-center.x,-bounds.min.y,-center.z);child.geometry.computeBoundingSphere();if(child.material.userData.roomLighting)addWindowRooms(child.geometry);}
+     for(const child of root.children){child.geometry.translate(-center.x,-bounds.min.y,-center.z);child.geometry.computeBoundingSphere();if(child.material.userData.roomLighting)addWindowRooms(child.geometry);
+      const indices=child.geometry.userData.authoredLodIndices;if(indices){const distant=new THREE.BufferGeometry();for(const [name,attribute]of Object.entries(child.geometry.attributes))distant.setAttribute(name,attribute);distant.setIndex(new THREE.BufferAttribute(indices,1));distant.computeBoundingSphere();child.geometry.userData.lod=distant;delete child.geometry.userData.authoredLodIndices;}}
      this.models.push({name:source.name,category:source.userData.category,family:source.userData.family||'masonry',floors:source.userData.floors,building:source.userData.building,site:!!source.userData.site,houseForm:source.userData.houseForm,roofForm:source.userData.roofForm,gardens:source.userData.gardens||[],streetFronts:source.userData.streetFronts||[],origin:{x:-center.x,y:-bounds.min.y,z:-center.z},size,root});
     }
     // The merged model library owns its buffers, the import hierarchy can go.
@@ -73,7 +76,7 @@ export class ModelLibrary {
  acceptsCivic(tile){const id=tile.building||civicDefaults[tile.type];return !!id&&this.models.some(a=>a.category===tile.type&&a.building===id&&a.site===!!tile.facilitySite);}
  create(world,index,parcel){
   if(!this.models.length)return null;const p=lotPlan(world,index,parcel),definition=parcel?.definition||world.tiles[index],mixed=definition.building==='mixeduse',category=mixed?'commercial':p.low?'residential-low':p.type;
-  const civic=civicDefaults[p.type],id=definition.building||civic;let candidates=this.models.filter(a=>a.category===category&&(a.building!=='lowrent'||id==='lowrent')&&(!mixed||a.name.includes('mixed-use'))&&(!civic||a.building===id&&a.site===p.facility));if(!candidates.length)return null;
+  const civic=civicDefaults[p.type],id=definition.building||civic;let candidates=this.models.filter(a=>a.category===category&&(a.building!=='mixeduse'||mixed)&&(a.building!=='lowrent'||id==='lowrent')&&(!mixed||a.name.includes('mixed-use'))&&(!civic||a.building===id&&a.site===p.facility));if(!candidates.length)return null;
   if(p.type==='industrial'){const kind=id||((p.seed&1)?'factory':'warehouse'),forms=candidates.filter(a=>a.building===kind);if(forms.length)candidates=forms;}
   if(id==='lowrent'){const name=p.lotWidth>=7.8&&p.lotDepth>=7.8?'lowrent-court-block':'lowrent-staggered-slab',slabs=candidates.filter(a=>a.building==='lowrent'&&a.name===name);if(slabs.length)candidates=slabs;}
   if(p.low){const homes=candidates.filter(a=>a.houseForm);if(homes.length)candidates=homes;const forms=candidates.filter(a=>id==='townhouse'?(p.oriented?a.houseForm==='terrace':['semi','terrace'].includes(a.houseForm)):a.houseForm==='detached');if(forms.length)candidates=forms;}

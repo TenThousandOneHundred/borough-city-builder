@@ -1,4 +1,4 @@
-import './map-grid.js?v=170';
+import './map-grid.js?v=171';
 const G=globalThis.BoroughGrid;
 // Construction coordinates are tile coordinates: one tile is 20 metres.
 // The index is a snapshot of network geometry. Recreate it after road edits.

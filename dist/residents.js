@@ -1,6 +1,6 @@
-import './map-grid.js?v=170';
+import './map-grid.js?v=171';
 const G=globalThis.BoroughGrid;
-import './building-entities.js?v=170';
+import './building-entities.js?v=171';
 const Buildings=globalThis.BoroughBuildings;
 // Saved household members and daily routines, connected to the live road agents.
 export class Residents {

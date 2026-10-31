@@ -1,12 +1,12 @@
-import './map-grid.js?v=170';
+import './map-grid.js?v=171';
 const G=globalThis.BoroughGrid;
-import './progression.js?v=170';
-import './roundabout-state.js?v=170';
-import {moveToRoute} from './route-progress.js?v=170';
-import './building-entities.js?v=170';
+import './progression.js?v=171';
+import './roundabout-state.js?v=171';
+import {moveToRoute} from './route-progress.js?v=171';
+import './building-entities.js?v=171';
 const Buildings=globalThis.BoroughBuildings;
-import {Walking,sidewalkPosition} from './walking.js?v=170';
-import {roadPoint} from './traffic.js?v=170';
+import {Walking,sidewalkPosition} from './walking.js?v=171';
+import {roadPoint} from './traffic.js?v=171';
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const nearby=(engine,i)=>engine.neighbors(i);
 // Attach each numeric stop to one physical road for the complete loop. Runtime
