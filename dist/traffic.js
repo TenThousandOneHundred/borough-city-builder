@@ -1,17 +1,17 @@
-import './map-grid.js?v=171';
+import './map-grid.js?v=172';
 const G=globalThis.BoroughGrid;
-import {CrossingControl} from './crossing-control.js?v=171';
-import './road-connectivity.js?v=171';
+import {CrossingControl} from './crossing-control.js?v=172';
+import './road-connectivity.js?v=172';
 const RoadConnectivity=globalThis.BoroughRoadConnectivity;
-import {followingClearance} from './traffic-following.js?v=171';
-import {roundaboutRoute} from './roundabout-geometry.js?v=171';
-import {moveToRoute} from './route-progress.js?v=171';
-import './building-entities.js?v=171';
+import {followingClearance} from './traffic-following.js?v=172';
+import {roundaboutRoute} from './roundabout-geometry.js?v=172';
+import {moveToRoute} from './route-progress.js?v=172';
+import './building-entities.js?v=172';
 const Buildings=globalThis.BoroughBuildings;
-import {laneOffset,transitionLaneOffsets} from './road-lanes.js?v=171';
-import {roadGeometry} from './road-junction-plan.js?v=171';
-import {TrafficSpatial} from './traffic-spatial.js?v=171';
-import {Junctions,smoothRoute} from './junctions.js?v=171';
+import {laneOffset,transitionLaneOffsets} from './road-lanes.js?v=172';
+import {roadGeometry} from './road-junction-plan.js?v=172';
+import {TrafficSpatial} from './traffic-spatial.js?v=172';
+import {Junctions,smoothRoute} from './junctions.js?v=172';
 // Car slots grow with population; saved road trips always have room to resume.
 export function carCapacity(world){const population=Buildings.entries(world).reduce((n,[,t])=>n+(t.type==='residential'&&!t.construction?(t.people||0):0),0),saved=world.citizens?.residents.filter(r=>r.trip).length||0;return Math.max(32,Math.min(512,Math.ceil(population/4)),saved);}
 // Destination-based road trips. No random placement or per-frame route searches.
@@ -19,14 +19,22 @@ export const roadPoint=i=>({x:(i%G.n+.5)*4-G.half,z:(Math.floor(i/G.n)+.5)*4-G.h
 export function outsidePortals(world){return world.tiles.flatMap((t,i)=>{const x=i%G.n,y=Math.floor(i/G.n);if(t.type!=='road'||x!==0&&x!==G.last&&y!==0&&y!==G.last)return[];const direction=x===0?[-1,0]:x===G.last?[1,0]:y===0?[0,-1]:[0,1],p=roadPoint(i);return[{id:i,...p,dx:direction[0],dz:direction[1],outside:{x:p.x+direction[0]*80,z:p.z+direction[1]*80}}];});}
 export class Traffic {
  constructor(world,engine){this.engine=engine;this.spatial=new TrafficSpatial();this.agents=[];this.sequence=0;this.spawnClock=0;this.completed=0;this.time=0;this.rebuild(world);this.crossings=new CrossingControl(this);}
- rebuild(world){const replacement=this.roadEditRevision!==undefined&&this.roadEditRevision!==(world.roadEditRevision||0);this.roadEditRevision=world.roadEditRevision||0;this.world=world;this.portals=outsidePortals(world);this.graph=new Map();this.samples=new Map();this.positions=new Map();this.routeCache=new Map();this.searchCache=new Map();
- for(const path of world.roadPaths||[]){const samples=this.engine.sampleRoad(path.controls).map(p=>({x:(p.x+.5)*4-G.half,z:(p.y+.5)*4-G.half}));const mapping=new Map();for(const i of path.tiles){const p=roadPoint(i);let best=0,d=Infinity;samples.forEach((s,j)=>{const v=(s.x-p.x)**2+(s.z-p.z)**2;if(v<d){d=v;best=j}});mapping.set(i,best);if(!this.positions.has(i))this.positions.set(i,samples[best]);}this.samples.set(path.id,{samples,mapping,spec:this.engine.ROADS[path.type]});}
+ rebuild(world){const replacement=this.roadEditRevision!==undefined&&this.roadEditRevision!==(world.roadEditRevision||0);this.roadEditRevision=world.roadEditRevision||0;this.world=world;this.portals=outsidePortals(world);this.graph=new Map();const previousSamples=this.samples,previousKeys=this.sampleKeys,sameSampler=this.sampleRoad===this.engine.sampleRoad;this.sampleRoad=this.engine.sampleRoad;this.samples=new Map();this.sampleKeys=new Map();this.positions=new Map();this.routeCache=new Map();this.searchCache=new Map();
+ // Centerline samples depend on controls, tile order, map size and sampler,
+ // not on a neighboring road edit. Retain exact previous arrays when unchanged.
+ for(const path of world.roadPaths||[]){const key=JSON.stringify([G.n,path.controls,path.tiles]),cached=sameSampler&&previousKeys?.get(path.id)===key?previousSamples.get(path.id):null;
+  const samples=cached?.samples||this.engine.sampleRoad(path.controls).map(p=>({x:(p.x+.5)*4-G.half,z:(p.y+.5)*4-G.half})),mapping=cached?.mapping||new Map();
+  for(const i of path.tiles){if(!cached){const p=roadPoint(i);let best=0,d=Infinity;samples.forEach((s,j)=>{const v=(s.x-p.x)**2+(s.z-p.z)**2;if(v<d){d=v;best=j}});mapping.set(i,best);}if(!this.positions.has(i))this.positions.set(i,samples[mapping.get(i)]);}
+  this.samples.set(path.id,{samples,mapping,spec:this.engine.ROADS[path.type]});this.sampleKeys.set(path.id,key);
+ }
  this.network=RoadConnectivity.build(world,this.engine);this.graph=this.network.graph;
  const previousJunctions=this.junctions;this.roadJunctions=roadGeometry(world,this.engine).junctions;this.junctions=new Junctions(this.graph,roadPoint,this.roadJunctions);for(const j of this.junctions.items){const previous=previousJunctions?.items.find(old=>old.id===j.id);if(previous?.owner?.active)j.owner=previous.owner;}
  this.crossings?.rebuild();
  this.reverseGraph=this.network.reverseGraph;
- this.trips=[];const pathsFrom=new Map(this.portals.map(p=>[p.id,this.search(p.id)])),pathsTo=new Map(this.portals.map(p=>[p.id,this.search(p.id,this.reverseGraph)]));
- for(const [i,tile]of Buildings.entries(world)){if(!['residential','commercial','industrial','office'].includes(tile.type)||!tile.level||tile.construction)continue;const frontage=Buildings.frontage(world,i,this.graph),lotPoint=Buildings.point(world,i),nearest=[...this.portals].sort((a,b)=>Math.hypot(a.x-lotPoint.x,a.z-lotPoint.z)-Math.hypot(b.x-lotPoint.x,b.z-lotPoint.z));let found=false;for(const portal of nearest){const parents=pathsFrom.get(portal.id);for(const road of frontage){const source=this.frontageSource(i,road),inbound=this.trace(parents,road,source,this.frontagePoint(i));if(!inbound)continue;for(const exit of nearest){const reverse=this.trace(pathsTo.get(exit.id),road,source,this.frontagePoint(i));if(!reverse)continue;const outbound=this.network.reverseTrace(reverse);const incoming=this.route(inbound,portal,true,Buildings.seed(i)),outgoing=this.route(outbound,exit,false,Buildings.seed(i)),lot=Buildings.point(world,i),stop={x:(lot.x+incoming.at(-1).x)/2,z:(lot.z+incoming.at(-1).z)/2};this.trips.push({destination:i,kind:tile.type==='industrial'?'Delivery':this.engine.hasShops(tile)?'Business visit':tile.type==='residential'?'Resident visit':'Business visit',inbound:[...incoming,stop],outbound:[stop,...outgoing],cells:[inbound,outbound],roads:new Set([...inbound,...outbound])});found=true;break;}if(found)break;}if(found)break;}}
+ // Search an outside entrance only when a completed destination needs it.
+ // Empty cities and unreachable frontages need no eager search per map edge.
+ this.trips=[];const pathsFrom=new Map(),pathsTo=new Map(),portalPaths=(cache,id,graph)=>{if(!cache.has(id))cache.set(id,this.search(id,graph));return cache.get(id);};
+ for(const [i,tile]of Buildings.entries(world)){if(!['residential','commercial','industrial','office'].includes(tile.type)||!tile.level||tile.construction)continue;const frontage=Buildings.frontage(world,i,this.graph);if(!frontage.length)continue;const lotPoint=Buildings.point(world,i),nearest=[...this.portals].sort((a,b)=>Math.hypot(a.x-lotPoint.x,a.z-lotPoint.z)-Math.hypot(b.x-lotPoint.x,b.z-lotPoint.z));let found=false;for(const portal of nearest){const parents=portalPaths(pathsFrom,portal.id,this.graph);for(const road of frontage){const source=this.frontageSource(i,road),inbound=this.trace(parents,road,source,this.frontagePoint(i));if(!inbound)continue;for(const exit of nearest){const reverse=this.trace(portalPaths(pathsTo,exit.id,this.reverseGraph),road,source,this.frontagePoint(i));if(!reverse)continue;const outbound=this.network.reverseTrace(reverse);const incoming=this.route(inbound,portal,true,Buildings.seed(i)),outgoing=this.route(outbound,exit,false,Buildings.seed(i)),lot=Buildings.point(world,i),stop={x:(lot.x+incoming.at(-1).x)/2,z:(lot.z+incoming.at(-1).z)/2};this.trips.push({destination:i,kind:tile.type==='industrial'?'Delivery':this.engine.hasShops(tile)?'Business visit':tile.type==='residential'?'Resident visit':'Business visit',inbound:[...incoming,stop],outbound:[stop,...outgoing],cells:[inbound,outbound],roads:new Set([...inbound,...outbound])});found=true;break;}if(found)break;}if(found)break;}}
  // Width and direction changes need new lane geometry. Additions retain the
  // existing route exactly; replacements project onto a newly connected trip.
  if(replacement){const people=new Map((world.citizens?.residents||[]).map(r=>[r.id,r]));for(const a of this.agents){if(!a.active||a.kind==='bus')continue;

@@ -1,6 +1,16 @@
 # Borough II
 A standalone browser city simulation with a Cities: Skylines II inspired interface and a real Three.js 3D view. It is an original small game, not the commercial game or a reproduction of its complete simulation.
 
+## Edition 172 — Less repeated traffic work after road edits
+
+Road updates now reuse the exact centerline samples and nearest-sample mappings of unchanged roads. Connectivity still rebuilds its junction states and directed links, so new intersections, demolished segments and one-way changes take effect immediately. Reuse is invalidated by changed controls, active road tiles, tile ordering, map dimensions or the sampling function. Removed paths leave the cache.
+
+Outside-entry and exit route searches now run only when a completed, road-connected destination requires them. The measured fixture performs zero portal searches for an empty city instead of twelve, and six for its three destinations instead of twelve. Entrance priority, return routes and active journeys retain the released behavior. No simulation frequency, building detail, terrain resolution, textures, shadows, visible population or distant-model threshold was reduced.
+
+Eight new checks cover lazy search counts, exact released route fingerprints across 48/72/96 maps and one-way roads, invalidation, removal and ongoing offscreen journeys. Building, terrain and texture files are byte-identical to Edition 171; matched-camera browser comparisons retain the apartment facades and storefronts. The full release workflow runs 1,010 checks plus syntax and asset validation. Performance measurements and publication verification are recorded in the local Edition 172 audit.
+
+This is the scheduled optimization after updates 169–171. The next scheduled optimization follows three further feature updates. The actual Cities: Skylines II road photo was inspected again; this pass preserves the existing artwork and does not claim overall visual parity or a lag-free game.
+
 ## Edition 171 — Blender apartment-over-shop buildings
 
 Two new mixed-use buildings grow through normal residential mixed-use zoning: a nine-storey rose-brick block and an eight-storey sage block. Both have recessed paired windows, open balcony rails, separate residential entrances, visible shop interiors and retail windows wrapping the front corners. The brick building uses narrower ground-floor openings in a stone frontage. Existing lot fitting, deterministic selection, saved residents and room lighting remain in use; the new models are excluded from commercial-only malls.

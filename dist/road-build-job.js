@@ -1,14 +1,14 @@
-import {borrowRoadsForTerrain} from './terrain-refresh-plan.js?v=171';
-import {lotGradingKey} from './lot-grading.js?v=171';
-import {geometryUploadSteps} from './geometry-upload.js?v=171';
-import {constructionGridSteps} from './construction-grid.js?v=171';
-import {groundCoverSteps} from './ground-cover.js?v=171';
-import {groundHeight,wetness} from './landscape.js?v=171';
+import {borrowRoadsForTerrain} from './terrain-refresh-plan.js?v=172';
+import {lotGradingKey} from './lot-grading.js?v=172';
+import {geometryUploadSteps} from './geometry-upload.js?v=172';
+import {constructionGridSteps} from './construction-grid.js?v=172';
+import {groundCoverSteps} from './ground-cover.js?v=172';
+import {groundHeight,wetness} from './landscape.js?v=172';
 import * as THREE from './vendor/three.module.js';
-import {changedRoadCells} from './road-frontage.js?v=171';
-import {Roadworks} from './roadworks.js?v=171';
-import {reuseRoadGeometry} from './road-junction-plan.js?v=171';
-import {scheduleBuild} from './build-scheduler.js?v=171';
+import {changedRoadCells} from './road-frontage.js?v=172';
+import {Roadworks} from './roadworks.js?v=172';
+import {reuseRoadGeometry} from './road-junction-plan.js?v=172';
+import {scheduleBuild} from './build-scheduler.js?v=172';
 
 // Build an invisible replacement. The visible city and its traffic remain live
 // until both road meshes and fitted terrain are ready for one synchronous swap.

@@ -1,9 +1,9 @@
-import './map-grid.js?v=171';
+import './map-grid.js?v=172';
 const G=globalThis.BoroughGrid;
 import * as THREE from './vendor/three.module.js';
-import {GardenProps} from './garden-props.js?v=171';
-import {IndustrialProps} from './industrial-props.js?v=171';
-import {sitePlan} from './site-plan.js?v=171';
+import {GardenProps} from './garden-props.js?v=172';
+import {IndustrialProps} from './industrial-props.js?v=172';
+import {sitePlan} from './site-plan.js?v=172';
 // All props share geometry and materials across the city, allowing the existing
 // building instancer to submit them in a bounded number of draw calls.
 export class SiteDetails{

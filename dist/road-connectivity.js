@@ -11,7 +11,7 @@ const cross=(a,b)=>a.x*b.y-a.y*b.x;
 function project(p,a,b){const x=b.x-a.x,y=b.y-a.y,t=Math.max(0,Math.min(1,((p.x-a.x)*x+(p.y-a.y)*y)/(x*x+y*y||1)));return {x:a.x+x*t,y:a.y+y*t,t};}
 function signature(world){return JSON.stringify([world.roadPaths||[],world.tiles.map(t=>t.type==='road'?[t.roadType,t.roadWidth,t.legacyRoad,t.pathIds]:null)]);}
 function build(world,engine){
- const stamp=signature(world),old=cache.get(world);if(old&&old.stamp===stamp&&old.specs===engine.ROADS&&old.sample===engine.sampleRoad)return old.value;
+ const stamp=signature(world),old=cache.get(world);if(old&&old.n===G.n&&old.stamp===stamp&&old.specs===engine.ROADS&&old.sample===engine.sampleRoad)return old.value;
  const records=new Map(),states=new Map(),byTile=new Map(),forward=new Map(),reverse=new Map(),undirected=new Map(),contacts=new Map(),segments=[],bins=new Map();
  const addState=(record,tile,position=record.mapping.get(tile))=>{position=Math.max(0,Math.min(record.points.length-1,Number(position.toFixed(8))));const key=JSON.stringify([record.key,position]);let state=states.get(key);
   if(!state){const n=Math.floor(position),a=record.points[n],b=record.points[Math.min(n+1,record.points.length-1)],t=position-n;state={key,tile,tiles:new Set(),position,point:{x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t},record};states.set(key,state);record.nodes.set(position,key);forward.set(key,new Set());reverse.set(key,new Set());undirected.set(key,new Set());}
@@ -23,9 +23,13 @@ function build(world,engine){
   for(let y=Math.floor(Math.min(a.y,b.y)/BIN);y<=Math.floor(Math.max(a.y,b.y)/BIN);y++)for(let x=Math.floor(Math.min(a.x,b.x)/BIN);x<=Math.floor(Math.max(a.x,b.x)/BIN);x++){const key=x+','+y;if(!bins.has(key))bins.set(key,[]);bins.get(key).push(s);}
  };
  for(const path of world.roadPaths||[]){
-  const record={key:JSON.stringify(['path',path.id]),pathId:path.id,spec:engine.ROADS[path.type]||engine.ROADS.street,points:engine.sampleRoad(path.controls),mapping:new Map(),states:new Map(),nodes:new Map(),segments:[]};records.set(record.key,record);
-  for(const tile of path.tiles){if(world.tiles[tile]?.type!=='road'||!world.tiles[tile].pathIds?.includes(path.id))continue;let best=0,error=Infinity;const p=point(tile);
-   record.points.forEach((q,n)=>{const d=(p.x-q.x)**2+(p.y-q.y)**2;if(d<error){error=d;best=n;}});record.mapping.set(tile,best);addState(record,tile);
+  const key=JSON.stringify(['path',path.id]),tiles=path.tiles.filter(tile=>world.tiles[tile]?.type==='road'&&world.tiles[tile].pathIds?.includes(path.id)),sampleKey=JSON.stringify([path.controls,tiles]);
+  const previous=old?.n===G.n&&old.sample===engine.sampleRoad?old.value.records.get(key):null,cached=previous?.sampleKey===sampleKey?previous:null;
+  // Rebuild junction states and edges, but keep unchanged geometric samples and
+  // exact nearest-sample mappings. Topology is never reused across road edits.
+  const record={key,pathId:path.id,spec:engine.ROADS[path.type]||engine.ROADS.street,points:cached?.points||engine.sampleRoad(path.controls),mapping:cached?.mapping||new Map(),sampleKey,states:new Map(),nodes:new Map(),segments:[]};records.set(record.key,record);
+  for(const tile of tiles){if(!cached){let best=0,error=Infinity;const p=point(tile);
+   record.points.forEach((q,n)=>{const d=(p.x-q.x)**2+(p.y-q.y)**2;if(d<error){error=d;best=n;}});record.mapping.set(tile,best);}addState(record,tile);
   }
   for(let n=1;n<record.points.length;n++)addSegment(record,record.points[n-1],record.points[n],n-1);
  }
@@ -109,7 +113,7 @@ function build(world,engine){
   outside=new Set([...ordered.filter(i=>tiles.has(i)),...[...tiles].filter(i=>!raster.has(i))]);Object.defineProperty(outside,'hasSource',{value:(tile,pathId)=>selected(tile,pathId).some(key=>reached.has(key))});return outside;
  }
  const attachment=(tile,pathId=nearestSource(tile,point(tile)),p=point(tile))=>access(tile,pathId,p)[0]||null;
- const api={records,states,byTile,graph,reverseGraph,search,trace,reverseTrace,nearestSource,connected,validTrace,attachment};cache.set(world,{stamp,specs:engine.ROADS,sample:engine.sampleRoad,value:api});return api;
+ const api={records,states,byTile,graph,reverseGraph,search,trace,reverseTrace,nearestSource,connected,validTrace,attachment};cache.set(world,{n:G.n,stamp,specs:engine.ROADS,sample:engine.sampleRoad,value:api});return api;
 }
 signature=G.bind(signature);
 build=G.bind(build);

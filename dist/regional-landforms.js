@@ -1,7 +1,7 @@
-import './map-grid.js?v=171';
-import './map-terrain.js?v=171';
-import './coastline.js?v=171';
-import {terrainNoise} from './terrain-field.js?v=171';
+import './map-grid.js?v=172';
+import './map-terrain.js?v=172';
+import './coastline.js?v=172';
+import {terrainNoise} from './terrain-field.js?v=172';
 const ease=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
 
 // Version three is a continuous regional landform, not a staircase of narrow
